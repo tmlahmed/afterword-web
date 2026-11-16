@@ -21,21 +21,24 @@ const safeNext = (value: string) => (value.startsWith('/') && !value.startsWith(
 
 const SLOW_DOWN = 'You have tried that many times in a short while. Please wait a little and try again.'
 
-export async function addToBag(form: FormData) {
+export type AddToBagState = { inBag?: number; message?: string; at?: number }
+
+/** Add one copy and stay on the page. The header's bag count refreshes with the page. */
+export async function addToBag(_prev: AddToBagState, form: FormData): Promise<AddToBagState> {
   const edition = Number(form.get('edition'))
-  if (!Number.isInteger(edition) || edition <= 0) return
-  if (!(await allowed('bag'))) return
+  if (!Number.isInteger(edition) || edition <= 0) return { message: 'Something went wrong. Please reload the page.' }
+  if (!(await allowed('bag'))) return { message: SLOW_DOWN }
   const token = await ensureBagToken()
+  let inBag = 1
   await changeBag(token, (items) => {
     const existing = items.find((i) => i.edition === edition)
+    inBag = existing ? Math.min(20, existing.quantity + 1) : 1
     return {
-      items: existing
-        ? items.map((i) => (i.edition === edition ? { ...i, quantity: Math.min(20, i.quantity + 1) } : i))
-        : [...items, { edition, quantity: 1 }],
+      items: existing ? items.map((i) => (i.edition === edition ? { ...i, quantity: inBag } : i)) : [...items, { edition, quantity: 1 }],
     }
   })
   revalidatePath('/', 'layout')
-  redirect('/bag?added=1')
+  return { inBag, at: Date.now() }
 }
 
 export async function setQuantity(form: FormData) {

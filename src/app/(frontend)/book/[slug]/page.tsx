@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import React from 'react'
 
 import { AvailabilityMark, Cover, Price, Shelf, tintFor } from '../../../../components/site/Books'
+import { AddToBag } from '../../../../components/site/Forms'
 import { ShelfButton } from '../../../../components/site/TheShelf'
 import { availabilityOf } from '../../../../lib/availability'
 import { getBookBySlug, getNoteFor, getRelated, getSettings } from '../../../../lib/catalogue'
@@ -16,7 +17,6 @@ import { getReviews, reviewEligibility } from '../../../../lib/reviews'
 import { getCustomer } from '../../../../lib/session'
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { addToBag } from '../../actions'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -238,12 +238,10 @@ export default async function BookPage({ params }: Props) {
             <p className="mt-3 text-[0.9375rem] text-ink-soft">{availability.detail}</p>
 
             {availability.orderable && book.price ? (
-              <form action={addToBag} className="mt-5">
-                <input type="hidden" name="edition" value={book.id} />
-                <button type="submit" className="btn btn-primary w-full">
-                  {availability.state === 'pre_order' ? 'Pre-order' : availability.state === 'on_request' ? 'Order on request' : 'Add to bag'}
-                </button>
-              </form>
+              <AddToBag
+                edition={book.id}
+                label={availability.state === 'pre_order' ? 'Pre-order' : availability.state === 'on_request' ? 'Order on request' : 'Add to bag'}
+              />
             ) : (
               <button type="button" className="btn btn-primary mt-5 w-full" disabled>
                 Unavailable

@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import React from 'react'
 
-import { bagCount } from '../../lib/bag'
+import { getBag } from '../../lib/bag'
 import { getNavigation, getSettings } from '../../lib/catalogue'
-import { BagIcon, CloseIcon, MenuIcon, SearchIcon, Wordmark } from './Brand'
+import { CloseIcon, MenuIcon, SearchIcon, Wordmark } from './Brand'
 import { Cover } from './Books'
+import { MiniBag, type MiniBagData } from './MiniBag'
 import { SearchBox } from './SearchBox'
 import { ShelfLink } from './TheShelf'
 
@@ -14,7 +15,28 @@ import { ShelfLink } from './TheShelf'
  * so navigation works before any script loads.
  */
 export const Header: React.FC = async () => {
-  const [settings, nav, inBag] = await Promise.all([getSettings(), getNavigation(), bagCount()])
+  const [settings, nav, bag] = await Promise.all([getSettings(), getNavigation(), getBag()])
+  const inside = bag.totals('inside_dhaka')
+  const miniBag: MiniBagData = {
+    count: bag.count,
+    subtotal: inside.subtotal,
+    discount: inside.discount,
+    freeAbove: bag.rules.freeDeliveryAbove,
+    freeShortfall: inside.freeDeliveryShortfall,
+    lines: bag.lines.map((l) => ({
+      id: l.edition.id,
+      title: l.edition.title,
+      slug: l.edition.slug,
+      authorLine: l.edition.authorLine,
+      coverUrl: l.edition.coverUrl,
+      unitPrice: l.edition.price ?? 0,
+      quantity: l.quantity,
+      // In-stock books are limited to the copies on hand; others to what an order allows.
+      max: l.kind === 'in_stock' ? Math.min(20, l.edition.stockOnHand ?? 0) : 20,
+      note: l.note,
+      problem: l.problem,
+    })),
+  }
 
   return (
     <>
@@ -120,14 +142,7 @@ export const Header: React.FC = async () => {
                 <path d="M5 20c1-3.6 3.7-5.5 7-5.5s6 1.9 7 5.5" />
               </svg>
             </Link>
-            <Link href="/bag" aria-label={`Your bag, ${inBag} ${inBag === 1 ? 'book' : 'books'}`} className="relative -mr-2 flex h-11 w-11 items-center justify-center">
-              <BagIcon />
-              {inBag ? (
-                <span className="absolute right-1 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-green px-1 text-[0.625rem] font-semibold text-paper">
-                  {inBag}
-                </span>
-              ) : null}
-            </Link>
+            <MiniBag data={miniBag} />
           </div>
         </div>
 

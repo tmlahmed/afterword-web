@@ -2,10 +2,11 @@
 
 import React, { useActionState, useState } from 'react'
 
-import { type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
+import { addToBag, type AddToBagState, type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
 import { DISTRICTS, type PaymentPlan, type ShopRules, type Totals } from '../../lib/orders/pricing'
 import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
+import { BAG_ADDED_EVENT } from './MiniBag'
 
 const field = 'h-12 w-full border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-green focus:outline-none'
 const label = 'mb-1.5 block text-[0.8125rem] font-semibold'
@@ -422,5 +423,60 @@ export const NewsletterForm: React.FC = () => {
         </div>
       ) : null}
     </form>
+  )
+}
+
+// --- Add to bag ------------------------------------------------------------------
+
+/**
+ * The buy button. Adds a copy without leaving the page: the button says "Added" for a moment
+ * and the bag opens from the header to show it.
+ */
+export const AddToBag: React.FC<{ edition: number; label: string }> = ({ edition, label }) => {
+  const [flash, setFlash] = useState(0)
+  const announced = React.useRef(0)
+  const [state, action, pending] = useActionState<AddToBagState, FormData>(async (prev, form) => {
+    const result = await addToBag(prev, form)
+    if (result.inBag && !result.message) setFlash(result.at ?? Date.now())
+    return result
+  }, {})
+
+  // Once the page has caught up (the header's bag is fresh), open the bag and let the
+  // button say "Added" for a couple of seconds.
+  React.useEffect(() => {
+    if (pending || !flash) return
+    if (announced.current !== flash) {
+      announced.current = flash
+      window.dispatchEvent(new CustomEvent(BAG_ADDED_EVENT))
+    }
+    const t = setTimeout(() => setFlash(0), 2200)
+    return () => clearTimeout(t)
+  }, [pending, flash])
+
+  return (
+    <div className="mt-5">
+      <form action={action}>
+        <input type="hidden" name="edition" value={edition} />
+        <button type="submit" disabled={pending} aria-live="polite" className="btn btn-primary w-full gap-2">
+          {pending ? (
+            'Adding…'
+          ) : flash ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                <path d="m5 12.5 4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Added to your bag
+            </>
+          ) : (
+            label
+          )}
+        </button>
+      </form>
+      {state.message ? (
+        <div className="mt-3">
+          <ErrorNote message={state.message} />
+        </div>
+      ) : null}
+    </div>
   )
 }
