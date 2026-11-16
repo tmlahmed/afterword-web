@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useId, useOptimistic, useRef, useState, 
 import { setQuantity } from '../../app/(frontend)/actions'
 import { formatTaka } from '../../lib/pricing'
 import { BagIcon, CloseIcon } from './Brand'
+import { QtyStepper } from './QtyStepper'
 
 export type MiniBagLine = {
   id: number
@@ -28,7 +29,7 @@ export type MiniBagData = {
   subtotal: number
   /** Promotion discount on the books, used to judge free delivery. */
   discount: number
-  /** How much more for free delivery inside Dhaka; 0 when already free or there is no offer. */
+  /** How much more for free delivery (anywhere in Bangladesh); 0 when already free or there is no offer. */
   freeShortfall: number
   freeAbove: number
 }
@@ -195,34 +196,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                     {l.authorLine ? <p className="truncate text-[0.8125rem] text-ink-soft">{l.authorLine}</p> : null}
                     <p className={`mt-0.5 text-[0.75rem] ${l.problem ? 'text-[#7a2218]' : 'text-ink-faint'}`}>{l.problem ?? l.note}</p>
                     <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center border border-rule" aria-label={`Quantity of ${l.title}`}>
-                        <button
-                          type="button"
-                          onClick={() => change(l, l.quantity - 1)}
-                          aria-label={l.quantity === 1 ? `Remove ${l.title}` : `One fewer ${l.title}`}
-                          className="flex h-8 w-8 items-center justify-center text-[1.125rem] hover:bg-card disabled:opacity-40"
-                        >
-                          {l.quantity === 1 ? (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-                              <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          ) : (
-                            '−'
-                          )}
-                        </button>
-                        <span className="w-8 text-center text-[0.875rem] tabular-nums" aria-live="polite">
-                          {l.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => change(l, l.quantity + 1)}
-                          disabled={l.quantity >= l.max}
-                          aria-label={`One more ${l.title}`}
-                          className="flex h-8 w-8 items-center justify-center text-[1.125rem] hover:bg-card disabled:opacity-40"
-                        >
-                          +
-                        </button>
-                      </div>
+                      <QtyStepper title={l.title} quantity={l.quantity} max={l.max} onChange={(q) => change(l, q)} />
                       <span className="font-semibold tabular-nums">{formatTaka(l.unitPrice * l.quantity)}</span>
                     </div>
                   </div>
@@ -241,22 +215,25 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                 <div className="mt-3 bg-paper-deep px-3.5 py-2.5 text-[0.875rem]">
                   {freeShortfall > 0 ? (
                     <>
-                      Add <strong>{formatTaka(freeShortfall)}</strong> more for free delivery inside Dhaka.
+                      Add <strong>{formatTaka(freeShortfall)}</strong> more for free delivery anywhere in Bangladesh.
                       <span aria-hidden className="mt-2 block h-1 bg-rule">
                         <span className="block h-1 bg-green" style={{ width: `${Math.min(100, Math.round(((freeAbove - freeShortfall) / freeAbove) * 100))}%` }} />
                       </span>
                     </>
                   ) : (
-                    <>Your order qualifies for free delivery inside Dhaka.</>
+                    <>Your delivery is free, anywhere in Bangladesh.</>
                   )}
                 </div>
               ) : null}
-              <Link href="/checkout" onClick={() => setOpen(false)} className="btn btn-primary mt-3.5 w-full">
-                Checkout
-              </Link>
-              <Link href="/bag" onClick={() => setOpen(false)} className="mt-2.5 block text-center text-[0.875rem] font-semibold">
-                View bag, gift wrap and promotion codes
-              </Link>
+              {/* The bag comes first: gift wrap, promotion codes and the full totals are there. */}
+              <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+                <Link href="/bag" onClick={() => setOpen(false)} className="btn btn-primary w-full">
+                  View bag
+                </Link>
+                <Link href="/checkout" onClick={() => setOpen(false)} className="btn btn-quiet w-full">
+                  Checkout
+                </Link>
+              </div>
             </div>
           </>
         )}

@@ -7,6 +7,7 @@ import { getPayload } from 'payload'
 
 import { changeBag, emptyBag, getBag } from '../../lib/bag'
 import { normalisePhone } from '../../lib/orders/pricing'
+import { findPromotion } from '../../lib/orders/prepare'
 import { requestOtp, verifyOtp } from '../../lib/otp'
 import { type PayMethod, payMethods, payStartPath } from '../../lib/payments'
 import { allowed } from '../../lib/rateLimit'
@@ -41,27 +42,50 @@ export async function addToBag(_prev: AddToBagState, form: FormData): Promise<Ad
   return { inBag, at: Date.now() }
 }
 
+/** Set how many copies of a book are in the bag. 0 removes it; a book not in the bag is added back (undo). */
 export async function setQuantity(form: FormData) {
   const edition = Number(form.get('edition'))
-  const quantity = Math.max(0, Math.min(20, Number(form.get('quantity')) || 0))
-  const token = await readBagToken()
+  const quantity = Math.max(0, Math.min(20, Math.floor(Number(form.get('quantity')) || 0)))
+  if (!Number.isInteger(edition) || edition <= 0) return
+  const token = quantity > 0 ? await ensureBagToken() : await readBagToken()
   if (!token) return
-  await changeBag(token, (items) => ({
-    items: quantity === 0 ? items.filter((i) => i.edition !== edition) : items.map((i) => (i.edition === edition ? { ...i, quantity } : i)),
-  }))
+  await changeBag(token, (items) => {
+    if (quantity === 0) return { items: items.filter((i) => i.edition !== edition) }
+    if (!items.some((i) => i.edition === edition)) return { items: [...items, { edition, quantity }] }
+    return { items: items.map((i) => (i.edition === edition ? { ...i, quantity } : i)) }
+  })
   revalidatePath('/', 'layout')
 }
 
-export async function setBagOptions(form: FormData) {
+export type PromoState = { message?: string; applied?: string; tried?: string }
+
+/** Apply a promotion code to the bag, saying plainly when it does not work. */
+export async function applyPromo(_prev: PromoState, form: FormData): Promise<PromoState> {
+  const code = text(form, 'promoCode', 40).toUpperCase()
+  if (!code) return { message: 'Enter a code.' }
+  const token = await readBagToken()
+  if (!token) return { message: 'Your bag is empty.' }
+  const payload = await getPayload({ config })
+  const promotion = await findPromotion({ payload }, code)
+  if (!promotion) return { message: 'That code is not valid or has ended.', tried: code }
+  await changeBag(token, (items) => ({ items, promoCode: promotion.code }))
+  revalidatePath('/', 'layout')
+  return { applied: promotion.code }
+}
+
+export async function removePromo() {
   const token = await readBagToken()
   if (!token) return
-  await changeBag(token, (items) => ({
-    items,
-    giftWrap: form.get('giftWrap') === 'on',
-    giftNote: text(form, 'giftNote', 240),
-    promoCode: text(form, 'promoCode', 40).toUpperCase() || null,
-  }))
-  revalidatePath('/bag')
+  await changeBag(token, (items) => ({ items, promoCode: null }))
+  revalidatePath('/', 'layout')
+}
+
+/** Gift wrap and gift note, saved as the shopper changes them. */
+export async function setGift(wrap: boolean, note: string) {
+  const token = await readBagToken()
+  if (!token) return
+  await changeBag(token, (items) => ({ items, giftWrap: Boolean(wrap), giftNote: String(note ?? '').trim().slice(0, 240) }))
+  revalidatePath('/', 'layout')
 }
 
 // --- Sign-in -----------------------------------------------------------------
