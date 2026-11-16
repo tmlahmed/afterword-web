@@ -88,15 +88,17 @@ export const BookCard: React.FC<{ book: BookCardData; className?: string }> = ({
           className="h-full max-h-full translate-y-2 transition-transform duration-300 ease-out group-hover:translate-y-0.5"
         />
       </div>
+      {/* Every card keeps the same height: the title always takes two lines' room and the
+          author one, so prices line up across a shelf however long the titles are. */}
       <div className="pt-5">
-        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-snug group-hover:underline group-hover:decoration-accent group-hover:underline-offset-4">
+        <h3 className="line-clamp-2 min-h-[2.75em] font-display text-[1.0625rem] leading-snug group-hover:underline group-hover:decoration-accent group-hover:underline-offset-4">
           {book.title}
         </h3>
-        {book.authorLine ? <p className="mt-0.5 truncate text-[0.8125rem] text-ink-soft">{book.authorLine}</p> : null}
-        <p className="mt-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-[0.8125rem]">
-          <Price price={book.price} was={book.compareAtPrice} className="text-[0.9375rem]" />
-          <AvailabilityMark availability={availability} className="text-ink-soft" />
+        <p className="mt-0.5 h-[1.25rem] truncate text-[0.8125rem] text-ink-soft">{book.authorLine ?? ''}</p>
+        <p className="mt-2 whitespace-nowrap text-[0.9375rem]">
+          <Price price={book.price} was={book.compareAtPrice} />
         </p>
+        <AvailabilityMark availability={availability} className="mt-0.5 whitespace-nowrap text-[0.8125rem] text-ink-soft" />
       </div>
     </Link>
   )

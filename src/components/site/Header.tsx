@@ -45,7 +45,7 @@ export const Header: React.FC = async () => {
       ) : null}
 
       <header className="sticky top-0 z-40 border-b border-rule bg-paper/95 backdrop-blur">
-        <div className="relative mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4 md:h-[4.5rem]">
+        <div className="relative mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] md:grid-cols-[auto_1fr] items-center px-4 md:h-[4.5rem]">
           {/* Left: menu (phones) */}
           <div className="flex items-center gap-1 md:hidden">
             <details className="group">
@@ -119,11 +119,11 @@ export const Header: React.FC = async () => {
           <div className="md:hidden">
             <Wordmark priority className="h-[14px]" />
           </div>
-          <div className="hidden w-[26rem] md:block">
-            <SearchBox />
-          </div>
-
+          {/* Right: a compact search, then the shelf, account and bag. */}
           <div className="flex items-center justify-end gap-0.5">
+            <div className="mr-3 hidden w-[17rem] md:block lg:w-[19rem]">
+              <SearchBox shortcut />
+            </div>
             <details className="group md:hidden">
               <summary
                 className="flex h-11 w-11 cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"
