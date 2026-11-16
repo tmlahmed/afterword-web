@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Instrument_Sans, Newsreader } from 'next/font/google'
+import { Instrument_Sans, Jost } from 'next/font/google'
 import React from 'react'
 
 import { Footer } from '../../components/site/Footer'
@@ -8,12 +8,8 @@ import { siteUrl } from '../../lib/notify'
 import { robotsFor, SHARE_DEFAULTS } from '../../lib/seo'
 import './globals.css'
 
-const serif = Newsreader({
-  subsets: ['latin'],
-  style: ['normal', 'italic'],
-  variable: '--font-newsreader',
-  display: 'swap',
-})
+// Jost: a geometric sans in the spirit of the logo's lettering, used for titles and headings.
+const display = Jost({ subsets: ['latin'], variable: '--font-jost', display: 'swap' })
 const sans = Instrument_Sans({ subsets: ['latin'], variable: '--font-instrument', display: 'swap' })
 
 const DESCRIPTION =
@@ -31,14 +27,14 @@ export const metadata: Metadata = {
   robots: robotsFor(),
 }
 
-export const viewport: Viewport = { themeColor: '#f6f1e7', width: 'device-width', initialScale: 1 }
+export const viewport: Viewport = { themeColor: '#ffffff', width: 'device-width', initialScale: 1 }
 
 // Pages read live prices and stock. Caching rules are set in the launch-hardening phase.
 export const dynamic = 'force-dynamic'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
         <a
           href="#content"

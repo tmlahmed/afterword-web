@@ -18,7 +18,7 @@ export default async function PreOrdersPage() {
           <BookGrid books={books} />
         ) : (
           <div className="border border-rule px-6 py-14 text-center">
-            <p className="font-serif text-[1.25rem]">Nothing is open for pre-order today.</p>
+            <p className="font-display text-[1.25rem]">Nothing is open for pre-order today.</p>
             <p className="mx-auto mt-2 max-w-md text-ink-soft">New titles are added here as soon as publishers confirm their dates.</p>
             <Link href="/collections/new-and-notable" className="btn btn-primary mt-6">
               See what is new

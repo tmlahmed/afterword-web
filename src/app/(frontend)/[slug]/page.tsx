@@ -52,7 +52,7 @@ export default async function BlockPage({ params }: Props) {
             <div className="border-t border-ink">
               {block.items.map((item) => (
                 <details key={item.id} className="group border-b border-rule">
-                  <summary className="flex cursor-pointer list-none items-baseline justify-between gap-4 py-4 font-serif text-[1.1875rem] [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-baseline justify-between gap-4 py-4 font-display text-[1.1875rem] [&::-webkit-details-marker]:hidden">
                     {item.question}
                     <span className="font-sans text-ink-soft group-open:hidden">+</span>
                     <span className="hidden font-sans text-ink-soft group-open:inline">−</span>

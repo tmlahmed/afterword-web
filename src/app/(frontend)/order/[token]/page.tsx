@@ -53,7 +53,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-3xl px-4 pb-8 pt-10 md:pt-14">
       <p className="eyebrow">Order {order.number}</p>
       <h1 className="display mt-2 text-[2.25rem] md:text-[3rem]">{headline}</h1>
-      {detail ? <p className="mt-3 font-serif text-[1.125rem] text-ink-soft">{detail}</p> : null}
+      {detail ? <p className="mt-3 font-display text-[1.125rem] text-ink-soft">{detail}</p> : null}
       {paid === '0' ? (
         <p className="mt-4 border-l-2 border-[#9b2c1f] bg-[#9b2c1f]/8 px-3 py-2.5 text-[0.9375rem]">
           The payment did not go through. Nothing was charged.{' '}
@@ -70,8 +70,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
             const done = i < at || order.status === 'delivered'
             const current = i === at && order.status !== 'delivered'
             return (
-              <li key={step} className={`flex items-center gap-3 border-b border-rule py-3 sm:block sm:border-b-0 sm:border-t-2 sm:pt-3 ${done || current ? 'sm:border-green' : 'sm:border-rule'}`}>
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold sm:mb-2 ${done ? 'bg-green text-paper' : current ? 'border-2 border-green text-green' : 'border border-rule text-ink-faint'}`}>
+              <li key={step} className={`flex items-center gap-3 border-b border-rule py-3 sm:block sm:border-b-0 sm:border-t-2 sm:pt-3 ${done || current ? 'sm:border-primary' : 'sm:border-rule'}`}>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold sm:mb-2 ${done ? 'bg-primary text-paper' : current ? 'border-2 border-primary text-primary' : 'border border-rule text-ink-faint'}`}>
                   {done ? '✓' : i + 1}
                 </span>
                 <span className={`text-[0.875rem] ${current ? 'font-semibold' : done ? '' : 'text-ink-faint'}`}>{STAGE_LABEL[step]}</span>
@@ -87,7 +87,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
           {(order.lines ?? []).map((l) => (
             <li key={l.id} className="flex justify-between gap-4 border-b border-rule py-3">
               <span>
-                <span className="font-serif text-[1.0625rem]">{l.title}</span>
+                <span className="font-display text-[1.0625rem]">{l.title}</span>
                 {l.quantity > 1 ? <span className="text-ink-soft"> × {l.quantity}</span> : null}
                 <span className="block text-[0.8125rem] text-ink-soft">
                   {l.authorLine} · {KIND[l.kind ?? 'in_stock']}
@@ -99,13 +99,13 @@ export default async function OrderPage({ params, searchParams }: Props) {
         </ul>
         <dl className="ml-auto mt-4 max-w-xs space-y-1 text-[0.9375rem]">
           {order.discount ? (
-            <div className="flex justify-between text-green">
+            <div className="flex justify-between text-primary">
               <dt>Discount</dt>
               <dd className="tabular-nums">−{formatTaka(order.discount)}</dd>
             </div>
           ) : null}
           {order.rewardDiscount ? (
-            <div className="flex justify-between text-green">
+            <div className="flex justify-between text-primary">
               <dt>Paid with points</dt>
               <dd className="tabular-nums">−{formatTaka(order.rewardDiscount)}</dd>
             </div>

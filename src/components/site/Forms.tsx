@@ -8,7 +8,7 @@ import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
 import { BAG_ADDED_EVENT } from './MiniBag'
 
-const field = 'h-12 w-full border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-green focus:outline-none'
+const field = 'h-12 w-full border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-primary focus:outline-none'
 const label = 'mb-1.5 block text-[0.8125rem] font-semibold'
 
 const ErrorNote: React.FC<{ message?: string }> = ({ message }) =>
@@ -43,7 +43,7 @@ export const SignInForm: React.FC<{ next: string }> = ({ next }) => {
           </label>
           <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} placeholder="••••••" required autoFocus className={`${field} tracking-[0.5em]`} />
           {state.devCode ? (
-            <p className="mt-2 border border-dashed border-brass px-3 py-2 text-[0.8125rem]">
+            <p className="mt-2 border border-dashed border-accent px-3 py-2 text-[0.8125rem]">
               Preview site: no SMS service is connected yet, so the code is shown here instead. Your code is{' '}
               <strong className="tabular-nums">{state.devCode}</strong>.
             </p>
@@ -118,7 +118,7 @@ export const CheckoutForm: React.FC<{
               </label>
               <input id="email" name="email" type="email" autoComplete="email" defaultValue={customer.email ?? ''} className={field} />
               <label className="mt-2 flex items-start gap-2 text-[0.8125rem] text-ink-soft">
-                <input type="checkbox" name="newsletter" className="mt-0.5 accent-[var(--color-green)]" />
+                <input type="checkbox" name="newsletter" className="mt-0.5 accent-[var(--color-primary)]" />
                 Send me the AFTERWORD newsletter, about once a month. Unsubscribe any time.
               </label>
             </div>
@@ -168,8 +168,8 @@ export const CheckoutForm: React.FC<{
           <section>
             <h2 className="display border-t border-ink pt-3 text-[1.5rem]">Reward points</h2>
             {points.usable > 0 ? (
-              <label className={`mt-4 flex cursor-pointer gap-3 border px-4 py-3.5 ${usePoints ? 'border-green bg-card' : 'border-rule'}`}>
-                <input type="checkbox" name="usePoints" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-1 accent-[var(--color-green)]" />
+              <label className={`mt-4 flex cursor-pointer gap-3 border px-4 py-3.5 ${usePoints ? 'border-primary bg-card' : 'border-rule'}`}>
+                <input type="checkbox" name="usePoints" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-1 accent-[var(--color-primary)]" />
                 <span>
                   <span className="block font-semibold">Use {points.usable} of my {points.balance} points</span>
                   <span className="block text-[0.9375rem] text-ink-soft">Takes {formatTaka(points.usable)} off the books.</span>
@@ -193,8 +193,8 @@ export const CheckoutForm: React.FC<{
           ) : (
             <div className="mt-4 space-y-2">
               {offered.map((p) => (
-                <label key={p} className={`flex cursor-pointer gap-3 border px-4 py-3.5 ${chosen === p ? 'border-green bg-card' : 'border-rule'}`}>
-                  <input type="radio" name="paymentPlan" value={p} checked={chosen === p} onChange={() => setPlan(p)} className="mt-1 accent-[var(--color-green)]" />
+                <label key={p} className={`flex cursor-pointer gap-3 border px-4 py-3.5 ${chosen === p ? 'border-primary bg-card' : 'border-rule'}`}>
+                  <input type="radio" name="paymentPlan" value={p} checked={chosen === p} onChange={() => setPlan(p)} className="mt-1 accent-[var(--color-primary)]" />
                   <span>
                     <span className="block font-semibold">{PLAN_COPY[p].title}</span>
                     <span className="block text-[0.9375rem] text-ink-soft">{PLAN_COPY[p].body(t)}</span>
@@ -208,8 +208,8 @@ export const CheckoutForm: React.FC<{
               <legend className={label}>Pay with</legend>
               <div className="grid gap-2 sm:grid-cols-3">
                 {methods.map((m) => (
-                  <label key={m} className={`flex cursor-pointer items-center gap-2.5 border px-3 py-3 text-[0.9375rem] ${via === m ? 'border-green bg-card' : 'border-rule'}`}>
-                    <input type="radio" name="payNowVia" value={m} checked={via === m} onChange={() => setMethod(m)} className="accent-[var(--color-green)]" />
+                  <label key={m} className={`flex cursor-pointer items-center gap-2.5 border px-3 py-3 text-[0.9375rem] ${via === m ? 'border-primary bg-card' : 'border-rule'}`}>
+                    <input type="radio" name="payNowVia" value={m} checked={via === m} onChange={() => setMethod(m)} className="accent-[var(--color-primary)]" />
                     {METHOD_LABEL[m]}
                   </label>
                 ))}
@@ -248,13 +248,13 @@ export const CheckoutForm: React.FC<{
             <dd className="tabular-nums">{formatTaka(t.subtotal)}</dd>
           </div>
           {t.discount ? (
-            <div className="flex justify-between text-green">
+            <div className="flex justify-between text-primary">
               <dt>Discount</dt>
               <dd className="tabular-nums">−{formatTaka(t.discount)}</dd>
             </div>
           ) : null}
           {t.rewards ? (
-            <div className="flex justify-between text-green">
+            <div className="flex justify-between text-primary">
               <dt>Reward points</dt>
               <dd className="tabular-nums">−{formatTaka(t.rewards)}</dd>
             </div>
@@ -269,7 +269,7 @@ export const CheckoutForm: React.FC<{
             <dt>Delivery</dt>
             <dd className="tabular-nums">{t.delivery === 0 ? 'Free' : formatTaka(t.delivery)}</dd>
           </div>
-          <div className="flex justify-between border-t border-ink pt-2 font-serif text-[1.375rem]">
+          <div className="flex justify-between border-t border-ink pt-2 font-display text-[1.375rem]">
             <dt>Total</dt>
             <dd className="tabular-nums">{formatTaka(t.total)}</dd>
           </div>
@@ -292,8 +292,8 @@ export const RequestForm: React.FC<{ signedIn: boolean; name?: string | null; pr
   const [state, action, pending] = useActionState<RequestState, FormData>(submitRequest, {})
   if (state.done)
     return (
-      <div className="border border-green px-6 py-8">
-        <p className="font-serif text-[1.375rem]">Thank you. We have your request.</p>
+      <div className="border border-primary px-6 py-8">
+        <p className="font-display text-[1.375rem]">Thank you. We have your request.</p>
         <p className="mt-2 text-ink-soft">
           We will look for the book and text you a price and an arrival estimate, usually within two working days. Nothing is charged
           until you decide to order.
@@ -351,14 +351,14 @@ export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
   const [rating, setRating] = useState(0)
   if (state.done)
     return (
-      <div className="border border-green px-5 py-6">
-        <p className="font-serif text-[1.25rem]">Thank you for your review.</p>
+      <div className="border border-primary px-5 py-6">
+        <p className="font-display text-[1.25rem]">Thank you for your review.</p>
         <p className="mt-1.5 text-ink-soft">A bookseller reads every review before it appears, usually within a day or two.</p>
       </div>
     )
   return (
     <form action={action} className="max-w-[38rem] space-y-4 bg-paper-deep px-5 py-6">
-      <p className="font-serif text-[1.25rem]">You bought this book. What did you think?</p>
+      <p className="font-display text-[1.25rem]">You bought this book. What did you think?</p>
       <input type="hidden" name="edition" value={edition} />
       <fieldset>
         <legend className={label}>Your rating</legend>
@@ -366,7 +366,7 @@ export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
           {[1, 2, 3, 4, 5].map((n) => (
             <label key={n} className="cursor-pointer p-1" title={`${n} out of 5`}>
               <input type="radio" name="rating" value={n} required className="sr-only" onChange={() => setRating(n)} />
-              <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden fill={n <= rating ? 'var(--color-brass)' : 'none'} stroke="var(--color-brass)" strokeWidth="1.5">
+              <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden fill={n <= rating ? 'var(--color-ink)' : 'none'} stroke="var(--color-ink)" strokeWidth="1.5">
                 <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" strokeLinejoin="round" />
               </svg>
               <span className="sr-only">{n} out of 5</span>
@@ -404,7 +404,7 @@ export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
 
 export const NewsletterForm: React.FC = () => {
   const [state, action, pending] = useActionState<NewsletterState, FormData>(joinNewsletter, {})
-  if (state.done) return <p className="font-serif text-[1.125rem]">Thank you. The next letter is on its way to you.</p>
+  if (state.done) return <p className="font-display text-[1.125rem]">Thank you. The next letter is on its way to you.</p>
   return (
     <form action={action} className="max-w-md">
       <label htmlFor="newsletter-email" className="eyebrow !text-ink">

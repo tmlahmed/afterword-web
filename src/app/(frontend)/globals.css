@@ -2,31 +2,34 @@
 
 /*
  * AFTERWORD design tokens.
- * Paper and ink, one green accent, brass for small details.
+ * Black on white, with the poppy red of the logo's underline for small accents.
  * Change a value here and it changes everywhere.
  */
 @theme {
-  --color-paper: #f6f1e7;
-  --color-paper-deep: #ede6d6;
-  --color-card: #fbf8f2;
-  --color-ink: #1a1d1b;
-  --color-ink-soft: #4a4f4b;
-  --color-ink-faint: #7c8079;
-  --color-rule: #d9d0be;
-  --color-green: #1f4a3a;
-  --color-green-deep: #163629;
-  --color-brass: #a47e3b;
+  --color-paper: #ffffff;
+  --color-paper-deep: #f3f3f1;
+  --color-card: #fafaf9;
+  --color-ink: #111111;
+  --color-ink-soft: #4a4a4a;
+  --color-ink-faint: #737373;
+  --color-rule: #dedede;
+  /* Buttons, badges, ticks and bars. */
+  --color-primary: #111111;
+  --color-primary-deep: #333333;
+  /* The red: link underlines, labels above titles, small marks. Never large areas. */
+  --color-accent: #d22b2f;
 
   /* Quiet panels that sit behind book covers. */
-  --color-tint-sage: #dde4d6;
-  --color-tint-clay: #ecdccf;
-  --color-tint-slate: #dae0e3;
-  --color-tint-straw: #ede3c8;
+  --color-tint-sage: #f1f1ef;
+  --color-tint-clay: #ecebe8;
+  --color-tint-slate: #e9ebed;
+  --color-tint-straw: #f4f1ec;
 
-  --font-serif: var(--font-newsreader), 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  /* Titles and headings: a geometric sans that matches the logo. Body text: Instrument Sans. */
+  --font-display: var(--font-jost), 'Century Gothic', 'Avenir Next', Avenir, ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  --shadow-book: 0 1px 1px rgb(26 29 27 / 0.18), 0 10px 22px -10px rgb(26 29 27 / 0.45);
+  --shadow-book: 0 1px 1px rgb(17 17 17 / 0.16), 0 10px 22px -10px rgb(17 17 17 / 0.4);
 }
 
 @layer base {
@@ -45,12 +48,12 @@
   }
 
   ::selection {
-    background: var(--color-green);
+    background: var(--color-primary);
     color: var(--color-paper);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-green);
+    outline: 2px solid var(--color-primary);
     outline-offset: 3px;
     border-radius: 2px;
   }
@@ -68,10 +71,10 @@
   }
 
   .display {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-weight: 400;
-    letter-spacing: -0.012em;
-    line-height: 1.08;
+    letter-spacing: -0.005em;
+    line-height: 1.1;
   }
 
   /* Horizontal shelf: swipe on phones, scroll on desktop, no visible scrollbar. */
@@ -104,14 +107,14 @@
     transition: background-color 150ms ease, color 150ms ease;
   }
   .btn-primary {
-    background: var(--color-green);
+    background: var(--color-primary);
     color: var(--color-paper);
   }
   .btn-primary:hover {
-    background: var(--color-green-deep);
+    background: var(--color-primary-deep);
   }
   .btn-primary[disabled] {
-    background: var(--color-green);
+    background: var(--color-primary);
     opacity: 0.55;
     cursor: not-allowed;
   }
@@ -126,9 +129,9 @@
 
   .link {
     text-decoration: underline;
-    text-decoration-thickness: 1px;
+    text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
-    text-decoration-color: var(--color-brass);
+    text-decoration-color: var(--color-accent);
   }
   .link:hover {
     text-decoration-color: var(--color-ink);
@@ -143,8 +146,8 @@
 @layer components {
   /* Articles and pages written in the admin's editor. */
   .rich-text {
-    font-family: var(--font-serif);
-    font-size: 1.125rem;
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
     line-height: 1.75;
   }
   .rich-text > * + * {
@@ -152,8 +155,9 @@
   }
   .rich-text h2,
   .rich-text h3 {
-    font-weight: 400;
-    letter-spacing: -0.012em;
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: 0;
     line-height: 1.15;
     margin-top: 1.8em;
   }
@@ -165,9 +169,9 @@
   }
   .rich-text a {
     text-decoration: underline;
-    text-decoration-thickness: 1px;
+    text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
-    text-decoration-color: var(--color-brass);
+    text-decoration-color: var(--color-accent);
   }
   .rich-text ul,
   .rich-text ol {
@@ -183,9 +187,8 @@
     margin-top: 0.4em;
   }
   .rich-text blockquote {
-    border-left: 1px solid var(--color-brass);
+    border-left: 2px solid var(--color-accent);
     padding-left: 1.25rem;
-    font-style: italic;
   }
   .rich-text hr {
     border: 0;

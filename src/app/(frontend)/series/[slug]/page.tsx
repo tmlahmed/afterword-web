@@ -29,7 +29,7 @@ export default async function SeriesPage({ params }: Props) {
         <ol className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {books.map((book) => (
             <li key={book.id}>
-              {book.seriesNumber ? <p className="eyebrow mb-2 !text-green">Book {book.seriesNumber}</p> : null}
+              {book.seriesNumber ? <p className="eyebrow mb-2 !text-accent">Book {book.seriesNumber}</p> : null}
               <BookCard book={book as unknown as BookCardData} />
             </li>
           ))}

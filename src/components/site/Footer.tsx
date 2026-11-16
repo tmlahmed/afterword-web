@@ -14,7 +14,7 @@ export const Footer: React.FC = async () => {
         <div className="grid gap-12 md:grid-cols-[1.3fr_2fr]">
           <div>
             <Wordmark as="text" className="h-[20px]" />
-            <p className="mt-5 max-w-sm font-serif text-[1.0625rem] leading-relaxed text-ink-soft">
+            <p className="mt-5 max-w-sm font-display text-[1.0625rem] leading-relaxed text-ink-soft">
               An independent bookshop for readers in Bangladesh. Every book we sell is a genuine publisher’s edition,
               chosen by people who read.
             </p>
@@ -54,7 +54,7 @@ export const Footer: React.FC = async () => {
             ['Help', '/help'],
           ].map(([label, href]) => (
             <li key={href}>
-              <Link href={href} className="hover:underline hover:decoration-brass hover:underline-offset-4">
+              <Link href={href} className="hover:underline hover:decoration-accent hover:underline-offset-4">
                 {label}
               </Link>
             </li>
@@ -64,7 +64,7 @@ export const Footer: React.FC = async () => {
         <div className="mt-8 flex flex-col gap-3 border-t border-rule pt-6 text-[0.8125rem] text-ink-faint sm:flex-row sm:items-baseline sm:justify-between">
           <p>
             <span className="eyebrow mr-2 !text-ink-faint">Colophon</span>
-            Set in Newsreader and Instrument Sans. Made in Dhaka.
+            Set in Jost and Instrument Sans. Made in Dhaka.
           </p>
           <p>© {new Date().getFullYear()} AFTERWORD</p>
         </div>

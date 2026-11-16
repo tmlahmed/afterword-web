@@ -178,14 +178,14 @@ export default async function BookPage({ params }: Props) {
           ) : null}
 
           <h1 className="display mt-3 text-[2.25rem] md:text-[3.25rem]">{book.title}</h1>
-          {book.subtitle ? <p className="mt-2 font-serif text-[1.25rem] text-ink-soft">{book.subtitle}</p> : null}
+          {book.subtitle ? <p className="mt-2 font-display text-[1.25rem] text-ink-soft">{book.subtitle}</p> : null}
 
           {authors.length ? (
-            <p className="mt-3 font-serif text-[1.25rem] italic">
+            <p className="mt-3 font-display text-[1.25rem] text-ink-soft">
               {authors.map((a, i) => (
                 <React.Fragment key={a.person.id}>
                   {i > 0 ? ', ' : ''}
-                  <Link href={`/authors/${a.person.slug}`} className="hover:underline hover:decoration-brass hover:underline-offset-4">
+                  <Link href={`/authors/${a.person.slug}`} className="hover:underline hover:decoration-accent hover:underline-offset-4">
                     {a.person.name}
                   </Link>
                 </React.Fragment>
@@ -232,7 +232,7 @@ export default async function BookPage({ params }: Props) {
           {/* Buy box */}
           <div className="mt-7 border-y border-ink py-6">
             <div className="flex items-baseline justify-between gap-4">
-              <Price price={book.price} was={book.compareAtPrice} className="font-serif text-[2rem] leading-none" />
+              <Price price={book.price} was={book.compareAtPrice} className="font-display text-[2rem] leading-none" />
               <AvailabilityMark availability={availability} className="text-[0.9375rem] font-semibold" />
             </div>
             <p className="mt-3 text-[0.9375rem] text-ink-soft">{availability.detail}</p>
@@ -258,7 +258,7 @@ export default async function BookPage({ params }: Props) {
             </div>
 
             <p className="mt-5 flex items-start gap-2.5 text-[0.875rem]">
-              <span aria-hidden className="mt-[0.4rem] inline-block h-[7px] w-[7px] shrink-0 rotate-45 bg-brass" />
+              <span aria-hidden className="mt-[0.4rem] inline-block h-[7px] w-[7px] shrink-0 rotate-45 bg-accent" />
               <span>
                 <strong className="font-semibold">Original edition.</strong> A genuine copy from the publisher, never a
                 reprint.
@@ -269,8 +269,8 @@ export default async function BookPage({ params }: Props) {
           {/* The Afterword — the bookseller's note sits above the synopsis, on purpose. */}
           {note ? (
             <figure className="mt-9 bg-paper-deep px-6 py-7">
-              <p className="eyebrow !text-green">The Afterword</p>
-              <blockquote className="mt-3 font-serif text-[1.1875rem] leading-relaxed">{note.body}</blockquote>
+              <p className="eyebrow !text-accent">The Afterword</p>
+              <blockquote className="mt-3 font-display text-[1.1875rem] leading-relaxed">{note.body}</blockquote>
               <figcaption className="mt-4 text-[0.875rem] text-ink-soft">— {note.signedBy}</figcaption>
             </figure>
           ) : null}
@@ -278,7 +278,7 @@ export default async function BookPage({ params }: Props) {
           {paragraphs.length ? (
             <section className="mt-10">
               <h2 className="eyebrow">About the book</h2>
-              <div className="prose-book mt-3 max-w-[38rem] font-serif text-[1.0625rem] leading-[1.7]">
+              <div className="prose-book mt-3 max-w-[38rem] text-[1.0625rem] leading-[1.7]">
                 {paragraphs.map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}

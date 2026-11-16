@@ -73,7 +73,7 @@ export default async function AccountPage() {
                     </span>
                     <span className="text-right">
                       <span className="block font-semibold tabular-nums">{formatTaka(o.total ?? 0)}</span>
-                      <span className="block text-[0.875rem] text-green">{STAGE_LABEL[o.status]}</span>
+                      <span className="block text-[0.875rem] text-primary">{STAGE_LABEL[o.status]}</span>
                     </span>
                   </Link>
                 </li>
@@ -94,7 +94,7 @@ export default async function AccountPage() {
           <section>
             <div className="flex flex-wrap items-end justify-between gap-2 border-t border-ink pt-3">
               <h2 className="display text-[1.625rem]">Reward points</h2>
-              <p className="font-serif text-[1.375rem]">
+              <p className="font-display text-[1.375rem]">
                 {customer.rewardPoints ?? 0} <span className="text-[0.9375rem] text-ink-soft">points · worth {formatTaka(customer.rewardPoints ?? 0)}</span>
               </p>
             </div>
@@ -111,7 +111,7 @@ export default async function AccountPage() {
                       {e.note ? <span className="text-ink-soft"> · {e.note}</span> : null}
                       <span className="block text-[0.8125rem] text-ink-soft">{day(e.createdAt)}</span>
                     </span>
-                    <span className={`shrink-0 tabular-nums ${e.points > 0 ? 'text-green' : ''}`}>
+                    <span className={`shrink-0 tabular-nums ${e.points > 0 ? 'text-primary' : ''}`}>
                       {e.points > 0 ? '+' : '−'}
                       {Math.abs(e.points)}
                     </span>
@@ -130,7 +130,7 @@ export default async function AccountPage() {
               {toReview.map((b) => (
                 <li key={b.id} className="flex flex-wrap items-baseline justify-between gap-3 border-b border-rule py-3">
                   <span>
-                    <span className="font-serif text-[1.0625rem]">{b.title}</span>
+                    <span className="font-display text-[1.0625rem]">{b.title}</span>
                     <span className="block text-[0.875rem] text-ink-soft">{b.authorLine}</span>
                   </span>
                   <Link href={`/book/${b.slug}#review`} className="text-[0.875rem] font-semibold">
@@ -156,7 +156,7 @@ export default async function AccountPage() {
                 return (
                   <li key={r.id} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-rule py-4">
                     <span>
-                      <span className="font-serif text-[1.0625rem]">{r.wanted}</span>
+                      <span className="font-display text-[1.0625rem]">{r.wanted}</span>
                       <span className="block text-[0.875rem] text-ink-soft">
                         Asked on {day(r.createdAt)}
                         {r.reply ? ` · ${r.reply}` : ''}
@@ -168,7 +168,7 @@ export default async function AccountPage() {
                           {book.price ? `Order for ${formatTaka(book.price)}` : 'See the book'}
                         </Link>
                       ) : (
-                        <span className="text-green">{REQUEST[r.status]}</span>
+                        <span className="text-primary">{REQUEST[r.status]}</span>
                       )}
                     </span>
                   </li>

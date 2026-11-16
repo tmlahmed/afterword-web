@@ -38,16 +38,16 @@ export const Cover: React.FC<{
     <div
       role="img"
       aria-label={`Cover of ${title}`}
-      className={`flex aspect-[2/3] flex-col justify-between rounded-[2px] bg-green p-3 text-paper shadow-book ${className}`}
+      className={`flex aspect-[2/3] flex-col justify-between rounded-[2px] bg-primary p-3 text-paper shadow-book ${className}`}
     >
-      <span className="font-serif text-[0.9375rem] leading-tight">{title}</span>
+      <span className="font-display text-[0.9375rem] leading-tight">{title}</span>
       {author ? <span className="text-[0.625rem] uppercase tracking-[0.14em] opacity-80">{author}</span> : null}
     </div>
   )
 
 const DOT: Record<Availability['state'], string> = {
-  in_stock: 'bg-green',
-  pre_order: 'bg-brass',
+  in_stock: 'bg-primary',
+  pre_order: 'bg-accent',
   on_request: 'border border-ink-soft',
   unavailable: 'bg-rule',
 }
@@ -89,7 +89,7 @@ export const BookCard: React.FC<{ book: BookCardData; className?: string }> = ({
         />
       </div>
       <div className="pt-5">
-        <h3 className="line-clamp-2 font-serif text-[1.0625rem] leading-snug group-hover:underline group-hover:decoration-brass group-hover:underline-offset-4">
+        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-snug group-hover:underline group-hover:decoration-accent group-hover:underline-offset-4">
           {book.title}
         </h3>
         {book.authorLine ? <p className="mt-0.5 truncate text-[0.8125rem] text-ink-soft">{book.authorLine}</p> : null}

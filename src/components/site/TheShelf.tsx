@@ -77,7 +77,7 @@ export const ShelfLink: React.FC = () => {
     <Link href="/shelf" aria-label={`The Shelf, ${count} saved`} className="relative hidden h-11 w-11 items-center justify-center sm:flex">
       <ShelfIcon />
       {count ? (
-        <span className="absolute right-1 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-green px-1 text-[0.625rem] font-semibold text-paper">
+        <span className="absolute right-1 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold text-paper">
           {count}
         </span>
       ) : null}
@@ -127,7 +127,7 @@ export const ShelfPage: React.FC<{ shared: number[] }> = ({ shared }) => {
   if (books.length === 0)
     return (
       <div className="border border-rule px-6 py-14 text-center">
-        <p className="font-serif text-[1.25rem]">Your Shelf is empty.</p>
+        <p className="font-display text-[1.25rem]">Your Shelf is empty.</p>
         <p className="mx-auto mt-2 max-w-md text-ink-soft">
           Tap “Save to The Shelf” on any book to keep it here for later. No account needed.
         </p>

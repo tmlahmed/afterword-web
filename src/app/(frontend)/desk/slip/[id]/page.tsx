@@ -26,7 +26,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
       <style>{`header, footer, nav, body > a, [aria-label="Main"] { display: none !important } body, html { background: #fff !important }`}</style>
       <div className="flex items-start justify-between border-b-2 border-black pb-4">
         <div>
-          <p className="font-serif text-[1.5rem] uppercase tracking-[0.2em]">Afterword.</p>
+          <p className="font-display text-[1.5rem] uppercase tracking-[0.2em]">Afterword.</p>
           <p className="text-[0.8125rem]">Original editions, delivered across Bangladesh</p>
         </div>
         <div className="text-right">

@@ -146,7 +146,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
       >
         <BagIcon />
         {count ? (
-          <span className="absolute right-1 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-green px-1 text-[0.625rem] font-semibold text-paper">
+          <span className="absolute right-1 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold text-paper">
             {count}
           </span>
         ) : null}
@@ -186,11 +186,11 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                     {l.coverUrl ? (
                       <Image src={l.coverUrl} alt="" width={56} height={84} sizes="56px" className="h-[5.25rem] w-auto max-w-[3.5rem] rounded-[2px] object-contain shadow-book" />
                     ) : (
-                      <span className="block h-[5.25rem] w-14 rounded-[2px] bg-green" />
+                      <span className="block h-[5.25rem] w-14 rounded-[2px] bg-primary" />
                     )}
                   </Link>
                   <div className="min-w-0 flex-1">
-                    <Link href={`/book/${l.slug}`} onClick={() => setOpen(false)} className="line-clamp-2 font-serif text-[1.0625rem] leading-snug hover:underline">
+                    <Link href={`/book/${l.slug}`} onClick={() => setOpen(false)} className="line-clamp-2 font-display text-[1.0625rem] leading-snug hover:underline">
                       {l.title}
                     </Link>
                     {l.authorLine ? <p className="truncate text-[0.8125rem] text-ink-soft">{l.authorLine}</p> : null}
@@ -209,7 +209,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                 <span>
                   Subtotal <span className="text-[0.875rem] text-ink-soft">({count} {count === 1 ? 'book' : 'books'})</span>
                 </span>
-                <span className="font-serif text-[1.375rem] tabular-nums">{formatTaka(subtotal)}</span>
+                <span className="font-display text-[1.375rem] tabular-nums">{formatTaka(subtotal)}</span>
               </div>
               {freeAbove > 0 ? (
                 <div className="mt-3 bg-paper-deep px-3.5 py-2.5 text-[0.875rem]">
@@ -217,7 +217,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                     <>
                       Add <strong>{formatTaka(freeShortfall)}</strong> more for free delivery anywhere in Bangladesh.
                       <span aria-hidden className="mt-2 block h-1 bg-rule">
-                        <span className="block h-1 bg-green" style={{ width: `${Math.min(100, Math.round(((freeAbove - freeShortfall) / freeAbove) * 100))}%` }} />
+                        <span className="block h-1 bg-primary" style={{ width: `${Math.min(100, Math.round(((freeAbove - freeShortfall) / freeAbove) * 100))}%` }} />
                       </span>
                     </>
                   ) : (

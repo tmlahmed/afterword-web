@@ -42,11 +42,11 @@ export const ArticleCard: React.FC<{ article: ArticleCardData; lead?: boolean }>
   <Link href={`/marginalia/${article.slug}`} className={`group block ${lead ? 'md:grid md:grid-cols-[7fr_5fr] md:items-center md:gap-10' : ''}`}>
     <ArticleArt article={article} tall={lead} />
     <div className={lead ? 'pt-5 md:pt-0' : 'pt-4'}>
-      <p className="eyebrow !text-green">{kindLabel(article.kind)}</p>
-      <h3 className={`display mt-2 group-hover:underline group-hover:decoration-brass group-hover:underline-offset-4 ${lead ? 'text-[2rem] md:text-[2.75rem]' : 'text-[1.5rem]'}`}>
+      <p className="eyebrow !text-accent">{kindLabel(article.kind)}</p>
+      <h3 className={`display mt-2 group-hover:underline group-hover:decoration-accent group-hover:underline-offset-4 ${lead ? 'text-[2rem] md:text-[2.75rem]' : 'text-[1.5rem]'}`}>
         {article.title}
       </h3>
-      <p className={`mt-2 text-ink-soft ${lead ? 'font-serif text-[1.125rem]' : 'line-clamp-3 text-[0.9375rem]'}`}>{article.standfirst}</p>
+      <p className={`mt-2 text-ink-soft ${lead ? 'font-display text-[1.125rem]' : 'line-clamp-3 text-[0.9375rem]'}`}>{article.standfirst}</p>
       <p className="mt-3 text-[0.8125rem] text-ink-faint">
         {[article.byline, formatDay(article.publishedAt)].filter(Boolean).join(' · ')}
       </p>
@@ -66,14 +66,14 @@ export const FeaturedBook: React.FC<{
       <Cover title={book.title} author={book.authorLine} src={book.coverUrl} className="h-[14rem] md:h-[17rem]" />
     </Link>
     <div className="flex flex-col justify-center px-5 py-7 md:px-10">
-      {eyebrow ? <p className="eyebrow !text-green">{eyebrow}</p> : null}
+      {eyebrow ? <p className="eyebrow !text-accent">{eyebrow}</p> : null}
       <h3 className="display mt-2 text-[1.875rem] md:text-[2.375rem]">
         <Link href={`/book/${book.slug}`}>{book.title}</Link>
       </h3>
-      {book.authorLine ? <p className="mt-1 font-serif text-[1.125rem] italic text-ink-soft">{book.authorLine}</p> : null}
+      {book.authorLine ? <p className="mt-1 font-display text-[1.125rem] text-ink-soft">{book.authorLine}</p> : null}
       {note ? (
-        <figure className="mt-5 border-l border-brass pl-5">
-          <blockquote className="font-serif text-[1.0625rem] leading-relaxed">{note.body}</blockquote>
+        <figure className="mt-5 border-l border-accent pl-5">
+          <blockquote className="font-display text-[1.0625rem] leading-relaxed">{note.body}</blockquote>
           <figcaption className="eyebrow mt-3">The Afterword · {note.signedBy}</figcaption>
         </figure>
       ) : null}

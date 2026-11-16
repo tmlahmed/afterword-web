@@ -54,8 +54,8 @@ export const SearchBox: React.FC<{ variant?: 'line' | 'box'; autoFocus?: boolean
         <label
           className={
             variant === 'line'
-              ? 'flex h-11 items-center gap-2 border-b border-ink/70 px-1 focus-within:border-green'
-              : 'flex h-12 items-center gap-2 border border-ink/70 bg-card px-3 focus-within:border-green'
+              ? 'flex h-11 items-center gap-2 border-b border-ink/70 px-1 focus-within:border-primary'
+              : 'flex h-12 items-center gap-2 border border-ink/70 bg-card px-3 focus-within:border-primary'
           }
         >
           <SearchIcon className="shrink-0 text-ink-soft" />
@@ -90,11 +90,11 @@ export const SearchBox: React.FC<{ variant?: 'line' | 'box'; autoFocus?: boolean
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={h.coverUrl} alt="" className="max-h-14 max-w-10 rounded-[1px] shadow-book" />
                       ) : (
-                        <span className="h-14 w-9 bg-green" />
+                        <span className="h-14 w-9 bg-primary" />
                       )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-serif text-[1rem] leading-snug">{h.title}</span>
+                      <span className="block truncate font-display text-[1rem] leading-snug">{h.title}</span>
                       <span className="block truncate text-[0.8125rem] text-ink-soft">{h.authorLine}</span>
                     </span>
                     <span className="shrink-0 text-right text-[0.8125rem]">

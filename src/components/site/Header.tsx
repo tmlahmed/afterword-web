@@ -155,7 +155,7 @@ export const Header: React.FC = async () => {
                 <li key={item.href} className="group/item">
                   <Link
                     href={item.href}
-                    className="block border-b-2 border-transparent py-3 text-[0.875rem] font-medium tracking-wide group-focus-within/item:border-green group-hover/item:border-green"
+                    className="block border-b-2 border-transparent py-3 text-[0.875rem] font-medium tracking-wide group-focus-within/item:border-primary group-hover/item:border-primary"
                   >
                     {item.label}
                   </Link>
@@ -167,7 +167,7 @@ export const Header: React.FC = async () => {
                           <ul className="mt-3 grid grid-cols-2 gap-x-8">
                             {item.children.map((c) => (
                               <li key={c.href}>
-                                <Link href={c.href} className="block py-1.5 font-serif text-[1.125rem] hover:underline hover:decoration-brass hover:underline-offset-4">
+                                <Link href={c.href} className="block py-1.5 font-display text-[1.125rem] hover:underline hover:decoration-accent hover:underline-offset-4">
                                   {c.label}
                                 </Link>
                               </li>
@@ -198,7 +198,7 @@ export const Header: React.FC = async () => {
                             <Cover title={item.featured.title} src={item.featured.coverUrl} sizes="5rem" className="h-[7.5rem] shrink-0" />
                             <span>
                               <span className="eyebrow block">We recommend</span>
-                              <span className="mt-1 block font-serif text-[1.0625rem] leading-snug">{item.featured.title}</span>
+                              <span className="mt-1 block font-display text-[1.0625rem] leading-snug">{item.featured.title}</span>
                               <span className="block text-[0.8125rem] text-ink-soft">{item.featured.authorLine}</span>
                             </span>
                           </Link>

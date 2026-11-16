@@ -58,7 +58,7 @@ export default async function AuthorPage({ params }: Props) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={portrait.url} alt={portrait.alt ?? author.name} className="h-28 w-28 shrink-0 object-cover grayscale" />
             ) : null}
-            {author.bio ? <p className="font-serif text-[1.125rem] leading-relaxed text-ink-soft">{author.bio}</p> : null}
+            {author.bio ? <p className="font-display text-[1.125rem] leading-relaxed text-ink-soft">{author.bio}</p> : null}
           </div>
         ) : null}
       </PageHeading>

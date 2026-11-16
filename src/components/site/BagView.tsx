@@ -112,7 +112,7 @@ export const BagView: React.FC<{
             aria-valuemax={freeAbove}
             aria-valuenow={Math.min(freeAbove, towardsFree)}
           >
-            <div className="h-full rounded-full bg-green transition-[width] duration-500" style={{ width: `${Math.min(100, (towardsFree / freeAbove) * 100)}%` }} />
+            <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.min(100, (towardsFree / freeAbove) * 100)}%` }} />
           </div>
           <span className="text-[0.875rem] font-semibold tabular-nums">{formatTaka(freeAbove)}</span>
         </div>
@@ -123,7 +123,7 @@ export const BagView: React.FC<{
             </>
           ) : (
             <>
-              <strong className="text-green">Your delivery is free.</strong> Anywhere in Bangladesh.
+              <strong className="text-primary">Your delivery is free.</strong> Anywhere in Bangladesh.
             </>
           )}
         </p>
@@ -133,7 +133,7 @@ export const BagView: React.FC<{
   const undoNote = removed ? (
     <p role="status" className="mt-6 flex flex-wrap items-center justify-between gap-3 border-l-2 border-ink bg-card px-4 py-3 text-[0.9375rem]">
       <span>
-        Removed <em className="font-serif">{removed.title}</em>.
+        Removed <em className="font-display">{removed.title}</em>.
       </span>
       <button type="button" onClick={undo} className="link font-semibold">
         Undo
@@ -147,9 +147,9 @@ export const BagView: React.FC<{
       {promotion ? (
         <div>
           <p className="text-[0.8125rem] font-semibold">Promotion code</p>
-          <div className="mt-2 flex items-center justify-between gap-3 border border-green bg-card px-3 py-2.5">
+          <div className="mt-2 flex items-center justify-between gap-3 border border-primary bg-card px-3 py-2.5">
             <span className="text-[0.9375rem]">
-              <span className="mr-1.5 text-green" aria-hidden>
+              <span className="mr-1.5 text-primary" aria-hidden>
                 ✓
               </span>
               <strong className="tracking-wide">{promotion.code}</strong>
@@ -186,7 +186,7 @@ export const BagView: React.FC<{
               placeholder="Enter code"
               aria-invalid={Boolean(promoState.message)}
               aria-describedby={promoState.message ? 'promo-error' : undefined}
-              className={`h-11 min-w-0 flex-1 border bg-card px-3 uppercase placeholder:normal-case placeholder:text-ink-faint focus:border-green focus:outline-none ${promoState.message ? 'border-[#9b2c1f]' : 'border-ink/60'}`}
+              className={`h-11 min-w-0 flex-1 border bg-card px-3 uppercase placeholder:normal-case placeholder:text-ink-faint focus:border-primary focus:outline-none ${promoState.message ? 'border-[#9b2c1f]' : 'border-ink/60'}`}
             />
             <button type="submit" disabled={promoPending} className="btn btn-quiet !min-h-11 shrink-0 px-5">
               {promoPending ? 'Checking…' : 'Apply'}
@@ -212,7 +212,7 @@ export const BagView: React.FC<{
             setWrap(e.target.checked)
             saveGift(e.target.checked, note)
           }}
-          className="mt-1 h-4 w-4 accent-[var(--color-green)]"
+          className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
         />
         <span>
           <span className="font-semibold">This is a gift</span> <span className="text-ink-soft">(+{formatTaka(rules.giftWrapFee)})</span>
@@ -257,7 +257,7 @@ export const BagView: React.FC<{
 
           {lines.length === 0 ? (
             <div className="mt-10 border-t border-ink pt-8">
-              <p className="font-serif text-[1.375rem]">Your bag is empty.</p>
+              <p className="font-display text-[1.375rem]">Your bag is empty.</p>
               <Link href="/collections" className="btn btn-primary mt-5">
                 Find something to read <ArrowIcon />
               </Link>
@@ -279,11 +279,11 @@ export const BagView: React.FC<{
                         {l.coverUrl ? (
                           <Image src={l.coverUrl} alt="" width={72} height={108} sizes="72px" className="h-[6rem] w-auto max-w-full rounded-[2px] object-contain shadow-book sm:h-[6.5rem]" />
                         ) : (
-                          <span className="block h-[6rem] w-16 rounded-[2px] bg-green" />
+                          <span className="block h-[6rem] w-16 rounded-[2px] bg-primary" />
                         )}
                       </Link>
                       <div className="min-w-0">
-                        <Link href={`/book/${l.slug}`} className="font-serif text-[1.125rem] leading-snug hover:underline">
+                        <Link href={`/book/${l.slug}`} className="font-display text-[1.125rem] leading-snug hover:underline">
                           {l.title}
                         </Link>
                         {l.authorLine ? <p className="text-[0.875rem] text-ink-soft">{l.authorLine}</p> : null}
@@ -343,7 +343,7 @@ export const BagView: React.FC<{
                   <dd className="tabular-nums">{formatTaka(t.subtotal)}</dd>
                 </div>
                 {t.discount ? (
-                  <div className="flex justify-between text-green">
+                  <div className="flex justify-between text-primary">
                     <dt>Discount ({promotion?.code})</dt>
                     <dd className="tabular-nums">−{formatTaka(t.discount)}</dd>
                   </div>
@@ -358,7 +358,7 @@ export const BagView: React.FC<{
                   <dt>Delivery</dt>
                   <dd className="text-right tabular-nums">
                     {deliveryFree ? (
-                      <span className="font-semibold text-green">Free</span>
+                      <span className="font-semibold text-primary">Free</span>
                     ) : (
                       <>
                         {formatTaka(rules.insideDhakaFee)} Dhaka
@@ -369,7 +369,7 @@ export const BagView: React.FC<{
                 </div>
                 <div className="flex items-baseline justify-between border-t border-ink pt-3">
                   <dt className="font-semibold">{deliveryFree ? 'Total' : 'Total before delivery'}</dt>
-                  <dd className="font-serif text-[1.5rem] tabular-nums">{formatTaka(total)}</dd>
+                  <dd className="font-display text-[1.5rem] tabular-nums">{formatTaka(total)}</dd>
                 </div>
               </dl>
               {t.advanceDue > 0 ? (
@@ -407,7 +407,7 @@ export const BagView: React.FC<{
               <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-ink bg-paper px-4 py-3 shadow-[0_-12px_24px_-16px_rgb(26_29_27/0.35)] md:hidden">
                 <span>
                   <span className="block text-[0.75rem] text-ink-soft">{deliveryFree ? 'Total' : 'Before delivery'}</span>
-                  <span className="font-serif text-[1.375rem] leading-none tabular-nums">{formatTaka(total)}</span>
+                  <span className="font-display text-[1.375rem] leading-none tabular-nums">{formatTaka(total)}</span>
                 </span>
                 <Link href="/checkout" className="btn btn-primary">
                   Checkout <ArrowIcon />

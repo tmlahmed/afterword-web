@@ -6,7 +6,7 @@ import { ReviewForm } from './Forms'
 
 /** Five small stars, filled to the rating. Read out as "Rated 4 out of 5". */
 export const Stars: React.FC<{ rating: number; className?: string }> = ({ rating, className = '' }) => (
-  <span className={`inline-flex gap-0.5 text-brass ${className}`} role="img" aria-label={`Rated ${rating} out of 5`}>
+  <span className={`inline-flex gap-0.5 text-ink ${className}`} role="img" aria-label={`Rated ${rating} out of 5`}>
     {[1, 2, 3, 4, 5].map((i) => (
       <svg key={i} width="14" height="14" viewBox="0 0 24 24" aria-hidden fill={i <= Math.round(rating) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6">
         <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" strokeLinejoin="round" />
@@ -46,13 +46,13 @@ export const ReaderReviews: React.FC<{
         {reviews.map((r) => (
           <li key={r.id} className="border-b border-rule py-5">
             <Stars rating={r.rating} />
-            <p className="mt-1.5 font-serif text-[1.1875rem]">{r.title}</p>
+            <p className="mt-1.5 font-display text-[1.1875rem]">{r.title}</p>
             <p className="mt-2 max-w-[38rem] whitespace-pre-line leading-relaxed">{r.body}</p>
             <p className="mt-2 text-[0.8125rem] text-ink-soft">
               {r.displayName} · bought from us · {day(r.createdAt)}
             </p>
             {r.reply ? (
-              <p className="mt-3 border-l-2 border-green pl-3 text-[0.9375rem]">
+              <p className="mt-3 border-l-2 border-primary pl-3 text-[0.9375rem]">
                 <span className="font-semibold">AFTERWORD replies:</span> {r.reply}
               </p>
             ) : null}

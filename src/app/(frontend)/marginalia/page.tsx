@@ -37,7 +37,7 @@ export default async function MarginaliaPage({ searchParams }: Props) {
             <Pager page={current} totalPages={articles.totalPages} hrefFor={(p) => `/marginalia?page=${p}`} />
           </>
         ) : (
-          <p className="border-t border-ink py-16 text-center font-serif text-[1.125rem] text-ink-soft">The first pieces are being written.</p>
+          <p className="border-t border-ink py-16 text-center font-display text-[1.125rem] text-ink-soft">The first pieces are being written.</p>
         )}
       </div>
     </>

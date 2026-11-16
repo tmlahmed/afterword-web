@@ -46,7 +46,7 @@ const Group: React.FC<{
               >
                 <span
                   aria-hidden
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? 'border-green bg-green text-paper' : 'border-ink-faint'}`}
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? 'border-primary bg-primary text-paper' : 'border-ink-faint'}`}
                 >
                   {on ? (
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -165,7 +165,7 @@ export const Browse: React.FC<{
             <BookGrid books={result.books as unknown as BookCardData[]} />
           </div>
         ) : (
-          <p className="py-16 text-center font-serif text-[1.125rem] text-ink-soft">
+          <p className="py-16 text-center font-display text-[1.125rem] text-ink-soft">
             {emptyMessage ?? 'No books match those filters.'}{' '}
             {active ? (
               <Link href={clear} className="link">

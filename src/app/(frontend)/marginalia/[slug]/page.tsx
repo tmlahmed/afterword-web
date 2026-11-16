@@ -49,10 +49,10 @@ export default async function ArticlePage({ params }: Props) {
             <Link href="/marginalia" className="hover:text-ink">
               Marginalia
             </Link>{' '}
-            · <span className="text-green">{kindLabel(article.kind)}</span>
+            · <span className="text-accent">{kindLabel(article.kind)}</span>
           </p>
           <h1 className="display mt-3 text-[2.5rem] md:text-[3.75rem]">{article.title}</h1>
-          <p className="mt-4 font-serif text-[1.3125rem] leading-snug text-ink-soft">{article.standfirst}</p>
+          <p className="mt-4 font-display text-[1.3125rem] leading-snug text-ink-soft">{article.standfirst}</p>
           <p className="mt-5 border-t border-rule pt-3 text-[0.8125rem] text-ink-faint">
             {[article.byline, formatDay(article.publishedAt)].filter(Boolean).join(' · ')}
           </p>

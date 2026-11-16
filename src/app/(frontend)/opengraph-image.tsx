@@ -19,16 +19,16 @@ export default async function OpenGraphImage() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          background: '#f6f1e7',
-          color: '#1a1d1b',
+          background: '#ffffff',
+          color: '#111111',
           padding: '72px 80px',
-          borderBottom: '18px solid #1f4a3a',
+          borderBottom: '18px solid #d22b2f',
         }}
       >
         <img src={logo} alt="AFTERWORD" width={346} height={40} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: 76, lineHeight: 1.08, maxWidth: 900 }}>Original books, chosen by people who read.</div>
-          <div style={{ fontSize: 30, marginTop: 28, color: '#4a4f4b' }}>Genuine publishers’ editions · Delivered across Bangladesh</div>
+          <div style={{ fontSize: 30, marginTop: 28, color: '#4a4a4a' }}>Genuine publishers’ editions · Delivered across Bangladesh</div>
         </div>
       </div>
     ),

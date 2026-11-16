@@ -58,17 +58,17 @@ export default async function HomePage() {
               />
             </Link>
             <div className="flex flex-col justify-center px-4 py-9 md:px-14 md:py-16">
-              <p className="eyebrow !text-green">{home.eyebrow || 'Book of the Month'}</p>
+              <p className="eyebrow !text-accent">{home.eyebrow || 'Book of the Month'}</p>
               <h1 className="display mt-3 text-[2.375rem] md:text-[3.5rem]">
                 <Link href={`/book/${feature.slug}`}>{feature.title}</Link>
               </h1>
               {feature.authorLine ? (
-                <p className="mt-2 font-serif text-[1.25rem] italic text-ink-soft">{feature.authorLine}</p>
+                <p className="mt-2 font-display text-[1.25rem] text-ink-soft">{feature.authorLine}</p>
               ) : null}
 
               {featureNote ? (
-                <figure className="mt-7 border-l border-brass pl-5">
-                  <blockquote className="font-serif text-[1.125rem] leading-relaxed md:text-[1.1875rem]">
+                <figure className="mt-7 border-l border-accent pl-5">
+                  <blockquote className="font-display text-[1.125rem] leading-relaxed md:text-[1.1875rem]">
                     {featureNote.body}
                   </blockquote>
                   <figcaption className="eyebrow mt-3">The Afterword · {featureNote.signedBy}</figcaption>
@@ -93,7 +93,7 @@ export default async function HomePage() {
         <ul className="mx-auto grid max-w-6xl divide-y divide-rule px-4 md:grid-cols-3 md:divide-x md:divide-y-0 md:px-0">
           {PROMISES.map((p) => (
             <li key={p.title} className="py-4 md:px-8 md:py-6">
-              <p className="font-serif text-[1.0625rem]">{p.title}</p>
+              <p className="font-display text-[1.0625rem]">{p.title}</p>
               <p className="text-[0.875rem] text-ink-soft">{p.body}</p>
             </li>
           ))}
@@ -118,7 +118,7 @@ export default async function HomePage() {
                     />
                   </Link>
                   <figure>
-                    <p className="eyebrow !text-brass">The Afterword</p>
+                    <p className="eyebrow !text-accent">The Afterword</p>
                     <blockquote className="display mt-4 text-[1.625rem] leading-[1.25] md:text-[2.25rem]">
                       “{quote.note.body}”
                     </blockquote>
