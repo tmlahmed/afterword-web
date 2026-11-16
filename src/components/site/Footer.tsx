@@ -13,7 +13,7 @@ export const Footer: React.FC = async () => {
       <div className="mx-auto max-w-6xl px-4 py-14">
         <div className="grid gap-12 md:grid-cols-[1.3fr_2fr]">
           <div>
-            <Wordmark as="text" className="text-[1.25rem]" />
+            <Wordmark as="text" className="h-[20px]" />
             <p className="mt-5 max-w-sm font-serif text-[1.0625rem] leading-relaxed text-ink-soft">
               An independent bookshop for readers in Bangladesh. Every book we sell is a genuine publisher’s edition,
               chosen by people who read.

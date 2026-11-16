@@ -48,6 +48,7 @@ export default buildConfig({
     components: {
       beforeDashboard: ['/components/admin/Desk#Desk'],
       afterNavLinks: ['/components/admin/Reports#ReportsNavLink'],
+      graphics: { Logo: '/components/admin/Logo#AdminLogo' },
       views: {
         reports: { Component: '/components/admin/Reports#Reports', path: '/reports', meta: { title: 'Reports' } },
       },

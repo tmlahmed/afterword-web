@@ -1,15 +1,17 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 
-/**
- * The AFTERWORD wordmark: spaced serif capitals closed by a brass full stop —
- * the last mark on the page, after the word.
- */
-export const Wordmark: React.FC<{ className?: string; as?: 'link' | 'text' }> = ({ className = '', as = 'link' }) => {
+/** The AFTERWORD logo, from public/brand. Its proportions are kept; set the height with className. */
+export const LOGO = { src: '/brand/afterword-logo.png', width: 1013, height: 117 } as const
+
+export const Wordmark: React.FC<{ className?: string; as?: 'link' | 'text'; priority?: boolean }> = ({
+  className = 'h-[18px]',
+  as = 'link',
+  priority = false,
+}) => {
   const mark = (
-    <span className={`font-serif font-medium uppercase tracking-[0.22em] text-ink ${className}`}>
-      Afterword<span className="text-brass">.</span>
-    </span>
+    <Image src={LOGO.src} alt="AFTERWORD" width={LOGO.width} height={LOGO.height} priority={priority} className={`block w-auto ${className}`} />
   )
   if (as === 'text') return mark
   return (

@@ -51,6 +51,10 @@ const nextConfig: NextConfig = {
       {
         pathname: '/api/media/file/**',
       },
+      // The logo and other brand images in public/brand.
+      {
+        pathname: '/brand/**',
+      },
     ],
   },
   webpack: (webpackConfig) => {

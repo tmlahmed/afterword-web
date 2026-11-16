@@ -113,11 +113,11 @@ export const Header: React.FC = async () => {
           </div>
 
           <div className="hidden md:block">
-            <Wordmark className="text-[1.375rem]" />
+            <Wordmark priority className="h-[19px]" />
           </div>
 
           <div className="md:hidden">
-            <Wordmark className="text-[1.0625rem]" />
+            <Wordmark priority className="h-[14px]" />
           </div>
           <div className="hidden w-[26rem] md:block">
             <SearchBox />
