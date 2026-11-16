@@ -1,16 +1,22 @@
+import path from 'path'
 import type { CollectionConfig } from 'payload'
+
+import { allow, anyone } from '../access/roles'
 
 export const Media: CollectionConfig = {
   slug: 'media',
+  admin: { group: 'Content' },
   access: {
-    read: () => true,
+    read: anyone,
+    create: allow('manager', 'catalogue', 'writer'),
+    update: allow('manager', 'catalogue', 'writer'),
+    delete: allow('manager'),
   },
-  fields: [
-    {
-      name: 'alt',
-      type: 'text',
-      required: true,
-    },
-  ],
-  upload: true,
+  fields: [{ name: 'alt', type: 'text', required: true }],
+  upload: {
+    // Where uploaded images are kept on disk. Set MEDIA_DIR on the server; backups read the same folder.
+    staticDir: process.env.MEDIA_DIR || path.resolve(process.cwd(), 'media'),
+    mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
+    formatOptions: { format: 'webp', options: { quality: 82 } },
+  },
 }

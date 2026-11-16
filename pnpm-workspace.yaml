@@ -1,0 +1,10 @@
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+overrides:
+  # One copy of the image library (two copies crash on macOS).
+  sharp: 0.35.5
+  # Security fixes not yet picked up by Payload's own dependencies (pnpm audit, 2026-11-16).
+  dompurify: ^3.4.18
+  happy-dom: ^21.0.4

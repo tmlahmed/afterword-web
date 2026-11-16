@@ -1,67 +1,74 @@
-# Payload Blank Template
+# AFTERWORD
 
-This template comes configured with the bare minimum to get started on anything you need.
+Online bookshop: storefront, admin and commerce rules in one application.
+Next.js + Payload CMS + PostgreSQL. The full plan is in the project proposal.
 
-## Quick start
+## Run it on this machine
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+Needs Node 24.22 or newer (`nvm use` picks the right version), pnpm 11 and a local PostgreSQL.
 
-## Quick Start - local setup
+```bash
+createdb afterword        # once
+cp .env.example .env      # once, then fill in the two values
+pnpm install
+pnpm seed                 # loads about 200 real books as sample data (takes about five minutes)
+pnpm search               # starts the search engine (leave it running in its own terminal)
+pnpm seed:content         # sample menu, journal articles, About and Help pages; also builds the search index
+pnpm dev
+```
 
-To spin up this template locally, follow these steps:
+Search needs Meilisearch (`brew install meilisearch`). If it is not running the shop still works:
+grids and search fall back to the database, without filters or typo tolerance.
 
-### Clone
+- Shop: http://localhost:3000
+- Admin: http://localhost:3000/admin — the first account you create becomes the Owner.
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+Other commands: `pnpm test` (unit tests), `pnpm typecheck`, `pnpm generate:types` (after changing the data model), `pnpm search:reindex` (rebuild the search index from the database), `pnpm check:orders` (end-to-end test of the order and report rules on your local database; cleans up after itself), `pnpm import:catalogue books.csv` (load books from a spreadsheet), `pnpm covers:copy` (copy covers into the shop's own image store), `sh scripts/backup.sh` / `sh scripts/restore.sh` (backups), `node scripts/check-access.mjs URL` (checks nothing private is readable without signing in).
 
-### Development
+## Guides
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+- [docs/production.md](docs/production.md): going live on a Hostinger KVM 2 server, step by step, and every account the shop needs
+- [docs/runbook.md](docs/runbook.md): routine jobs, what to do when something breaks, launch checklist, soft launch
+- [docs/staff-handbook.md](docs/staff-handbook.md): day-to-day work in the admin, by role
+- [docs/growth.md](docs/growth.md): reviews, reward points, shopping feeds, direct bKash and the newsletter: how each works and how to switch it on
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+## What is where
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+| Path | What it holds |
+| --- | --- |
+| `src/collections`, `src/globals` | The data model: books, authors, subjects, collections, notes, stock ledger, staff, settings |
+| `src/access/roles.ts` | Staff roles and who may do what |
+| `src/lib/pricing.ts` | List price to taka price |
+| `src/lib/availability.ts` | In stock / Pre-order / On Request, worked out from stock |
+| `src/lib/isbn` | ISBN checks, book-data sources and the "add a book by ISBN" importer |
+| `src/lib/orders` | Order arithmetic, stock reservation, and the actions that move an order along |
+| `src/lib/bag.ts`, `src/lib/session.ts`, `src/lib/otp.ts` | The bag, customer sessions and one-time sign-in codes |
+| `src/lib/notify.ts`, `src/lib/payments` | Text messages and the SSLCommerz adapter (both waiting for provider accounts) |
+| `src/lib/catalogue.ts` | Every database query the storefront makes |
+| `src/lib/search`, `src/lib/browse.ts` | The search index, filters and sorting, and the database fallback |
+| `src/app/(frontend)` | The shop's pages. Design tokens are at the top of `globals.css` |
+| `src/app/(payload)` | The admin (provided by Payload) |
+| `src/components/site` | Header, footer, covers, book cards, shelves |
+| `src/seed` | Sample catalogue for the preview site |
 
-#### Docker (Optional)
+## Sample data — replace before launch
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+The seed loads real titles, covers and descriptions from Open Library and Google Books.
+These values are placeholders, not AFTERWORD's real ones:
 
-To do so, follow these steps:
+- list prices and the exchange rates in **Settings → Pricing rules**
+- stock levels (the "Sample opening stock" movements)
+- the bookseller notes signed "Sample note"
+- the Marginalia articles (byline "Sample article"), author notes, subject introductions, and the About and Help pages
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+## Connecting outside services
 
-## How it works
+Set these in `.env` when the accounts exist. Until then the shop runs without them.
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
-
-### Collections
-
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
-
-- #### Users (Authentication)
-
-  Users are auth-enabled collections that have access to the admin panel.
-
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+| Service | Settings | Without it |
+| --- | --- | --- |
+| bKash (direct) | `BKASH_APP_KEY`, `BKASH_APP_SECRET`, `BKASH_USERNAME`, `BKASH_PASSWORD`, `BKASH_LIVE=true` for real payments | See SSLCommerz |
+| SSLCommerz | `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWORD`, `SSLCZ_LIVE=true` for real payments | With neither connected, advances are sent by bKash Send Money to the number in Shop settings and checked by staff |
+| Email (Lark Mail) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | Staff password resets and newsletter welcome emails are written to the server log |
+| SMS | Implement a provider in `src/lib/notify.ts` | Messages are logged under Orders → Messages sent; sign-in codes are shown on screen on a development machine only |
+| Site address | `NEXT_PUBLIC_SITE_URL` | Links in messages point to localhost |

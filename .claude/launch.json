@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "afterword",
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v24.22.3/bin:$PATH\" && pnpm dev"],
+      "port": 3000
+    }
+  ]
+}

@@ -67,28 +67,102 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    users: User;
+    editions: Edition;
+    works: Work;
+    contributors: Contributor;
+    publishers: Publisher;
+    series: Series;
+    subjects: Subject;
+    'catalogue-imports': CatalogueImport;
+    'search-misses': SearchMiss;
+    lists: List;
+    notes: Note;
+    articles: Article;
+    pages: Page;
+    reviews: Review;
+    subscribers: Subscriber;
     media: Media;
+    orders: Order;
+    requests: Request;
+    customers: Customer;
+    promotions: Promotion;
+    'reward-entries': RewardEntry;
+    messages: Message;
+    'stock-movements': StockMovement;
+    'purchase-orders': PurchaseOrder;
+    suppliers: Supplier;
+    carts: Cart;
+    'otp-codes': OtpCode;
+    users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    editions: {
+      notes: 'notes';
+      stockMovements: 'stock-movements';
+    };
+    works: {
+      editions: 'editions';
+    };
+    contributors: {
+      books: 'editions';
+    };
+    customers: {
+      orders: 'orders';
+    };
+  };
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>;
+    editions: EditionsSelect<false> | EditionsSelect<true>;
+    works: WorksSelect<false> | WorksSelect<true>;
+    contributors: ContributorsSelect<false> | ContributorsSelect<true>;
+    publishers: PublishersSelect<false> | PublishersSelect<true>;
+    series: SeriesSelect<false> | SeriesSelect<true>;
+    subjects: SubjectsSelect<false> | SubjectsSelect<true>;
+    'catalogue-imports': CatalogueImportsSelect<false> | CatalogueImportsSelect<true>;
+    'search-misses': SearchMissesSelect<false> | SearchMissesSelect<true>;
+    lists: ListsSelect<false> | ListsSelect<true>;
+    notes: NotesSelect<false> | NotesSelect<true>;
+    articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
+    reviews: ReviewsSelect<false> | ReviewsSelect<true>;
+    subscribers: SubscribersSelect<false> | SubscribersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
+    requests: RequestsSelect<false> | RequestsSelect<true>;
+    customers: CustomersSelect<false> | CustomersSelect<true>;
+    promotions: PromotionsSelect<false> | PromotionsSelect<true>;
+    'reward-entries': RewardEntriesSelect<false> | RewardEntriesSelect<true>;
+    messages: MessagesSelect<false> | MessagesSelect<true>;
+    'stock-movements': StockMovementsSelect<false> | StockMovementsSelect<true>;
+    'purchase-orders': PurchaseOrdersSelect<false> | PurchaseOrdersSelect<true>;
+    suppliers: SuppliersSelect<false> | SuppliersSelect<true>;
+    carts: CartsSelect<false> | CartsSelect<true>;
+    'otp-codes': OtpCodesSelect<false> | OtpCodesSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: string;
+    defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    home: Home;
+    navigation: Navigation;
+    'site-settings': SiteSetting;
+    pricing: Pricing;
+  };
+  globalsSelect: {
+    home: HomeSelect<false> | HomeSelect<true>;
+    navigation: NavigationSelect<false> | NavigationSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    pricing: PricingSelect<false> | PricingSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -118,11 +192,343 @@ export interface UserAuthOperations {
   };
 }
 /**
+ * Each book is one edition, identified by its ISBN.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "editions".
+ */
+export interface Edition {
+  id: number;
+  title: string;
+  subtitle?: string | null;
+  /**
+   * Authors first, then translators, illustrators and editors.
+   */
+  contributors?:
+    | {
+        contributor: number | Contributor;
+        role: 'author' | 'translator' | 'illustrator' | 'editor' | 'introduction';
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * The publisher’s description. Plain paragraphs.
+   */
+  synopsis?: string | null;
+  /**
+   * Upload a cover to replace the imported one.
+   */
+  cover?: (number | null) | Media;
+  /**
+   * The cover the shop shows. Set from the uploaded cover; until one is copied in, the imported one.
+   */
+  coverUrl?: string | null;
+  /**
+   * Where the imported cover came from.
+   */
+  coverSource?: string | null;
+  subjects?: (number | Subject)[] | null;
+  work?: (number | null) | Work;
+  series?: (number | null) | Series;
+  seriesNumber?: number | null;
+  format: 'paperback' | 'hardback' | 'special' | 'boxset' | 'board';
+  publisher?: (number | null) | Publisher;
+  publicationDate?: string | null;
+  language?: string | null;
+  pages?: number | null;
+  heightMm?: number | null;
+  widthMm?: number | null;
+  spineMm?: number | null;
+  weightG?: number | null;
+  /**
+   * The publisher’s printed price.
+   */
+  listPrice?: number | null;
+  listCurrency?: ('GBP' | 'USD' | 'INR' | 'EUR' | 'BDT') | null;
+  /**
+   * Calculated from the list price and your pricing rules.
+   */
+  price?: number | null;
+  /**
+   * Optional. If set, this is the price charged.
+   */
+  priceOverride?: number | null;
+  /**
+   * Optional. Shown struck through beside the price.
+   */
+  compareAtPrice?: number | null;
+  sourcing: 'standard' | 'pre_order' | 'out_of_print';
+  expectedDate?: string | null;
+  /**
+   * Leave empty to use the shop default.
+   */
+  leadTimeWeeks?: number | null;
+  supplier?: (number | null) | Supplier;
+  isbn13: string;
+  status: 'draft' | 'published' | 'archived';
+  /**
+   * Copies in Dhaka. Changes only through stock movements.
+   */
+  stockOnHand?: number | null;
+  ratingAverage?: number | null;
+  ratingCount?: number | null;
+  authorLine?: string | null;
+  slug: string;
+  /**
+   * Where the book data came from.
+   */
+  importSource?: string | null;
+  notes?: {
+    docs?: (number | Note)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  stockMovements?: {
+    docs?: (number | StockMovement)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contributors".
+ */
+export interface Contributor {
+  id: number;
+  name: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  /**
+   * Two or three sentences for the author page.
+   */
+  bio?: string | null;
+  portrait?: (number | null) | Media;
+  books?: {
+    docs?: (number | Edition)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * The shop categories. Two levels only: a main subject and the subjects inside it.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subjects".
+ */
+export interface Subject {
+  id: number;
+  name: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  /**
+   * Leave empty for a main subject (Fiction, Non-Fiction, Children’s & YA).
+   */
+  parent?: (number | null) | Subject;
+  /**
+   * Shown at the top of the subject page.
+   */
+  intro?: string | null;
+  /**
+   * Optional. Shown large on the subject page with its bookseller note.
+   */
+  feature?: (number | null) | Edition;
+  /**
+   * Hand-picked shelves for this subject, shown first. Automatic shelves (in stock, newest, each sub-subject) follow.
+   */
+  shelves?:
+    | {
+        title: string;
+        intro?: string | null;
+        list: number | List;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Book-trade subject codes (BISAC or Thema) that file a book here automatically on import.
+   */
+  tradeCodes?: string[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Hand-picked shelves. Drag the books into the order they should appear.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lists".
+ */
+export interface List {
+  id: number;
+  title: string;
+  slug: string;
+  kind?: ('theme' | 'monthly' | 'prize' | 'gift') | null;
+  /**
+   * One or two sentences shown above the books.
+   */
+  intro?: string | null;
+  books?: (number | Edition)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * A work is the book as written. Its editions (hardback, paperback, special) are what you sell.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "works".
+ */
+export interface Work {
+  id: number;
+  title: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  /**
+   * Year first published.
+   */
+  firstPublished?: number | null;
+  sourceKey?: string | null;
+  editions?: {
+    docs?: (number | Edition)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "series".
+ */
+export interface Series {
+  id: number;
+  name: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  about?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "publishers".
+ */
+export interface Publisher {
+  id: number;
+  name: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  /**
+   * For an imprint, the publishing house it belongs to.
+   */
+  parent?: (number | null) | Publisher;
+  about?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "suppliers".
+ */
+export interface Supplier {
+  id: number;
+  name: string;
+  country?: string | null;
+  /**
+   * The currency this supplier invoices in.
+   */
+  currency?: ('GBP' | 'USD' | 'INR' | 'EUR' | 'BDT') | null;
+  /**
+   * Typical weeks from order to arrival in Dhaka.
+   */
+  leadTimeWeeks?: number | null;
+  /**
+   * Optional. Overrides the default margin for books from this supplier.
+   */
+  margin?: number | null;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * The Afterword — two to four sentences on why this book, signed by a bookseller.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notes".
+ */
+export interface Note {
+  id: number;
+  edition: number | Edition;
+  body: string;
+  /**
+   * The bookseller’s name.
+   */
+  signedBy: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Every change to stock, with a reason. To fix a mistake, add another movement — entries cannot be edited.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stock-movements".
+ */
+export interface StockMovement {
+  id: number;
+  edition: number | Edition;
+  /**
+   * Copies added (positive) or removed (negative).
+   */
+  quantity: number;
+  reason: 'opening' | 'received' | 'sale' | 'released' | 'return' | 'damaged' | 'adjustment';
+  note?: string | null;
+  recordedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * People who can sign in to this admin. Customers are kept separately.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
-  id: string;
+  id: number;
+  name: string;
+  /**
+   * The first account created always becomes the Owner, whatever is chosen here.
+   */
+  roles: ('owner' | 'manager' | 'catalogue' | 'orders' | 'warehouse' | 'writer')[];
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -144,30 +550,648 @@ export interface User {
   collection: 'users';
 }
 /**
+ * Spreadsheet imports. Start one from Catalogue → Books.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
+ * via the `definition` "catalogue-imports".
  */
-export interface Media {
-  id: string;
-  alt: string;
+export interface CatalogueImport {
+  id: number;
+  name: string;
+  status: 'queued' | 'running' | 'done' | 'stopped' | 'failed';
+  total?: number | null;
+  processed?: number | null;
+  created?: number | null;
+  updated?: number | null;
+  notFound?: number | null;
+  failed?: number | null;
+  rows?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  log?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  startedBy?: (number | null) | User;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  heartbeatAt?: string | null;
   updatedAt: string;
   createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
+}
+/**
+ * What customers searched for and did not find. A guide to what to stock next.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "search-misses".
+ */
+export interface SearchMiss {
+  id: number;
+  query: string;
+  count?: number | null;
+  lastAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * The journal: essays, reading lists, interviews and extracts.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles".
+ */
+export interface Article {
+  id: number;
+  title: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  status: 'draft' | 'published';
+  kind: 'list' | 'essay' | 'interview' | 'extract' | 'news';
+  publishedAt: string;
+  /**
+   * Who wrote it.
+   */
+  byline?: string | null;
+  /**
+   * One or two sentences under the headline, also shown on cards.
+   */
+  standfirst: string;
+  /**
+   * Optional. Without one, the first book’s cover is used.
+   */
+  image?: (number | null) | Media;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Books mentioned in the piece. Shown as a shelf at the end, in this order.
+   */
+  books?: (number | Edition)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Pages assembled from blocks. The address is afterword…/your-slug.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  /**
+   * Used in the page address. Filled in automatically.
+   */
+  slug: string;
+  status: 'draft' | 'published';
+  /**
+   * Shown under the title.
+   */
+  intro?: string | null;
+  layout?:
+    | (
+        | {
+            heading?: string | null;
+            body: {
+              root: {
+                type: string;
+                children: {
+                  type: any;
+                  version: number;
+                  [k: string]: unknown;
+                }[];
+                direction: ('ltr' | 'rtl') | null;
+                format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                indent: number;
+                version: number;
+              };
+              [k: string]: unknown;
+            };
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'text';
+          }
+        | {
+            title: string;
+            intro?: string | null;
+            list: number | List;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'shelf';
+          }
+        | {
+            note: number | Note;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'note';
+          }
+        | {
+            heading?: string | null;
+            items: {
+              question: string;
+              answer: string;
+              id?: string | null;
+            }[];
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'questions';
+          }
+      )[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Reviews from customers who bought the book. Nothing appears in the shop until it is published here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reviews".
+ */
+export interface Review {
+  id: number;
+  /**
+   * Publish reviews that are about the book. Disagreeing with us is fine; abuse, spoilers in the title and advertising are not.
+   */
+  status: 'pending' | 'published' | 'rejected';
+  edition: number | Edition;
+  rating: number;
+  title: string;
+  body: string;
+  /**
+   * First name and initial, as the customer chose.
+   */
+  displayName: string;
+  /**
+   * Optional. Shown under the review.
+   */
+  reply?: string | null;
+  customer: number | Customer;
+  /**
+   * The delivered order the book came in.
+   */
+  order?: (number | null) | Order;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customers".
+ */
+export interface Customer {
+  id: number;
+  /**
+   * In the form +8801XXXXXXXXX.
+   */
+  phone: string;
+  name?: string | null;
+  email?: string | null;
+  address?: {
+    district?:
+      | (
+          | 'Dhaka'
+          | 'Bagerhat'
+          | 'Bandarban'
+          | 'Barguna'
+          | 'Barishal'
+          | 'Bhola'
+          | 'Bogura'
+          | 'Brahmanbaria'
+          | 'Chandpur'
+          | 'Chapainawabganj'
+          | 'Chattogram'
+          | 'Chuadanga'
+          | "Cox's Bazar"
+          | 'Cumilla'
+          | 'Dinajpur'
+          | 'Faridpur'
+          | 'Feni'
+          | 'Gaibandha'
+          | 'Gazipur'
+          | 'Gopalganj'
+          | 'Habiganj'
+          | 'Jamalpur'
+          | 'Jashore'
+          | 'Jhalokathi'
+          | 'Jhenaidah'
+          | 'Joypurhat'
+          | 'Khagrachhari'
+          | 'Khulna'
+          | 'Kishoreganj'
+          | 'Kurigram'
+          | 'Kushtia'
+          | 'Lakshmipur'
+          | 'Lalmonirhat'
+          | 'Madaripur'
+          | 'Magura'
+          | 'Manikganj'
+          | 'Meherpur'
+          | 'Moulvibazar'
+          | 'Munshiganj'
+          | 'Mymensingh'
+          | 'Naogaon'
+          | 'Narail'
+          | 'Narayanganj'
+          | 'Narsingdi'
+          | 'Natore'
+          | 'Netrokona'
+          | 'Nilphamari'
+          | 'Noakhali'
+          | 'Pabna'
+          | 'Panchagarh'
+          | 'Patuakhali'
+          | 'Pirojpur'
+          | 'Rajbari'
+          | 'Rajshahi'
+          | 'Rangamati'
+          | 'Rangpur'
+          | 'Satkhira'
+          | 'Shariatpur'
+          | 'Sherpur'
+          | 'Sirajganj'
+          | 'Sunamganj'
+          | 'Sylhet'
+          | 'Tangail'
+          | 'Thakurgaon'
+        )
+      | null;
+    area?: string | null;
+    street?: string | null;
+  };
+  ordersCount?: number | null;
+  /**
+   * Parcels refused or returned undelivered.
+   */
+  refusedCount?: number | null;
+  /**
+   * The total of this customer’s reward entries. Change it by adding an entry under Orders → Reward points.
+   */
+  rewardPoints?: number | null;
+  /**
+   * A blocked number cannot place orders.
+   */
+  blocked?: boolean | null;
+  staffNotes?: string | null;
+  orders?: {
+    docs?: (number | Order)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * To take an order by phone or chat, press Create New, fill in the customer and the books, and save.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  /**
+   * Given when the order is saved.
+   */
+  number?: string | null;
+  status: 'placed' | 'awaiting_stock' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+  paymentStatus: 'unpaid' | 'to_verify' | 'advance_paid' | 'paid' | 'refunded';
+  contactName: string;
+  /**
+   * 01XXXXXXXXX
+   */
+  contactPhone: string;
+  contactEmail?: string | null;
+  district:
+    | 'Dhaka'
+    | 'Bagerhat'
+    | 'Bandarban'
+    | 'Barguna'
+    | 'Barishal'
+    | 'Bhola'
+    | 'Bogura'
+    | 'Brahmanbaria'
+    | 'Chandpur'
+    | 'Chapainawabganj'
+    | 'Chattogram'
+    | 'Chuadanga'
+    | "Cox's Bazar"
+    | 'Cumilla'
+    | 'Dinajpur'
+    | 'Faridpur'
+    | 'Feni'
+    | 'Gaibandha'
+    | 'Gazipur'
+    | 'Gopalganj'
+    | 'Habiganj'
+    | 'Jamalpur'
+    | 'Jashore'
+    | 'Jhalokathi'
+    | 'Jhenaidah'
+    | 'Joypurhat'
+    | 'Khagrachhari'
+    | 'Khulna'
+    | 'Kishoreganj'
+    | 'Kurigram'
+    | 'Kushtia'
+    | 'Lakshmipur'
+    | 'Lalmonirhat'
+    | 'Madaripur'
+    | 'Magura'
+    | 'Manikganj'
+    | 'Meherpur'
+    | 'Moulvibazar'
+    | 'Munshiganj'
+    | 'Mymensingh'
+    | 'Naogaon'
+    | 'Narail'
+    | 'Narayanganj'
+    | 'Narsingdi'
+    | 'Natore'
+    | 'Netrokona'
+    | 'Nilphamari'
+    | 'Noakhali'
+    | 'Pabna'
+    | 'Panchagarh'
+    | 'Patuakhali'
+    | 'Pirojpur'
+    | 'Rajbari'
+    | 'Rajshahi'
+    | 'Rangamati'
+    | 'Rangpur'
+    | 'Satkhira'
+    | 'Shariatpur'
+    | 'Sherpur'
+    | 'Sirajganj'
+    | 'Sunamganj'
+    | 'Sylhet'
+    | 'Tangail'
+    | 'Thakurgaon';
+  area: string;
+  street: string;
+  deliveryNote?: string | null;
+  channel?: ('web' | 'phone' | 'facebook' | 'whatsapp' | 'instagram') | null;
+  /**
+   * Matched by phone number when saved.
+   */
+  customer?: (number | null) | Customer;
+  /**
+   * Choose the book and quantity. Prices and availability are filled in when you save.
+   */
+  lines: {
+    edition: number | Edition;
+    quantity: number;
+    title?: string | null;
+    unitPrice?: number | null;
+    kind?: ('in_stock' | 'pre_order' | 'on_request') | null;
+    allocated?: boolean | null;
+    authorLine?: string | null;
+    isbn13?: string | null;
+    id?: string | null;
+  }[];
+  giftWrap?: boolean | null;
+  promoCode?: string | null;
+  /**
+   * As many as the rules allow. Worked out when you save.
+   */
+  usePoints?: boolean | null;
+  pointsUsed?: number | null;
+  /**
+   * Given when the order is delivered.
+   */
+  pointsEarned?: number | null;
+  giftNote?: string | null;
+  paymentPlan: 'cod' | 'advance' | 'full';
+  payNowVia?: ('bkash_manual' | 'bkash' | 'sslcommerz') | null;
+  paymentReference?: string | null;
+  subtotal?: number | null;
+  discount?: number | null;
+  rewardDiscount?: number | null;
+  delivery?: number | null;
+  giftWrapFee?: number | null;
+  total?: number | null;
+  payNow?: number | null;
+  paid?: number | null;
+  payOnDelivery?: number | null;
+  /**
+   * Money received. Recorded by the order actions.
+   */
+  payments?:
+    | {
+        amount: number;
+        method: string;
+        reference?: string | null;
+        at: string;
+        id?: string | null;
+      }[]
+    | null;
+  courier?: string | null;
+  trackingId?: string | null;
+  zone?: ('inside_dhaka' | 'outside_dhaka') | null;
+  timeline?:
+    | {
+        at: string;
+        event: string;
+        by?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * For staff only. Never shown to the customer.
+   */
+  staffNotes?: string | null;
+  token?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * People who asked for the newsletter. Download the list (managers) at /api/subscribers/export.csv and import it into your email service.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscribers".
+ */
+export interface Subscriber {
+  id: number;
+  email: string;
+  name?: string | null;
+  status: 'subscribed' | 'unsubscribed';
+  source?: ('form' | 'checkout') | null;
+  consentAt?: string | null;
+  unsubscribedAt?: string | null;
+  token?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * To answer a request: add the book to the catalogue (by ISBN), set its price and lead time, link it below and set the status to Quoted. The customer then orders it like any other book, paying the advance.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "requests".
+ */
+export interface Request {
+  id: number;
+  /**
+   * Title and author, as the customer wrote it.
+   */
+  wanted: string;
+  isbn?: string | null;
+  note?: string | null;
+  contactName: string;
+  contactPhone: string;
+  customer?: (number | null) | Customer;
+  status: 'new' | 'quoted' | 'ordered' | 'declined' | 'closed';
+  edition?: (number | null) | Edition;
+  /**
+   * Shown on their account page.
+   */
+  reply?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Codes customers type into the bag.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promotions".
+ */
+export interface Promotion {
+  id: number;
+  code: string;
+  type: 'percent' | 'fixed' | 'free_delivery';
+  value?: number | null;
+  minSubtotal?: number | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  /**
+   * Leave empty for no limit.
+   */
+  usageLimit?: number | null;
+  active?: boolean | null;
+  used?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Every point earned or spent. To give or take points by hand, add an entry; entries cannot be edited.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reward-entries".
+ */
+export interface RewardEntry {
+  id: number;
+  customer: number | Customer;
+  /**
+   * Points added (positive) or taken away (negative).
+   */
+  points: number;
+  reason: 'earned' | 'spent' | 'refunded' | 'adjustment';
+  order?: (number | null) | Order;
+  note?: string | null;
+  recordedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "messages".
+ */
+export interface Message {
+  id: number;
+  to: string;
+  kind: string;
+  body: string;
+  status: 'sent' | 'logged' | 'failed';
+  order?: (number | null) | Order;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * What has been ordered from a supplier. Receiving it adds the stock and releases waiting customer orders.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "purchase-orders".
+ */
+export interface PurchaseOrder {
+  id: number;
+  /**
+   * Your own reference or the supplier’s invoice number.
+   */
+  reference: string;
+  supplier: number | Supplier;
+  status: 'draft' | 'ordered' | 'received';
+  expectedDate?: string | null;
+  lines: {
+    edition: number | Edition;
+    quantity: number;
+    unitCost?: number | null;
+    id?: string | null;
+  }[];
+  notes?: string | null;
+  receivedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "carts".
+ */
+export interface Cart {
+  id: number;
+  token: string;
+  items?:
+    | {
+        edition: number | Edition;
+        quantity: number;
+        id?: string | null;
+      }[]
+    | null;
+  giftWrap?: boolean | null;
+  giftNote?: string | null;
+  promoCode?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "otp-codes".
+ */
+export interface OtpCode {
+  id: number;
+  phone: string;
+  codeHash: string;
+  expiresAt: string;
+  attempts?: number | null;
+  used?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: string;
+  id: number;
   key: string;
   data:
     | {
@@ -184,20 +1208,120 @@ export interface PayloadKv {
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: string;
+  id: number;
   document?:
     | ({
-        relationTo: 'users';
-        value: string | User;
+        relationTo: 'editions';
+        value: number | Edition;
+      } | null)
+    | ({
+        relationTo: 'works';
+        value: number | Work;
+      } | null)
+    | ({
+        relationTo: 'contributors';
+        value: number | Contributor;
+      } | null)
+    | ({
+        relationTo: 'publishers';
+        value: number | Publisher;
+      } | null)
+    | ({
+        relationTo: 'series';
+        value: number | Series;
+      } | null)
+    | ({
+        relationTo: 'subjects';
+        value: number | Subject;
+      } | null)
+    | ({
+        relationTo: 'catalogue-imports';
+        value: number | CatalogueImport;
+      } | null)
+    | ({
+        relationTo: 'search-misses';
+        value: number | SearchMiss;
+      } | null)
+    | ({
+        relationTo: 'lists';
+        value: number | List;
+      } | null)
+    | ({
+        relationTo: 'notes';
+        value: number | Note;
+      } | null)
+    | ({
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'reviews';
+        value: number | Review;
+      } | null)
+    | ({
+        relationTo: 'subscribers';
+        value: number | Subscriber;
       } | null)
     | ({
         relationTo: 'media';
-        value: string | Media;
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'requests';
+        value: number | Request;
+      } | null)
+    | ({
+        relationTo: 'customers';
+        value: number | Customer;
+      } | null)
+    | ({
+        relationTo: 'promotions';
+        value: number | Promotion;
+      } | null)
+    | ({
+        relationTo: 'reward-entries';
+        value: number | RewardEntry;
+      } | null)
+    | ({
+        relationTo: 'messages';
+        value: number | Message;
+      } | null)
+    | ({
+        relationTo: 'stock-movements';
+        value: number | StockMovement;
+      } | null)
+    | ({
+        relationTo: 'purchase-orders';
+        value: number | PurchaseOrder;
+      } | null)
+    | ({
+        relationTo: 'suppliers';
+        value: number | Supplier;
+      } | null)
+    | ({
+        relationTo: 'carts';
+        value: number | Cart;
+      } | null)
+    | ({
+        relationTo: 'otp-codes';
+        value: number | OtpCode;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -207,10 +1331,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: string;
+  id: number;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   key?: string | null;
   value?:
@@ -230,7 +1354,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: string;
+  id: number;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -238,26 +1362,288 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users_select".
+ * via the `definition` "editions_select".
  */
-export interface UsersSelect<T extends boolean = true> {
-  updatedAt?: T;
-  createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  resetPasswordRequestedAt?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
+export interface EditionsSelect<T extends boolean = true> {
+  title?: T;
+  subtitle?: T;
+  contributors?:
     | T
     | {
+        contributor?: T;
+        role?: T;
         id?: T;
-        createdAt?: T;
-        expiresAt?: T;
       };
+  synopsis?: T;
+  cover?: T;
+  coverUrl?: T;
+  coverSource?: T;
+  subjects?: T;
+  work?: T;
+  series?: T;
+  seriesNumber?: T;
+  format?: T;
+  publisher?: T;
+  publicationDate?: T;
+  language?: T;
+  pages?: T;
+  heightMm?: T;
+  widthMm?: T;
+  spineMm?: T;
+  weightG?: T;
+  listPrice?: T;
+  listCurrency?: T;
+  price?: T;
+  priceOverride?: T;
+  compareAtPrice?: T;
+  sourcing?: T;
+  expectedDate?: T;
+  leadTimeWeeks?: T;
+  supplier?: T;
+  isbn13?: T;
+  status?: T;
+  stockOnHand?: T;
+  ratingAverage?: T;
+  ratingCount?: T;
+  authorLine?: T;
+  slug?: T;
+  importSource?: T;
+  notes?: T;
+  stockMovements?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "works_select".
+ */
+export interface WorksSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  firstPublished?: T;
+  sourceKey?: T;
+  editions?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contributors_select".
+ */
+export interface ContributorsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  bio?: T;
+  portrait?: T;
+  books?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "publishers_select".
+ */
+export interface PublishersSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  parent?: T;
+  about?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "series_select".
+ */
+export interface SeriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  about?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subjects_select".
+ */
+export interface SubjectsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  parent?: T;
+  intro?: T;
+  feature?: T;
+  shelves?:
+    | T
+    | {
+        title?: T;
+        intro?: T;
+        list?: T;
+        id?: T;
+      };
+  tradeCodes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "catalogue-imports_select".
+ */
+export interface CatalogueImportsSelect<T extends boolean = true> {
+  name?: T;
+  status?: T;
+  total?: T;
+  processed?: T;
+  created?: T;
+  updated?: T;
+  notFound?: T;
+  failed?: T;
+  rows?: T;
+  log?: T;
+  startedBy?: T;
+  startedAt?: T;
+  finishedAt?: T;
+  heartbeatAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "search-misses_select".
+ */
+export interface SearchMissesSelect<T extends boolean = true> {
+  query?: T;
+  count?: T;
+  lastAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lists_select".
+ */
+export interface ListsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  kind?: T;
+  intro?: T;
+  books?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notes_select".
+ */
+export interface NotesSelect<T extends boolean = true> {
+  edition?: T;
+  body?: T;
+  signedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles_select".
+ */
+export interface ArticlesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  status?: T;
+  kind?: T;
+  publishedAt?: T;
+  byline?: T;
+  standfirst?: T;
+  image?: T;
+  body?: T;
+  books?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  status?: T;
+  intro?: T;
+  layout?:
+    | T
+    | {
+        text?:
+          | T
+          | {
+              heading?: T;
+              body?: T;
+              id?: T;
+              blockName?: T;
+            };
+        shelf?:
+          | T
+          | {
+              title?: T;
+              intro?: T;
+              list?: T;
+              id?: T;
+              blockName?: T;
+            };
+        note?:
+          | T
+          | {
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        questions?:
+          | T
+          | {
+              heading?: T;
+              items?:
+                | T
+                | {
+                    question?: T;
+                    answer?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reviews_select".
+ */
+export interface ReviewsSelect<T extends boolean = true> {
+  status?: T;
+  edition?: T;
+  rating?: T;
+  title?: T;
+  body?: T;
+  displayName?: T;
+  reply?: T;
+  customer?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscribers_select".
+ */
+export interface SubscribersSelect<T extends boolean = true> {
+  email?: T;
+  name?: T;
+  status?: T;
+  source?: T;
+  consentAt?: T;
+  unsubscribedAt?: T;
+  token?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -276,6 +1662,270 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  number?: T;
+  status?: T;
+  paymentStatus?: T;
+  contactName?: T;
+  contactPhone?: T;
+  contactEmail?: T;
+  district?: T;
+  area?: T;
+  street?: T;
+  deliveryNote?: T;
+  channel?: T;
+  customer?: T;
+  lines?:
+    | T
+    | {
+        edition?: T;
+        quantity?: T;
+        title?: T;
+        unitPrice?: T;
+        kind?: T;
+        allocated?: T;
+        authorLine?: T;
+        isbn13?: T;
+        id?: T;
+      };
+  giftWrap?: T;
+  promoCode?: T;
+  usePoints?: T;
+  pointsUsed?: T;
+  pointsEarned?: T;
+  giftNote?: T;
+  paymentPlan?: T;
+  payNowVia?: T;
+  paymentReference?: T;
+  subtotal?: T;
+  discount?: T;
+  rewardDiscount?: T;
+  delivery?: T;
+  giftWrapFee?: T;
+  total?: T;
+  payNow?: T;
+  paid?: T;
+  payOnDelivery?: T;
+  payments?:
+    | T
+    | {
+        amount?: T;
+        method?: T;
+        reference?: T;
+        at?: T;
+        id?: T;
+      };
+  courier?: T;
+  trackingId?: T;
+  zone?: T;
+  timeline?:
+    | T
+    | {
+        at?: T;
+        event?: T;
+        by?: T;
+        id?: T;
+      };
+  staffNotes?: T;
+  token?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "requests_select".
+ */
+export interface RequestsSelect<T extends boolean = true> {
+  wanted?: T;
+  isbn?: T;
+  note?: T;
+  contactName?: T;
+  contactPhone?: T;
+  customer?: T;
+  status?: T;
+  edition?: T;
+  reply?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customers_select".
+ */
+export interface CustomersSelect<T extends boolean = true> {
+  phone?: T;
+  name?: T;
+  email?: T;
+  address?:
+    | T
+    | {
+        district?: T;
+        area?: T;
+        street?: T;
+      };
+  ordersCount?: T;
+  refusedCount?: T;
+  rewardPoints?: T;
+  blocked?: T;
+  staffNotes?: T;
+  orders?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promotions_select".
+ */
+export interface PromotionsSelect<T extends boolean = true> {
+  code?: T;
+  type?: T;
+  value?: T;
+  minSubtotal?: T;
+  startsAt?: T;
+  endsAt?: T;
+  usageLimit?: T;
+  active?: T;
+  used?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reward-entries_select".
+ */
+export interface RewardEntriesSelect<T extends boolean = true> {
+  customer?: T;
+  points?: T;
+  reason?: T;
+  order?: T;
+  note?: T;
+  recordedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "messages_select".
+ */
+export interface MessagesSelect<T extends boolean = true> {
+  to?: T;
+  kind?: T;
+  body?: T;
+  status?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stock-movements_select".
+ */
+export interface StockMovementsSelect<T extends boolean = true> {
+  edition?: T;
+  quantity?: T;
+  reason?: T;
+  note?: T;
+  recordedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "purchase-orders_select".
+ */
+export interface PurchaseOrdersSelect<T extends boolean = true> {
+  reference?: T;
+  supplier?: T;
+  status?: T;
+  expectedDate?: T;
+  lines?:
+    | T
+    | {
+        edition?: T;
+        quantity?: T;
+        unitCost?: T;
+        id?: T;
+      };
+  notes?: T;
+  receivedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "suppliers_select".
+ */
+export interface SuppliersSelect<T extends boolean = true> {
+  name?: T;
+  country?: T;
+  currency?: T;
+  leadTimeWeeks?: T;
+  margin?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "carts_select".
+ */
+export interface CartsSelect<T extends boolean = true> {
+  token?: T;
+  items?:
+    | T
+    | {
+        edition?: T;
+        quantity?: T;
+        id?: T;
+      };
+  giftWrap?: T;
+  giftNote?: T;
+  promoCode?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "otp-codes_select".
+ */
+export interface OtpCodesSelect<T extends boolean = true> {
+  phone?: T;
+  codeHash?: T;
+  expiresAt?: T;
+  attempts?: T;
+  used?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users_select".
+ */
+export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  roles?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  resetPasswordRequestedAt?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -316,6 +1966,252 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * Everything on the home page is arranged here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home".
+ */
+export interface Home {
+  id: number;
+  feature?: {
+    eyebrow?: string | null;
+    edition?: (number | null) | Edition;
+    /**
+     * The bookseller note to quote beside the cover.
+     */
+    note?: (number | null) | Note;
+  };
+  /**
+   * Shelves appear in this order. A shelf with no books is hidden.
+   */
+  shelves?:
+    | {
+        title: string;
+        intro?: string | null;
+        source: 'list' | 'in_stock' | 'pre_order' | 'newest';
+        list?: (number | null) | List;
+        limit?: number | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * A second bookseller note, shown large between shelves.
+   */
+  quote?: (number | null) | Note;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * The menu across the top of the shop, in this order.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navigation".
+ */
+export interface Navigation {
+  id: number;
+  items?:
+    | {
+        label: string;
+        type: 'subject' | 'list' | 'url';
+        /**
+         * The panel lists the subjects inside this one automatically.
+         */
+        subject?: (number | null) | Subject;
+        list?: (number | null) | List;
+        /**
+         * For example /marginalia or /collections.
+         */
+        url?: string | null;
+        /**
+         * Optional. Up to three collections shown in the panel beside the subjects.
+         */
+        highlights?: (number | List)[] | null;
+        /**
+         * Optional. One cover shown in the panel.
+         */
+        featured?: (number | null) | Edition;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  /**
+   * The thin strip at the very top of every page.
+   */
+  announcement?: string | null;
+  /**
+   * Weeks quoted for On Request books that have no lead time of their own.
+   */
+  defaultLeadTimeWeeks?: number | null;
+  insideDhakaFee?: number | null;
+  outsideDhakaFee?: number | null;
+  /**
+   * 0 switches free delivery off.
+   */
+  freeDeliveryAbove?: number | null;
+  insideDhakaDays?: string | null;
+  outsideDhakaDays?: string | null;
+  giftWrapFee?: number | null;
+  advancePercent?: number | null;
+  /**
+   * 0 means no limit.
+   */
+  codCeiling?: number | null;
+  /**
+   * Until the online gateway is connected, customers send advance payments to this number and enter the transaction ID. Leave empty to hide the option.
+   */
+  bkashNumber?: string | null;
+  rewardsEnabled?: boolean | null;
+  rewardsEarnPerHundred?: number | null;
+  rewardsRedeemMinimum?: number | null;
+  rewardsRedeemMaxPercent?: number | null;
+  smsPlaced?: string | null;
+  smsConfirmed?: string | null;
+  smsShipped?: string | null;
+  smsArrived?: string | null;
+  smsDelivered?: string | null;
+  smsCancelled?: string | null;
+  /**
+   * Shown beside books that are in stock.
+   */
+  dispatchPromise?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Selling price = list price × your rate for that currency × margin, rounded up. Saving here does not change existing prices; books are re-priced when they are next saved.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pricing".
+ */
+export interface Pricing {
+  id: number;
+  /**
+   * The taka you actually pay for one unit of each currency.
+   */
+  rates?:
+    | {
+        currency: 'GBP' | 'USD' | 'INR' | 'EUR';
+        rate: number;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Multiplier applied after conversion. 1.2 adds 20%.
+   */
+  defaultMargin: number;
+  /**
+   * Prices round up to a multiple of this many taka.
+   */
+  roundTo: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home_select".
+ */
+export interface HomeSelect<T extends boolean = true> {
+  feature?:
+    | T
+    | {
+        eyebrow?: T;
+        edition?: T;
+        note?: T;
+      };
+  shelves?:
+    | T
+    | {
+        title?: T;
+        intro?: T;
+        source?: T;
+        list?: T;
+        limit?: T;
+        id?: T;
+      };
+  quote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navigation_select".
+ */
+export interface NavigationSelect<T extends boolean = true> {
+  items?:
+    | T
+    | {
+        label?: T;
+        type?: T;
+        subject?: T;
+        list?: T;
+        url?: T;
+        highlights?: T;
+        featured?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  announcement?: T;
+  defaultLeadTimeWeeks?: T;
+  insideDhakaFee?: T;
+  outsideDhakaFee?: T;
+  freeDeliveryAbove?: T;
+  insideDhakaDays?: T;
+  outsideDhakaDays?: T;
+  giftWrapFee?: T;
+  advancePercent?: T;
+  codCeiling?: T;
+  bkashNumber?: T;
+  rewardsEnabled?: T;
+  rewardsEarnPerHundred?: T;
+  rewardsRedeemMinimum?: T;
+  rewardsRedeemMaxPercent?: T;
+  smsPlaced?: T;
+  smsConfirmed?: T;
+  smsShipped?: T;
+  smsArrived?: T;
+  smsDelivered?: T;
+  smsCancelled?: T;
+  dispatchPromise?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pricing_select".
+ */
+export interface PricingSelect<T extends boolean = true> {
+  rates?:
+    | T
+    | {
+        currency?: T;
+        rate?: T;
+        id?: T;
+      };
+  defaultMargin?: T;
+  roundTo?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
