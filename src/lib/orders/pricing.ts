@@ -5,6 +5,8 @@
 export type Zone = 'inside_dhaka' | 'outside_dhaka'
 export type LineKind = 'in_stock' | 'pre_order' | 'on_request'
 export type PaymentPlan = 'cod' | 'advance' | 'full'
+/** split: books in stock go now, the rest when they arrive. together: one parcel when everything is here. */
+export type DeliveryPlan = 'split' | 'together'
 
 export type PricedLine = { unitPrice: number; quantity: number; kind: LineKind }
 
@@ -14,10 +16,8 @@ export type ShopRules = {
   /** Delivery is free when the books come to at least this much. 0 switches the offer off. */
   freeDeliveryAbove: number
   giftWrapFee: number
-  /** Share of pre-order and On Request lines paid up front, 0–100. */
+  /** Share of pre-order and On Request books paid up front, 0–100. Books in stock are always cash on delivery. */
   advancePercent: number
-  /** Cash on delivery above this total needs an advance. 0 means no ceiling. */
-  codCeiling: number
 }
 
 export type Promotion = {
@@ -68,12 +68,9 @@ export const priceOrder = (
   const rewards = Math.max(0, Math.min(Math.floor(options.rewardCredit ?? 0), subtotal - discount))
   const total = subtotal - discount - rewards + delivery + giftWrap
 
-  // Advance: a share of anything we must order in, and of any cash order above the ceiling.
+  // Advance: a share of the books we must order in (pre-orders and On Request), nothing else.
   const backorder = lines.filter((l) => l.kind !== 'in_stock').reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
   let advanceDue = backorder > 0 ? roundUp10((backorder * rules.advancePercent) / 100) : 0
-  if (rules.codCeiling > 0 && total > rules.codCeiling) {
-    advanceDue = Math.max(advanceDue, roundUp10((total * rules.advancePercent) / 100))
-  }
   advanceDue = Math.min(advanceDue, total)
 
   return {
@@ -99,6 +96,34 @@ export const splitPayment = (totals: Totals, plan: PaymentPlan): { payNow: numbe
 /** Plans the customer may choose. Cash on delivery is offered only when no advance is needed. */
 export const plansFor = (totals: Totals): PaymentPlan[] =>
   totals.advanceDue > 0 ? (totals.advanceDue < totals.total ? ['advance', 'full'] : ['full']) : ['cod', 'full']
+
+/** True when an order has books in stock and books that must be ordered in, so it can go in two parcels. */
+export const canSplit = (lines: Pick<PricedLine, 'kind'>[]): boolean =>
+  lines.some((l) => l.kind === 'in_stock') && lines.some((l) => l.kind !== 'in_stock')
+
+export type ParcelPlan = { later: boolean; collect: number }
+
+/**
+ * How an order is delivered and what the courier collects each time.
+ * Split: parcel 1 has the books in stock (cash on delivery for them, plus the one delivery fee);
+ * parcel 2 has the books ordered in, sent when they arrive, for the rest of their price after the
+ * advance. There is never a second delivery fee.
+ */
+export const planParcels = (lines: PricedLine[], totals: Totals, plan: PaymentPlan, delivery: DeliveryPlan): ParcelPlan[] => {
+  const { payNow } = splitPayment(totals, plan)
+  const remaining = Math.max(0, totals.total - payNow)
+  if (!canSplit(lines) || delivery === 'together') return [{ later: lines.some((l) => l.kind !== 'in_stock'), collect: remaining }]
+  const laterValue = lines.filter((l) => l.kind !== 'in_stock').reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
+  const laterDue = plan === 'full' ? 0 : Math.max(0, laterValue - (plan === 'advance' ? totals.advanceDue : 0))
+  const second = Math.min(remaining, laterDue)
+  return [
+    { later: false, collect: remaining - second },
+    { later: true, collect: second },
+  ]
+}
+
+/** Which parcel a line goes in. */
+export const parcelFor = (kind: LineKind, parcels: ParcelPlan[]): number => (parcels.length > 1 && kind !== 'in_stock' ? 1 : 0)
 
 /** 01XXXXXXXXX in any common spelling -> +8801XXXXXXXXX. Null if it is not a Bangladeshi mobile number. */
 export const normalisePhone = (input: string): string | null => {

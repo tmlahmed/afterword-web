@@ -965,12 +965,20 @@ export interface Order {
     unitPrice?: number | null;
     kind?: ('in_stock' | 'pre_order' | 'on_request') | null;
     allocated?: boolean | null;
+    /**
+     * 0 = first parcel, 1 = second.
+     */
+    parcel?: number | null;
     authorLine?: string | null;
     isbn13?: string | null;
     id?: string | null;
   }[];
   giftWrap?: boolean | null;
   promoCode?: string | null;
+  /**
+   * Only matters when the order has books in stock and books to order in. No second delivery fee either way.
+   */
+  deliveryPlan?: ('split' | 'together') | null;
   /**
    * As many as the rules allow. Worked out when you save.
    */
@@ -984,6 +992,10 @@ export interface Order {
   paymentPlan: 'cod' | 'advance' | 'full';
   payNowVia?: ('bkash_manual' | 'bkash' | 'sslcommerz') | null;
   paymentReference?: string | null;
+  /**
+   * The customer’s bKash number the money was sent from.
+   */
+  paymentSender?: string | null;
   subtotal?: number | null;
   discount?: number | null;
   rewardDiscount?: number | null;
@@ -1008,6 +1020,18 @@ export interface Order {
   courier?: string | null;
   trackingId?: string | null;
   zone?: ('inside_dhaka' | 'outside_dhaka') | null;
+  /**
+   * One parcel, or two when books in stock go first and the rest follow. Moved on by the actions at the top.
+   */
+  parcels?:
+    | {
+        status: 'pending' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+        collect?: number | null;
+        courier?: string | null;
+        trackingId?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   timeline?:
     | {
         at: string;
@@ -1690,12 +1714,14 @@ export interface OrdersSelect<T extends boolean = true> {
         unitPrice?: T;
         kind?: T;
         allocated?: T;
+        parcel?: T;
         authorLine?: T;
         isbn13?: T;
         id?: T;
       };
   giftWrap?: T;
   promoCode?: T;
+  deliveryPlan?: T;
   usePoints?: T;
   pointsUsed?: T;
   pointsEarned?: T;
@@ -1703,6 +1729,7 @@ export interface OrdersSelect<T extends boolean = true> {
   paymentPlan?: T;
   payNowVia?: T;
   paymentReference?: T;
+  paymentSender?: T;
   subtotal?: T;
   discount?: T;
   rewardDiscount?: T;
@@ -1724,6 +1751,15 @@ export interface OrdersSelect<T extends boolean = true> {
   courier?: T;
   trackingId?: T;
   zone?: T;
+  parcels?:
+    | T
+    | {
+        status?: T;
+        collect?: T;
+        courier?: T;
+        trackingId?: T;
+        id?: T;
+      };
   timeline?:
     | T
     | {
@@ -2062,10 +2098,10 @@ export interface SiteSetting {
   insideDhakaDays?: string | null;
   outsideDhakaDays?: string | null;
   giftWrapFee?: number | null;
-  advancePercent?: number | null;
   /**
-   * 0 means no limit.
+   * Charged on those books only. Books in stock are always cash on delivery.
    */
+  advancePercent?: number | null;
   codCeiling?: number | null;
   /**
    * Until the online gateway is connected, customers send advance payments to this number and enter the transaction ID. Leave empty to hide the option.

@@ -50,11 +50,12 @@ export default async function CheckoutPage() {
           }}
           points={{ balance: bag.rewards.enabled ? balance : 0, usable, minimum: bag.rewards.redeemMinimum }}
           methods={methods}
+          lines={bag.lines.map((l) => ({ unitPrice: l.edition.price ?? 0, quantity: l.quantity, kind: l.kind }))}
           bkashNumber={settings.bkashNumber}
           needsAdvanceBecause={
             hasBackorder
-              ? 'Some of your books are ordered in specially, so we ask for part of the price now. The rest is paid on delivery.'
-              : 'For larger orders we ask for part of the price now. The rest is paid on delivery.'
+              ? `We order some of your books in specially, so we ask for ${settings.advancePercent ?? 50}% of their price now.`
+              : null
           }
         />
       </div>

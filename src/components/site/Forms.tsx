@@ -3,7 +3,7 @@
 import React, { useActionState, useState } from 'react'
 
 import { addToBag, type AddToBagState, type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
-import { DISTRICTS, type PaymentPlan, type ShopRules, type Totals } from '../../lib/orders/pricing'
+import { canSplit, type DeliveryPlan, DISTRICTS, type PaymentPlan, planParcels, type PricedLine, type ShopRules, type Totals } from '../../lib/orders/pricing'
 import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
 import { BAG_ADDED_EVENT } from './MiniBag'
@@ -62,11 +62,12 @@ export const SignInForm: React.FC<{ next: string }> = ({ next }) => {
 
 const METHOD_LABEL: Record<PayMethod, string> = { bkash: 'bKash', sslcommerz: 'Card or other wallet', bkash_manual: 'bKash Send Money' }
 
-const PLAN_COPY: Record<PaymentPlan, { title: string; body: (t: Totals) => string }> = {
+const PLAN_COPY: Record<PaymentPlan, { title: string; body: (t: Totals, pct: number) => string }> = {
   cod: { title: 'Cash on delivery', body: (t) => `Pay ${formatTaka(t.total)} to the courier when your books arrive.` },
   advance: {
-    title: 'Pay the advance now',
-    body: (t) => `Pay ${formatTaka(t.advanceDue)} now and ${formatTaka(t.total - t.advanceDue)} to the courier on delivery.`,
+    title: 'Pay the advance now, the rest on delivery',
+    body: (t, pct) =>
+      `Pay ${formatTaka(t.advanceDue)} now: ${pct}% of the books we order in for you. Everything else, including books in stock, is cash on delivery.`,
   },
   full: { title: 'Pay in full now', body: (t) => `Pay ${formatTaka(t.total)} now. Nothing to pay on delivery.` },
 }
@@ -84,7 +85,9 @@ export const CheckoutForm: React.FC<{
   methods: PayMethod[]
   bkashNumber?: string | null
   needsAdvanceBecause: string | null
-}> = ({ customer, rules, totals, plans, withPoints, points, methods, bkashNumber, needsAdvanceBecause }) => {
+  /** The books, priced, so the parcels can be worked out as choices change. */
+  lines: PricedLine[]
+}> = ({ customer, rules, totals, plans, withPoints, points, methods, bkashNumber, needsAdvanceBecause, lines }) => {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, {})
   const [district, setDistrict] = useState(customer.district ?? 'Dhaka')
   const [usePoints, setUsePoints] = useState(false)
@@ -96,6 +99,10 @@ export const CheckoutForm: React.FC<{
   const chosen = offered.includes(plan) ? plan : (offered[0] ?? 'cod')
   const [method, setMethod] = useState<PayMethod | undefined>(methods[0])
   const via = method && methods.includes(method) ? method : methods[0]
+  const [delivery, setDelivery] = useState<DeliveryPlan>('split')
+  const splittable = canSplit(lines)
+  const parcels = planParcels(lines, t, chosen, delivery)
+  const payNow = chosen === 'full' ? t.total : chosen === 'advance' ? t.advanceDue : 0
 
   return (
     <form action={action} className="md:grid md:grid-cols-[1fr_22rem] md:items-start md:gap-12">
@@ -183,6 +190,31 @@ export const CheckoutForm: React.FC<{
           </section>
         ) : null}
 
+        {splittable ? (
+          <section>
+            <h2 className="display border-t border-ink pt-3 text-[1.5rem]">Sending your books</h2>
+            <p className="mt-2 text-[0.9375rem] text-ink-soft">
+              Some of your books are in stock and some we order in for you. One delivery fee either way.
+            </p>
+            <div className="mt-4 space-y-2">
+              {(
+                [
+                  ['split', 'Send the books in stock now', 'The rest follow in a second parcel when they arrive, at no extra delivery charge.'],
+                  ['together', 'Send everything together', 'One parcel, once all your books are here.'],
+                ] as const
+              ).map(([value, title, body]) => (
+                <label key={value} className={`flex cursor-pointer gap-3 border rounded-ui px-4 py-3.5 ${delivery === value ? 'border-primary bg-card' : 'border-rule'}`}>
+                  <input type="radio" name="deliveryPlan" value={value} checked={delivery === value} onChange={() => setDelivery(value)} className="mt-1 accent-[var(--color-primary)]" />
+                  <span>
+                    <span className="block font-semibold">{title}</span>
+                    <span className="block text-[0.9375rem] text-ink-soft">{body}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section>
           <h2 className="display border-t border-ink pt-3 text-[1.5rem]">3. Payment</h2>
           {needsAdvanceBecause && t.advanceDue > 0 ? <p className="mt-2 text-[0.9375rem] text-ink-soft">{needsAdvanceBecause}</p> : null}
@@ -197,7 +229,7 @@ export const CheckoutForm: React.FC<{
                   <input type="radio" name="paymentPlan" value={p} checked={chosen === p} onChange={() => setPlan(p)} className="mt-1 accent-[var(--color-primary)]" />
                   <span>
                     <span className="block font-semibold">{PLAN_COPY[p].title}</span>
-                    <span className="block text-[0.9375rem] text-ink-soft">{PLAN_COPY[p].body(t)}</span>
+                    <span className="block text-[0.9375rem] text-ink-soft">{PLAN_COPY[p].body(t, rules.advancePercent)}</span>
                   </span>
                 </label>
               ))}
@@ -225,13 +257,33 @@ export const CheckoutForm: React.FC<{
             <div className="mt-4 bg-paper-deep px-4 py-4">
               <p className="text-[0.9375rem]">
                 Send <strong>{formatTaka(chosen === 'full' ? t.total : t.advanceDue)}</strong> by bKash (Send Money) to{' '}
-                <strong className="tabular-nums">{bkashNumber}</strong>, then enter the transaction ID below. We check it before
-                confirming your order.
+                <strong className="tabular-nums">{bkashNumber}</strong>, then tell us the number you sent from and the transaction
+                ID. We check it before confirming your order.
               </p>
-              <label className={`${label} mt-3`} htmlFor="paymentReference">
-                bKash transaction ID
-              </label>
-              <input id="paymentReference" name="paymentReference" required maxLength={40} placeholder="e.g. 9A7B6C5D4E" className={`${field} uppercase`} />
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={label} htmlFor="paymentSender">
+                    bKash number you sent from
+                  </label>
+                  <input
+                    id="paymentSender"
+                    name="paymentSender"
+                    type="tel"
+                    inputMode="numeric"
+                    required
+                    maxLength={20}
+                    placeholder="01XXXXXXXXX"
+                    defaultValue={customer.phone.replace(/^\+88/, '')}
+                    className={field}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="paymentReference">
+                    bKash transaction ID
+                  </label>
+                  <input id="paymentReference" name="paymentReference" required maxLength={40} placeholder="e.g. 9A7B6C5D4E" className={`${field} uppercase placeholder:normal-case`} />
+                </div>
+              </div>
             </div>
           ) : null}
           {chosen !== 'cod' && via === 'sslcommerz' ? (
@@ -274,6 +326,25 @@ export const CheckoutForm: React.FC<{
             <dd className="tabular-nums">{formatTaka(t.total)}</dd>
           </div>
         </dl>
+        {/* When the money is paid: now, and to the courier for each parcel. */}
+        {payNow > 0 || parcels.length > 1 ? (
+          <dl className="mt-4 space-y-1.5 border-t border-rule pt-3 text-[0.875rem]">
+            {payNow > 0 ? (
+              <div className="flex justify-between font-semibold">
+                <dt>Pay now by bKash</dt>
+                <dd className="tabular-nums">{formatTaka(payNow)}</dd>
+              </div>
+            ) : null}
+            {parcels.map((p, i) => (
+              <div key={i} className="flex justify-between gap-3">
+                <dt className="text-ink-soft">
+                  {parcels.length > 1 ? (p.later ? 'On delivery of the books we order in' : 'On delivery of the books in stock') : 'On delivery'}
+                </dt>
+                <dd className="tabular-nums">{formatTaka(p.collect)}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
         <div className="mt-4 space-y-3">
           <ErrorNote message={state.message} />
           <button type="submit" disabled={pending || offered.length === 0} className="btn btn-primary w-full">

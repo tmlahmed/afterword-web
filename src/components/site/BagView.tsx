@@ -374,9 +374,7 @@ export const BagView: React.FC<{
               </dl>
               {t.advanceDue > 0 ? (
                 <p className="mt-3 text-[0.8125rem] text-ink-soft">
-                  {lines.some((l) => l.kind !== 'in_stock')
-                    ? 'Some books are ordered in for you, so part of the price is paid in advance at checkout.'
-                    : `For orders over ${formatTaka(rules.codCeiling)}, part of the price is paid in advance at checkout.`}
+                  Books we order in for you need {rules.advancePercent}% paid in advance ({formatTaka(t.advanceDue)}). Books in stock are paid on delivery.
                 </p>
               ) : null}
 

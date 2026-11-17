@@ -8,6 +8,16 @@ import React from 'react'
 import { getSettings } from '../../../../lib/catalogue'
 import { STAGE_LABEL } from '../../../../lib/orders/labels'
 import { formatTaka } from '../../../../lib/pricing'
+import { linesIn, parcelsOf } from '../../../../lib/orders/parcels'
+
+const PARCEL_TEXT: Record<string, string> = {
+  pending: 'Waiting for the books to arrive',
+  packing: 'Being packed',
+  shipped: 'On its way',
+  delivered: 'Delivered',
+  returned: 'Came back to us',
+  cancelled: 'Cancelled',
+}
 
 export const metadata: Metadata = { title: 'Your order', robots: { index: false } }
 
@@ -31,6 +41,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const steps = STEPS.filter((s) => s !== 'awaiting_stock' || hasBackorder)
   const at = steps.indexOf(order.status as (typeof steps)[number])
   const advanceOwing = Math.max(0, (order.payNow ?? 0) - (order.paid ?? 0))
+  const parcels = parcelsOf(order)
 
   let headline = STAGE_LABEL[order.status]
   let detail = ''
@@ -79,6 +90,39 @@ export default async function OrderPage({ params, searchParams }: Props) {
             )
           })}
         </ol>
+      ) : null}
+
+      {/* Two parcels: what is in each, where it is, and what to pay when it comes. */}
+      {parcels.length > 1 ? (
+        <section className="mt-10">
+          <h2 className="eyebrow">Your two parcels</h2>
+          <ul className="mt-2 grid gap-3 sm:grid-cols-2">
+            {parcels.map((p, i) => (
+              <li key={i} className="border rounded-ui border-rule px-4 py-3.5">
+                <p className="font-semibold">{i === 0 ? 'Books in stock' : 'Books we are ordering in'}</p>
+                <p className="mt-0.5 text-[0.9375rem] text-ink-soft">
+                  {p.status === 'pending' && linesIn(order.lines, i).every((l) => l.allocated)
+                    ? 'Here and set aside for you; packed once your order is confirmed'
+                    : (PARCEL_TEXT[p.status] ?? p.status)}
+                  {p.status === 'shipped' && p.courier ? ` with ${p.courier}, tracking ${p.trackingId}` : ''}
+                </p>
+                <p className="mt-1 text-[0.875rem] text-ink-soft">{linesIn(order.lines, i).map((l) => l.title).join(', ')}</p>
+                {['pending', 'packing', 'shipped'].includes(p.status) ? (
+                  <p className="mt-2 text-[0.9375rem]">
+                    {(p.collect ?? 0) > 0 ? (
+                      <>
+                        Pay <strong>{formatTaka(p.collect ?? 0)}</strong> on delivery
+                      </>
+                    ) : (
+                      'Nothing to pay on delivery'
+                    )}
+                    {i === 1 ? <span className="text-ink-soft"> · no extra delivery charge</span> : null}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       <section className="mt-10">

@@ -70,6 +70,7 @@ type OrderRow = {
   courier?: string | null
   createdAt: string
   lines?: { edition: number | { id: number }; quantity: number; unitPrice?: number | null; title?: string | null }[] | null
+  parcels?: { status: string; collect?: number | null; courier?: string | null }[] | null
 }
 
 const ORDER_SELECT = {
@@ -88,6 +89,7 @@ const ORDER_SELECT = {
   courier: true,
   createdAt: true,
   lines: true,
+  parcels: true,
 } as const
 
 const idOf = (v: number | { id: number }) => (typeof v === 'object' ? v.id : v)
@@ -198,7 +200,15 @@ export const moneyReport = async (payload: Payload) => {
     overrideAccess: true,
   })
   const orders = open.docs as unknown as OrderRow[]
-  const withCouriers = orders.filter((o) => o.status === 'shipped').map((o) => ({ ...o, toCollect: (o.total ?? 0) - (o.paid ?? 0) }))
+  // Each parcel with a courier, with what it is carrying in cash. Older orders without parcels count as one.
+  const shippedParcels = orders.flatMap((o) =>
+    o.parcels?.length
+      ? o.parcels.filter((p) => p.status === 'shipped').map((p) => ({ order: o, courier: p.courier ?? o.courier, toCollect: p.collect ?? 0 }))
+      : o.status === 'shipped'
+        ? [{ order: o, courier: o.courier, toCollect: (o.total ?? 0) - (o.paid ?? 0) }]
+        : [],
+  )
+  const withCouriers = shippedParcels.map((p) => ({ ...p.order, courier: p.courier, toCollect: p.toCollect }))
   const byCourier = new Map<string, { parcels: number; amount: number }>()
   for (const o of withCouriers) {
     const c = byCourier.get(o.courier || 'Not recorded') ?? { parcels: 0, amount: 0 }
@@ -207,7 +217,8 @@ export const moneyReport = async (payload: Payload) => {
     byCourier.set(o.courier || 'Not recorded', c)
   }
   const toVerify = orders.filter((o) => o.paymentStatus === 'to_verify')
-  const advancesHeld = orders.filter((o) => o.status !== 'shipped' && (o.paid ?? 0) > 0)
+  // Advances paid for books not yet delivered.
+  const advancesHeld = orders.filter((o) => (o.paid ?? 0) > 0 && (o.parcels ?? []).some((p) => p.status === 'pending' || p.status === 'packing'))
   return {
     withCouriers,
     couriers: [...byCourier.entries()].map(([name, c]) => ({ name, ...c })),

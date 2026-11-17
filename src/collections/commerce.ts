@@ -303,6 +303,7 @@ export const Orders: CollectionConfig = {
                       admin: { readOnly: true },
                     },
                     { name: 'allocated', type: 'checkbox', label: 'Copies set aside', admin: { readOnly: true } },
+                    { name: 'parcel', type: 'number', defaultValue: 0, label: 'Parcel', admin: { readOnly: true, description: '0 = first parcel, 1 = second.' } },
                   ],
                 },
                 { name: 'authorLine', type: 'text', admin: { hidden: true } },
@@ -314,6 +315,17 @@ export const Orders: CollectionConfig = {
               fields: [
                 { name: 'giftWrap', type: 'checkbox', defaultValue: false },
                 { name: 'promoCode', type: 'text', label: 'Promotion code' },
+                {
+                  name: 'deliveryPlan',
+                  type: 'select',
+                  defaultValue: 'split',
+                  label: 'Delivery',
+                  options: [
+                    { label: 'Books in stock now, the rest when they arrive', value: 'split' },
+                    { label: 'Everything together when all books are here', value: 'together' },
+                  ],
+                  admin: { description: 'Only matters when the order has books in stock and books to order in. No second delivery fee either way.' },
+                },
                 {
                   name: 'usePoints',
                   type: 'checkbox',
@@ -362,6 +374,12 @@ export const Orders: CollectionConfig = {
                   admin: { condition: (data) => data?.paymentPlan !== 'cod' },
                 },
                 { name: 'paymentReference', type: 'text', label: 'bKash transaction ID', admin: { condition: (data) => data?.payNowVia === 'bkash_manual' } },
+                {
+                  name: 'paymentSender',
+                  type: 'text',
+                  label: 'bKash number paid from',
+                  admin: { condition: (data) => data?.payNowVia === 'bkash_manual', description: 'The customer’s bKash number the money was sent from.' },
+                },
               ],
             },
             {
@@ -410,6 +428,36 @@ export const Orders: CollectionConfig = {
                 { name: 'courier', type: 'text', admin: { readOnly: true } },
                 { name: 'trackingId', type: 'text', label: 'Tracking number', admin: { readOnly: true } },
                 { name: 'zone', type: 'select', options: [{ label: 'Inside Dhaka', value: 'inside_dhaka' }, { label: 'Outside Dhaka', value: 'outside_dhaka' }], admin: { readOnly: true } },
+              ],
+            },
+            {
+              name: 'parcels',
+              type: 'array',
+              labels: { singular: 'Parcel', plural: 'Parcels' },
+              admin: { readOnly: true, description: 'One parcel, or two when books in stock go first and the rest follow. Moved on by the actions at the top.' },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'status',
+                      type: 'select',
+                      required: true,
+                      defaultValue: 'pending',
+                      options: [
+                        { label: 'Waiting for books', value: 'pending' },
+                        { label: 'To pack', value: 'packing' },
+                        { label: 'With courier', value: 'shipped' },
+                        { label: 'Delivered', value: 'delivered' },
+                        { label: 'Returned', value: 'returned' },
+                        { label: 'Cancelled', value: 'cancelled' },
+                      ],
+                    },
+                    { name: 'collect', type: 'number', label: 'Courier collects (৳)' },
+                    { name: 'courier', type: 'text' },
+                    { name: 'trackingId', type: 'text', label: 'Tracking number' },
+                  ],
+                },
               ],
             },
             {

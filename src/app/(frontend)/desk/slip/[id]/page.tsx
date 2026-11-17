@@ -6,20 +6,26 @@ import { getPayload } from 'payload'
 import React from 'react'
 
 import { userHasRole } from '../../../../../access/roles'
+import { linesIn, PARCEL_NAME, parcelsOf } from '../../../../../lib/orders/parcels'
 import { formatTaka } from '../../../../../lib/pricing'
 import type { Edition } from '../../../../../payload-types'
 
 export const metadata: Metadata = { title: 'Packing slip', robots: { index: false } }
 
 /** Printable packing slip and pick list. Staff only. Gift orders leave the prices off. */
-export default async function SlipPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function SlipPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ parcel?: string }> }) {
+  const [{ id }, query] = await Promise.all([params, searchParams])
   const payload = await getPayload({ config })
   const { user } = await payload.auth({ headers: await headers() })
   if (!userHasRole(user, 'manager', 'orders', 'warehouse')) notFound()
   const order = await payload.findByID({ collection: 'orders', id: Number(id), depth: 1, overrideAccess: true, disableErrors: true })
   if (!order) notFound()
   const gift = Boolean(order.giftWrap)
+  // One slip per parcel when the order goes in two.
+  const parcels = parcelsOf(order)
+  const index = Math.min(Math.max(0, Number(query.parcel) || 0), parcels.length - 1)
+  const parcel = parcels[index]
+  const lines = parcels.length > 1 ? linesIn(order.lines, index) : (order.lines ?? [])
 
   return (
     <div className="mx-auto max-w-2xl bg-white px-8 py-10 text-[0.9375rem] text-black print:px-0">
@@ -31,6 +37,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="text-right">
           <p className="text-[1.25rem] font-semibold">{order.number}</p>
+          {parcels.length > 1 ? <p className="font-semibold">{PARCEL_NAME(index, parcels.length)} of 2</p> : null}
           <p>{new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' })}</p>
         </div>
       </div>
@@ -48,7 +55,8 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="text-right">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-widest">Courier collects</p>
-          <p className="mt-1 text-[1.75rem] font-semibold">{formatTaka(order.payOnDelivery ?? 0)}</p>
+          <p className="mt-1 text-[1.75rem] font-semibold">{formatTaka(parcel?.collect ?? 0)}</p>
+          {parcels.length > 1 && index === 1 ? <p className="text-[0.8125rem]">Delivery already paid with parcel 1</p> : null}
           {gift ? <p className="mt-1 font-semibold">GIFT WRAP{order.giftNote ? ` · card: “${order.giftNote}”` : ''}</p> : null}
         </div>
       </div>
@@ -64,7 +72,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
           </tr>
         </thead>
         <tbody>
-          {(order.lines ?? []).map((l) => (
+          {lines.map((l) => (
             <tr key={l.id} className="border-b border-neutral-300 align-top">
               <td className="py-2 pr-2">☐</td>
               <td className="py-2">

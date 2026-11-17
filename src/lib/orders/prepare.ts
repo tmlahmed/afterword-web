@@ -4,7 +4,8 @@ import { APIError, type PayloadRequest, type RequestContext } from 'payload'
 
 import type { Order } from '../../payload-types'
 import { notifyOrder } from '../notify'
-import { type LineKind, normalisePhone, type PaymentPlan, plansFor, pointsToSpend, priceOrder, type Promotion, type RewardRules, splitPayment, zoneFor } from './pricing'
+import { overallStatus, readyParcels, stillToCollect } from './parcels'
+import { type DeliveryPlan, type LineKind, normalisePhone, parcelFor, type PaymentPlan, planParcels, plansFor, pointsToSpend, priceOrder, type Promotion, type RewardRules, splitPayment, zoneFor } from './pricing'
 import { recordMovement, takeCopies, takePoints } from './stock'
 
 const fail = (message: string): never => {
@@ -37,7 +38,6 @@ export const shopRules = async (req: Pick<PayloadRequest, 'payload'>) => {
       freeDeliveryAbove: s.freeDeliveryAbove ?? 0,
       giftWrapFee: s.giftWrapFee ?? 0,
       advancePercent: s.advancePercent ?? 50,
-      codCeiling: s.codCeiling ?? 0,
     },
     rewards: {
       enabled: s.rewardsEnabled !== false,
@@ -114,9 +114,18 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
   // Customers must follow the advance rules. Staff may override them for a customer they know.
   if (fromCheckout && !plansFor(totals).includes(plan)) fail('This order needs an advance payment. Please choose bKash or card.')
   if (plan === 'advance' && totals.advanceDue === 0) fail('No advance is needed for this order. Choose cash on delivery or pay in full.')
-  const { payNow, payOnDelivery } = splitPayment(totals, plan)
+  const { payNow } = splitPayment(totals, plan)
   if (payNow > 0 && !data.payNowVia) fail('Choose how the advance will be paid.')
   if (data.payNowVia === 'bkash_manual' && fromCheckout && !data.paymentReference?.trim()) fail('Enter the bKash transaction ID.')
+  // The number the bKash money came from, so staff can match it in the bKash app.
+  const paymentSender = data.payNowVia === 'bkash_manual' && payNow > 0 ? normalisePhone(String(data.paymentSender ?? '')) : null
+  if (data.payNowVia === 'bkash_manual' && payNow > 0 && fromCheckout && !paymentSender) fail('Enter the bKash number you sent the money from, for example 01712345678.')
+
+  // Parcels: books in stock now and the rest when they arrive, or everything together.
+  const deliveryPlan: DeliveryPlan = data.deliveryPlan === 'together' ? 'together' : 'split'
+  const parcelPlan = planParcels(priced, totals, plan, deliveryPlan)
+  for (const line of lines) line.parcel = parcelFor(line.kind as LineKind, parcelPlan)
+  let parcels = parcelPlan.map((p) => ({ status: 'pending' as const, collect: p.collect }))
 
   const now = new Date().toISOString()
   const staffName = !fromCheckout && req.user ? ((req.user as { name?: string }).name ?? 'Staff') : undefined
@@ -124,10 +133,13 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
 
   // A cash order taken by staff has already been confirmed in conversation.
   let status: Order['status'] = 'placed'
+  let readied: NonNullable<Order['parcels']> = parcels
   if (!fromCheckout && payNow === 0) {
-    status = lines.every((l) => l.allocated) ? 'packing' : 'awaiting_stock'
+    readied = readyParcels(lines, parcels)
+    status = overallStatus(readied)
     timeline.push({ at: now, event: 'Confirmed', by: staffName })
   }
+  parcels = readied as typeof parcels
 
   return {
     ...data,
@@ -148,8 +160,11 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
     paymentPlan: plan,
     payNowVia: payNow > 0 ? data.payNowVia : null,
     payNow,
-    payOnDelivery,
+    payOnDelivery: stillToCollect(parcels),
     paid: 0,
+    deliveryPlan,
+    parcels,
+    paymentSender,
     payments: [],
     status,
     paymentStatus: payNow > 0 && data.payNowVia === 'bkash_manual' && data.paymentReference ? 'to_verify' : 'unpaid',

@@ -13,8 +13,19 @@ type OrderState = {
   payOnDelivery?: number
   payNowVia?: string | null
   paymentReference?: string | null
+  paymentSender?: string | null
   token?: string
-  lines?: { allocated?: boolean }[]
+  lines?: { allocated?: boolean; parcel?: number | null; title?: string | null; quantity?: number }[]
+  parcels?: { status: string; collect?: number | null; courier?: string | null; trackingId?: string | null }[] | null
+}
+
+const PARCEL_STAGE: Record<string, string> = {
+  pending: 'Waiting for books',
+  packing: 'To pack',
+  shipped: 'With courier',
+  delivered: 'Delivered',
+  returned: 'Came back',
+  cancelled: 'Cancelled',
 }
 
 const STAGE: Record<string, string> = {
@@ -104,7 +115,17 @@ export const OrderActions: React.FC = () => {
   const owing = (order.total ?? 0) - (order.paid ?? 0)
   const advanceOwing = Math.max(0, (order.payNow ?? 0) - (order.paid ?? 0))
   const open = !['delivered', 'returned', 'cancelled'].includes(order.status)
-  const waiting = (order.lines ?? []).filter((l) => !l.allocated).length
+  // Orders from before parcels existed are shown as one parcel.
+  const parcels =
+    order.parcels && order.parcels.length
+      ? order.parcels
+      : [{ status: order.status === 'placed' || order.status === 'awaiting_stock' ? 'pending' : order.status, collect: order.payOnDelivery ?? 0 }]
+  const two = parcels.length > 1
+  const anyShipped = parcels.some((p) => p.status === 'shipped')
+  const cancellable = order.status === 'placed' || (!anyShipped && parcels.some((p) => p.status === 'pending' || p.status === 'packing'))
+  const parcelName = (i: number) => (two ? (i === 0 ? 'Parcel 1 · books in stock' : 'Parcel 2 · books ordered in') : 'Parcel')
+  const booksIn = (i: number) => (order.lines ?? []).filter((l) => (l.parcel ?? 0) === i)
+  const row: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }
 
   return (
     <div style={box}>
@@ -114,87 +135,118 @@ export const OrderActions: React.FC = () => {
         </strong>
         <span>
           Total ৳{order.total} · paid ৳{order.paid ?? 0}
-          {order.payOnDelivery ? ` · courier collects ৳${order.payOnDelivery}` : ''}
+          {order.payOnDelivery ? ` · couriers still to collect ৳${order.payOnDelivery}` : ''}
         </span>
         {order.token ? (
           <a href={`/order/${order.token}`} target="_blank" rel="noreferrer">
             Customer’s tracking page ↗
           </a>
         ) : null}
-        <a href={`/desk/slip/${id}`} target="_blank" rel="noreferrer">
-          Print packing slip ↗
-        </a>
       </div>
 
       {order.status === 'placed' && advanceOwing > 0 ? (
         <p style={{ margin: '0 0 0.75rem' }}>
           Waiting for an advance of <strong>৳{advanceOwing}</strong>
-          {order.payNowVia === 'bkash_manual' && order.paymentReference
-            ? `. The customer gave bKash transaction ID ${order.paymentReference} — check it in the bKash app, then record the payment below.`
-            : '.'}
-        </p>
-      ) : null}
-      {order.status === 'awaiting_stock' ? (
-        <p style={{ margin: '0 0 0.75rem' }}>
-          {waiting} {waiting === 1 ? 'book is' : 'books are'} on order from the supplier. This order moves to “To pack” by itself when
-          the stock is received.
+          {order.payNowVia === 'bkash_manual' && order.paymentReference ? (
+            <>
+              . The customer says they sent it from bKash <strong>{order.paymentSender ?? 'number not given'}</strong>, transaction ID{' '}
+              <strong>{order.paymentReference}</strong>. Find it in the bKash app, then record the payment below.
+            </>
+          ) : (
+            '.'
+          )}
         </p>
       ) : null}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-        {order.status === 'placed' && advanceOwing === 0 ? (
+      {order.status === 'placed' && advanceOwing === 0 ? (
+        <div style={{ ...row, marginBottom: '0.75rem' }}>
           <Button disabled={busy} onClick={() => run({ action: 'confirm' })} buttonStyle="primary" size="medium">
             Confirm order
           </Button>
-        ) : null}
+        </div>
+      ) : null}
 
-        {order.status === 'packing' ? (
-          <>
-            <select style={input} value={courier} onChange={(e) => setCourier(e.target.value)} aria-label="Courier">
-              <option>Pathao</option>
-              <option>Steadfast</option>
-              <option>RedX</option>
-              <option>Own delivery</option>
-            </select>
-            <input style={input} placeholder="Tracking number" value={trackingId} onChange={(e) => setTrackingId(e.target.value)} />
-            <Button disabled={busy || !trackingId.trim()} onClick={() => run({ action: 'ship', courier, trackingId })} buttonStyle="primary" size="medium">
-              Hand to courier
-            </Button>
-          </>
-        ) : null}
+      {/* Each parcel: its books, what the courier collects, and the next step for it. */}
+      <div style={{ display: 'grid', gap: '0.75rem' }}>
+        {parcels.map((p, i) => (
+          <div key={i} style={{ border: '1px solid var(--theme-elevation-150)', borderRadius: 4, padding: '0.75rem 1rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.5rem 1.5rem' }}>
+              <strong>
+                {parcelName(i)} · {order.status === 'placed' ? 'Waiting for confirmation' : (PARCEL_STAGE[p.status] ?? p.status)}
+              </strong>
+              <span>
+                Courier collects <strong>৳{p.collect ?? 0}</strong>
+                {two && i === 1 ? ' (no second delivery fee)' : ''}
+                {' · '}
+                <a href={`/desk/slip/${id}${two ? `?parcel=${i}` : ''}`} target="_blank" rel="noreferrer">
+                  Packing slip ↗
+                </a>
+              </span>
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.8, margin: '0.25rem 0 0.5rem' }}>
+              {booksIn(i)
+                .map((l) => `${l.title}${(l.quantity ?? 1) > 1 ? ` ×${l.quantity}` : ''}${l.allocated ? '' : ' (not here yet)'}`)
+                .join(' · ')}
+              {p.courier ? ` — ${p.courier} ${p.trackingId ?? ''}` : ''}
+            </div>
 
-        {order.status === 'shipped' ? (
-          <>
-            <Button
-              disabled={busy}
-              onClick={() => run({ action: 'deliver' }, order.payOnDelivery ? `Mark delivered and record ৳${order.payOnDelivery} collected by the courier?` : 'Mark delivered?')}
-              buttonStyle="primary"
-              size="medium"
-            >
-              Mark delivered
-            </Button>
-            <Button disabled={busy} onClick={() => run({ action: 'return' }, 'Mark as returned undelivered? The books go back into stock.')} buttonStyle="secondary" size="medium">
-              Came back undelivered
-            </Button>
-          </>
-        ) : null}
+            {order.status !== 'placed' && p.status === 'packing' ? (
+              <div style={row}>
+                <select style={input} value={courier} onChange={(e) => setCourier(e.target.value)} aria-label="Courier">
+                  <option>Pathao</option>
+                  <option>Steadfast</option>
+                  <option>RedX</option>
+                  <option>Own delivery</option>
+                </select>
+                <input style={input} placeholder="Tracking number" value={trackingId} onChange={(e) => setTrackingId(e.target.value)} />
+                <Button disabled={busy || !trackingId.trim()} onClick={() => run({ action: 'ship', parcel: i, courier, trackingId })} buttonStyle="primary" size="medium">
+                  Hand to courier
+                </Button>
+              </div>
+            ) : null}
 
-        {open && order.status !== 'shipped' ? (
+            {p.status === 'shipped' ? (
+              <div style={row}>
+                <Button
+                  disabled={busy}
+                  onClick={() => run({ action: 'deliver', parcel: i }, p.collect ? `Mark delivered and record ৳${p.collect} collected by the courier?` : 'Mark delivered?')}
+                  buttonStyle="primary"
+                  size="medium"
+                >
+                  Mark delivered
+                </Button>
+                <Button disabled={busy} onClick={() => run({ action: 'return', parcel: i }, 'Mark as returned undelivered? The books go back into stock.')} buttonStyle="secondary" size="medium">
+                  Came back undelivered
+                </Button>
+              </div>
+            ) : null}
+
+            {p.status === 'pending' && order.status !== 'placed' ? (
+              <div style={{ fontSize: 13 }}>Moves to “To pack” by itself when the books are received.</div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      {cancellable ? (
+        <div style={{ ...row, marginTop: '0.75rem' }}>
           <Button
             disabled={busy}
             onClick={() => {
-              const reason = window.prompt('Cancel this order? Give a short reason (optional).')
+              const reason = window.prompt(
+                parcels.some((p) => p.status === 'delivered') ? 'Cancel the books not yet sent? Give a short reason (optional).' : 'Cancel this order? Give a short reason (optional).',
+              )
               if (reason !== null) void run({ action: 'cancel', reason })
             }}
             buttonStyle="secondary"
             size="medium"
           >
-            Cancel order
+            {parcels.some((p) => p.status === 'delivered') ? 'Cancel the rest' : 'Cancel order'}
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      {open && owing > 0 && order.status !== 'shipped' ? (
+      {open && owing > 0 ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginTop: '0.75rem' }}>
           <span>Record a payment:</span>
           <input style={{ ...input, width: 110 }} inputMode="numeric" placeholder={`৳ ${advanceOwing || owing}`} value={amount} onChange={(e) => setAmount(e.target.value)} />

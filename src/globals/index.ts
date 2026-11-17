@@ -103,6 +103,7 @@ export const SiteSettings: GlobalConfig = {
               max: 100,
               defaultValue: 50,
               label: 'Advance for pre-orders and On Request (%)',
+              admin: { description: 'Charged on those books only. Books in stock are always cash on delivery.' },
             },
             {
               name: 'codCeiling',
@@ -110,7 +111,8 @@ export const SiteSettings: GlobalConfig = {
               min: 0,
               defaultValue: 5000,
               label: 'Cash on delivery needs an advance above (৳)',
-              admin: { description: '0 means no limit.' },
+              // No longer used: books in stock are always cash on delivery. Kept so no data is dropped.
+              admin: { hidden: true },
             },
           ],
         },

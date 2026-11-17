@@ -32,21 +32,25 @@ The first admin screen shows what needs doing. Click any tile to see the list be
 An order changes only through the buttons at the top of its page. Never type over its fields. Every step is recorded in the order's history with your name, and the customer gets a text message at each step.
 
 **Confirming a new order.** Open it and check that the name, phone and address make sense. For a large cash-on-delivery order, or anything that looks odd, call the customer first. Then press **Confirm order**.
-- If the order has copies in stock, it moves to **To pack**.
-- If it needs an advance (pre-orders, On Request books, large cash orders), the button waits until the advance is recorded.
-- If the books are not here yet, it moves to **Waiting for stock**.
+
+**Advances.** Only books we order in (On Request and pre-orders) need an advance: your advance percentage of *their* price. Books in stock are always cash on delivery. An order that needs an advance cannot be confirmed until the advance is recorded.
 
 **Recording a payment.** Use **Record payment** with the amount, the method (bKash, Nagad, card, bank transfer, cash) and the transaction ID.
-- For a bKash Send Money advance, the customer typed their transaction ID at checkout. **Find that ID in the bKash merchant app before recording it.** The order shows "Payment to verify" until you do.
-- Card and wallet payments through SSLCommerz record themselves.
+- For a bKash Send Money advance, the order shows **the bKash number the customer sent from** and the **transaction ID** they gave. Find that payment in your bKash app (same number, same ID, same amount) before recording it.
 
-**Packing.** Press **Print packing slip ↗**. The slip has a pick list and the address. Gift orders print without prices and include the gift note. Pack the books, then choose the courier, type the **tracking number**, and press **Hand to courier**. The customer gets the tracking number by text.
+**Orders in two parcels.** When an order has books in stock *and* books to order in, the customer chooses at checkout:
+- *Send the books in stock now:* **Parcel 1** (in stock) is packed straight away. The courier collects the price of those books plus the delivery fee. **Parcel 2** (ordered in) waits; when its books are received it moves to "To pack" by itself and the customer gets a text. The courier collects the rest of those books' price, with **no second delivery fee**.
+- *Send everything together:* one parcel, sent when every book is here.
 
-**Delivered.** When the courier confirms delivery, press **Mark delivered**. For cash on delivery this also records the cash the courier collected, so match it against the courier's payout.
+Each parcel has its own **Packing slip**, **Hand to courier**, **Mark delivered** and **Came back undelivered** buttons on the order page. The slip shows what the courier collects for that parcel.
 
-**Came back undelivered.** Press **Came back undelivered** when the parcel is returned. The books go back into stock automatically.
+**Packing.** Press **Packing slip ↗** for the parcel. It has a pick list and the address; gift orders print without prices and include the gift note. Pack the books, choose the courier, type the **tracking number** and press **Hand to courier**. The customer gets the tracking number by text.
 
-**Cancelling.** Press **Cancel order** with a short reason. Any copies set aside go back into stock. An order that is already with a courier cannot be cancelled; wait for it to come back and mark it returned. If the customer paid anything, refund it through bKash or SSLCommerz, then note it on the order.
+**Delivered.** When the courier confirms delivery, press **Mark delivered** on that parcel. It records the cash the courier collected, so match it against the courier's payout.
+
+**Came back undelivered.** Press **Came back undelivered** on the parcel when it is returned. Its books go back into stock automatically.
+
+**Cancelling.** Press **Cancel order** with a short reason. Any copies set aside go back into stock. A parcel already with a courier cannot be cancelled; wait for it to come back and mark it returned. If the first parcel has been delivered, the button reads **Cancel the rest** and cancels only the books not yet sent; the advance paid for them is owed back. If the customer paid anything, refund it through bKash or SSLCommerz, then note it on the order.
 
 **Phone, Facebook and WhatsApp orders.** Go to Orders → **Create new**. Fill in the customer, the address and the books with their quantities, choose how they will pay, and save. Prices, delivery and stock are worked out when you save. Staff cash orders are confirmed straight away.
 

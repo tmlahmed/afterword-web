@@ -57,7 +57,7 @@ won.forEach((r) => created.push((r as PromiseFulfilledResult<{ id: number }>).va
 check('only one of two simultaneous orders gets the last copies', won.length === 1 && (await stock(inStock.id)) === 0, `${won.length} succeeded, stock ${await stock(inStock.id)}`)
 
 // 4. Confirm, ship, deliver
-await expectError('cannot ship before confirming', () => runOrderAction(payload, o.id, { action: 'ship', courier: 'Pathao', trackingId: 'T1' }, 'Test'), 'ready to pack')
+await expectError('cannot ship before confirming', () => runOrderAction(payload, o.id, { action: 'ship', courier: 'Pathao', trackingId: 'T1' }, 'Test'), 'Confirm the order')
 o = await runOrderAction(payload, o.id, { action: 'confirm' }, 'Test')
 check('confirm moves a stocked order to packing', o.status === 'packing')
 o = await runOrderAction(payload, o.id, { action: 'ship', courier: 'Pathao', trackingId: 'TEST123' }, 'Test')
@@ -73,7 +73,7 @@ check('cancelling returns copies to stock', (await stock(inStock.id)) === remain
 
 // 6. On Request needs an advance
 await expectError('On Request cannot be cash on delivery at checkout', () => place({ lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'cod' }), 'advance')
-let r = await place({ lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTTRX1' })
+let r = await place({ lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTTRX1', paymentSender: '01700000001' })
 created.push(r.id)
 r = await payload.findByID({ collection: 'orders', id: r.id, depth: 0 })
 const half = Math.ceil((onRequest.price! * advanceShare) / 10) * 10
@@ -120,7 +120,7 @@ check('customer messages are logged', msgs.totalDocs >= 6, `${msgs.totalDocs} me
 
   if (rewards.enabled) {
     const spend = pointsToSpend(balance, onRequest.price!, rewards)
-    const pay = { lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'full', payNowVia: 'bkash_manual', paymentReference: 'TESTPTS', usePoints: true }
+    const pay = { lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'full', payNowVia: 'bkash_manual', paymentReference: 'TESTPTS', paymentSender: '01700000001', usePoints: true }
     const pointsRace = await Promise.allSettled([place(pay), place(pay)])
     const spent = pointsRace.filter((x): x is PromiseFulfilledResult<Awaited<ReturnType<typeof place>>> => x.status === 'fulfilled').map((x) => x.value)
     spent.forEach((x) => created.push(x.id))
@@ -151,6 +151,45 @@ check('customer messages are logged', msgs.totalDocs >= 6, `${msgs.totalDocs} me
   const publicView = (await getReviews(payload, inStock.id)).find((r) => r.id === review.id) as Record<string, unknown> | undefined
   check('the public never sees who wrote a review or their order', publicView !== undefined && publicView.customer === undefined && publicView.order === undefined)
   check('one review per customer per book', !(await reviewEligibility(payload, cust, inStock.id)).canReview)
+}
+
+// 12. Books in stock now, the rest when they arrive: two parcels, one delivery fee
+const mixedIds: number[] = []
+const mixedBefore = new Map<number, number>()
+{
+  const mixedStock = (await payload.find({ collection: 'editions', where: { and: [{ stockOnHand: { greater_than: 1 } }, { id: { not_equals: inStock.id } }, { status: { equals: 'published' } }, { sourcing: { equals: 'standard' } }] }, limit: 1, depth: 0, sort: 'id' })).docs[0]
+  const mixedLater = (await payload.find({ collection: 'editions', where: { and: [{ stockOnHand: { equals: 0 } }, { id: { not_equals: onRequest.id } }, { status: { equals: 'published' } }, { sourcing: { equals: 'standard' } }] }, limit: 1, depth: 0, sort: 'id' })).docs[0]
+  for (const b of [mixedStock, mixedLater]) {
+    mixedIds.push(b.id)
+    mixedBefore.set(b.id, await stock(b.id))
+  }
+  const books = [{ edition: mixedStock.id, quantity: 1 }, { edition: mixedLater.id, quantity: 1 }]
+  await expectError('a bKash advance needs the number it was sent from', () => place({ lines: books, paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTMIX' }), 'number you sent')
+  let m = await place({ lines: books, paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTMIX', paymentSender: '018 1111 1111', deliveryPlan: 'split' })
+  created.push(m.id)
+  m = await payload.findByID({ collection: 'orders', id: m.id, depth: 0 })
+  const adv = Math.ceil((mixedLater.price! * advanceShare) / 10) * 10
+  check('the advance is only on the book ordered in', m.payNow === adv, `advance ${m.payNow}, expected ${adv}`)
+  check('the bKash number it was sent from is kept', m.paymentSender === '+8801811111111', String(m.paymentSender))
+  const p = m.parcels ?? []
+  check('two parcels: the book in stock now, the other later', p.length === 2 && m.lines![0].parcel === 0 && m.lines![1].parcel === 1)
+  check('the in-stock parcel is full cash on delivery with the one delivery fee', p[0]?.collect === mixedStock.price! + (m.delivery ?? 0), `collect ${p[0]?.collect}`)
+  check('the later parcel collects the rest of its book, with no delivery fee', p[1]?.collect === mixedLater.price! - adv, `collect ${p[1]?.collect}`)
+
+  m = await runOrderAction(payload, m.id, { action: 'record_payment', amount: adv, method: 'bKash', reference: 'TESTMIX' }, 'Test')
+  check('paying the advance readies the in-stock parcel; the rest waits', m.status === 'packing' && m.parcels?.[0].status === 'packing' && m.parcels?.[1].status === 'pending', `${m.status} ${m.parcels?.map((x) => x.status)}`)
+  await expectError('the waiting parcel cannot be sent yet', () => runOrderAction(payload, m.id, { action: 'ship', parcel: 1, courier: 'Pathao', trackingId: 'TESTP2' }, 'Test'), 'cannot')
+  m = await runOrderAction(payload, m.id, { action: 'ship', parcel: 0, courier: 'Pathao', trackingId: 'TESTP1' }, 'Test')
+  m = await runOrderAction(payload, m.id, { action: 'deliver', parcel: 0 }, 'Test')
+  check('after the first parcel, the order waits for the rest', m.status === 'awaiting_stock' && m.paid === adv + p[0].collect! && m.payOnDelivery === p[1].collect, `${m.status}, paid ${m.paid}`)
+
+  await payload.create({ collection: 'stock-movements', data: { edition: mixedLater.id, quantity: 1, reason: 'received', note: 'orders check: arrival' }, overrideAccess: true })
+  await wait(1500)
+  m = await payload.findByID({ collection: 'orders', id: m.id, depth: 0 })
+  check('when the book arrives, the second parcel is ready to pack', m.status === 'packing' && m.parcels?.[1].status === 'packing', `${m.status} ${m.parcels?.map((x) => x.status)}`)
+  m = await runOrderAction(payload, m.id, { action: 'ship', parcel: 1, courier: 'Pathao', trackingId: 'TESTP2' }, 'Test')
+  m = await runOrderAction(payload, m.id, { action: 'deliver', parcel: 1 }, 'Test')
+  check('both parcels delivered, paid in full, one delivery fee', m.status === 'delivered' && m.paid === m.total && m.paymentStatus === 'paid' && m.total === mixedStock.price! + mixedLater.price! + (m.delivery ?? 0), `paid ${m.paid} of ${m.total}`)
 }
 
 // 10. Reports agree with the orders
@@ -197,7 +236,8 @@ await wait(800) // ratings are recalculated just after a review is removed
 check('clean-up removed the test reviews', reviewedBooks.length === 0 || ((await payload.findByID({ collection: 'editions', id: inStock.id, depth: 0 })).ratingCount ?? 0) === 0)
 if (supplier.name === 'Test supplier') await payload.delete({ collection: 'suppliers', id: supplier.id, overrideAccess: true })
 // ledger rows were removed directly, so restore the two stock figures to what the ledger says
-for (const id of [inStock.id, onRequest.id]) await payload.update({ collection: 'editions', id, data: { stockOnHand: await ledger(id) }, depth: 0 })
+for (const id of [inStock.id, onRequest.id, ...mixedIds]) await payload.update({ collection: 'editions', id, data: { stockOnHand: await ledger(id) }, depth: 0 })
 check('clean-up restored stock', (await stock(inStock.id)) === before && (await stock(onRequest.id)) === 0, `${await stock(inStock.id)} vs ${before}`)
+for (const id of mixedIds) check(`clean-up restored stock of book ${id}`, (await stock(id)) === mixedBefore.get(id), `${await stock(id)} vs ${mixedBefore.get(id)}`)
 console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED')
 process.exit(0)

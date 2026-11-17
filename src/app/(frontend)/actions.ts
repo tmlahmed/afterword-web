@@ -157,6 +157,8 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
         paymentPlan: plan,
         payNowVia,
         paymentReference: payNowVia === 'bkash_manual' ? text(form, 'paymentReference', 40) : undefined,
+        paymentSender: payNowVia === 'bkash_manual' ? text(form, 'paymentSender', 20) : undefined,
+        deliveryPlan: text(form, 'deliveryPlan', 10) === 'together' ? 'together' : 'split',
         status: 'placed',
         paymentStatus: 'unpaid',
       },
