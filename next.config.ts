@@ -30,6 +30,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  experimental: {
+    // Show security-upgrade reminders in the development overlay.
+    agentUpgrade: 'security',
+  },
   async headers() {
     // HTTPS-only headers would lock a developer out of http://localhost.
     if (process.env.NODE_ENV !== 'production') return []
