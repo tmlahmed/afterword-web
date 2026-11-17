@@ -8,7 +8,7 @@ import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
 import { BAG_ADDED_EVENT } from './MiniBag'
 
-const field = 'h-12 w-full border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-primary focus:outline-none'
+const field = 'h-12 w-full rounded-ui border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-primary focus:outline-none'
 const label = 'mb-1.5 block text-[0.8125rem] font-semibold'
 
 const ErrorNote: React.FC<{ message?: string }> = ({ message }) =>
@@ -43,7 +43,7 @@ export const SignInForm: React.FC<{ next: string }> = ({ next }) => {
           </label>
           <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} placeholder="••••••" required autoFocus className={`${field} tracking-[0.5em]`} />
           {state.devCode ? (
-            <p className="mt-2 border border-dashed border-accent px-3 py-2 text-[0.8125rem]">
+            <p className="mt-2 border rounded-ui border-dashed border-accent px-3 py-2 text-[0.8125rem]">
               Preview site: no SMS service is connected yet, so the code is shown here instead. Your code is{' '}
               <strong className="tabular-nums">{state.devCode}</strong>.
             </p>
@@ -157,7 +157,7 @@ export const CheckoutForm: React.FC<{
               <input id="deliveryNote" name="deliveryNote" maxLength={160} className={field} />
             </div>
           </div>
-          <p className="mt-4 border border-rule px-4 py-3 text-[0.9375rem]">
+          <p className="mt-4 border rounded-ui border-rule px-4 py-3 text-[0.9375rem]">
             {zone === 'inside_dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'}:{' '}
             <strong>{t.delivery === 0 ? 'free delivery' : formatTaka(t.delivery)}</strong>, {zone === 'inside_dhaka' ? rules.insideDays : rules.outsideDays}{' '}
             after dispatch.
@@ -168,7 +168,7 @@ export const CheckoutForm: React.FC<{
           <section>
             <h2 className="display border-t border-ink pt-3 text-[1.5rem]">Reward points</h2>
             {points.usable > 0 ? (
-              <label className={`mt-4 flex cursor-pointer gap-3 border px-4 py-3.5 ${usePoints ? 'border-primary bg-card' : 'border-rule'}`}>
+              <label className={`mt-4 flex cursor-pointer gap-3 border rounded-ui px-4 py-3.5 ${usePoints ? 'border-primary bg-card' : 'border-rule'}`}>
                 <input type="checkbox" name="usePoints" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-1 accent-[var(--color-primary)]" />
                 <span>
                   <span className="block font-semibold">Use {points.usable} of my {points.balance} points</span>
@@ -187,13 +187,13 @@ export const CheckoutForm: React.FC<{
           <h2 className="display border-t border-ink pt-3 text-[1.5rem]">3. Payment</h2>
           {needsAdvanceBecause && t.advanceDue > 0 ? <p className="mt-2 text-[0.9375rem] text-ink-soft">{needsAdvanceBecause}</p> : null}
           {offered.length === 0 ? (
-            <p className="mt-4 border border-rule px-4 py-3">
+            <p className="mt-4 border rounded-ui border-rule px-4 py-3">
               This order needs an advance, and online payment is not connected yet. Please message us to arrange it.
             </p>
           ) : (
             <div className="mt-4 space-y-2">
               {offered.map((p) => (
-                <label key={p} className={`flex cursor-pointer gap-3 border px-4 py-3.5 ${chosen === p ? 'border-primary bg-card' : 'border-rule'}`}>
+                <label key={p} className={`flex cursor-pointer gap-3 border rounded-ui px-4 py-3.5 ${chosen === p ? 'border-primary bg-card' : 'border-rule'}`}>
                   <input type="radio" name="paymentPlan" value={p} checked={chosen === p} onChange={() => setPlan(p)} className="mt-1 accent-[var(--color-primary)]" />
                   <span>
                     <span className="block font-semibold">{PLAN_COPY[p].title}</span>
@@ -208,7 +208,7 @@ export const CheckoutForm: React.FC<{
               <legend className={label}>Pay with</legend>
               <div className="grid gap-2 sm:grid-cols-3">
                 {methods.map((m) => (
-                  <label key={m} className={`flex cursor-pointer items-center gap-2.5 border px-3 py-3 text-[0.9375rem] ${via === m ? 'border-primary bg-card' : 'border-rule'}`}>
+                  <label key={m} className={`flex cursor-pointer items-center gap-2.5 border rounded-ui px-3 py-3 text-[0.9375rem] ${via === m ? 'border-primary bg-card' : 'border-rule'}`}>
                     <input type="radio" name="payNowVia" value={m} checked={via === m} onChange={() => setMethod(m)} className="accent-[var(--color-primary)]" />
                     {METHOD_LABEL[m]}
                   </label>
@@ -240,7 +240,7 @@ export const CheckoutForm: React.FC<{
         </section>
       </div>
 
-      <aside className="mt-10 border border-ink p-5 md:sticky md:top-36 md:mt-0">
+      <aside className="mt-10 border rounded-ui border-ink p-5 md:sticky md:top-36 md:mt-0">
         <h2 className="eyebrow">Order total</h2>
         <dl className="mt-3 space-y-1.5 text-[0.9375rem]">
           <div className="flex justify-between">
@@ -292,7 +292,7 @@ export const RequestForm: React.FC<{ signedIn: boolean; name?: string | null; pr
   const [state, action, pending] = useActionState<RequestState, FormData>(submitRequest, {})
   if (state.done)
     return (
-      <div className="border border-primary px-6 py-8">
+      <div className="border rounded-ui border-primary px-6 py-8">
         <p className="font-display text-[1.375rem]">Thank you. We have your request.</p>
         <p className="mt-2 text-ink-soft">
           We will look for the book and text you a price and an arrival estimate, usually within two working days. Nothing is charged
@@ -351,7 +351,7 @@ export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
   const [rating, setRating] = useState(0)
   if (state.done)
     return (
-      <div className="border border-primary px-5 py-6">
+      <div className="border rounded-ui border-primary px-5 py-6">
         <p className="font-display text-[1.25rem]">Thank you for your review.</p>
         <p className="mt-1.5 text-ink-soft">A bookseller reads every review before it appears, usually within a day or two.</p>
       </div>

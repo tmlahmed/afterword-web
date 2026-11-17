@@ -131,7 +131,7 @@ export const Shelf: React.FC<{ title: string; intro?: string | null; href?: stri
         {href ? (
           <Link
             href={href}
-            className="flex h-[13.5rem] w-[7rem] shrink-0 snap-start flex-col items-center justify-center gap-2 border border-rule text-[0.8125rem] font-semibold md:h-[15.5rem]"
+            className="flex h-[13.5rem] w-[7rem] shrink-0 snap-start flex-col items-center justify-center gap-2 border rounded-ui border-rule text-[0.8125rem] font-semibold md:h-[15.5rem]"
           >
             See all <ArrowIcon />
           </Link>

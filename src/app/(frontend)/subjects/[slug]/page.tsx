@@ -31,20 +31,20 @@ export default async function SubjectPage({ params }: Props) {
         <ul className="mt-6 flex flex-wrap gap-2">
           {parent ? (
             <li>
-              <Link href={`/subjects/${parent.slug}`} className="inline-block border border-rule px-3.5 py-1.5 text-[0.875rem] hover:border-ink">
+              <Link href={`/subjects/${parent.slug}`} className="inline-block border rounded-ui border-rule px-3.5 py-1.5 text-[0.875rem] hover:border-ink">
                 ← {parent.name}
               </Link>
             </li>
           ) : null}
           {children.map((c) => (
             <li key={c.id}>
-              <Link href={`/subjects/${c.slug}`} className="inline-block border border-rule px-3.5 py-1.5 text-[0.875rem] hover:border-ink">
+              <Link href={`/subjects/${c.slug}`} className="inline-block border rounded-ui border-rule px-3.5 py-1.5 text-[0.875rem] hover:border-ink">
                 {c.name}
               </Link>
             </li>
           ))}
           <li>
-            <Link href={all} className="inline-flex items-center gap-1.5 border border-ink px-3.5 py-1.5 text-[0.875rem] font-semibold">
+            <Link href={all} className="inline-flex items-center gap-1.5 border rounded-ui border-ink px-3.5 py-1.5 text-[0.875rem] font-semibold">
               All {total} books <ArrowIcon />
             </Link>
           </li>

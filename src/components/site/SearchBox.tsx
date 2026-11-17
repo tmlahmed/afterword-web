@@ -84,7 +84,7 @@ export const SearchBox: React.FC<{ variant?: 'line' | 'box'; autoFocus?: boolean
       <form action="/search" role="search" onSubmit={() => setOpen(false)}>
         {/* One outlined box with the search button joined on the right. */}
         <div
-          className={`group flex items-stretch rounded-[3px] border border-ink bg-paper transition-shadow focus-within:shadow-[0_0_0_3px_rgb(17_17_17/0.08)] ${
+          className={`group flex items-stretch rounded-ui border border-ink bg-paper transition-shadow focus-within:shadow-[0_0_0_3px_rgb(17_17_17/0.08)] ${
             variant === 'line' ? 'h-9' : 'h-12'
           }`}
         >
@@ -130,14 +130,14 @@ export const SearchBox: React.FC<{ variant?: 'line' | 'box'; autoFocus?: boolean
               </svg>
             </button>
           ) : shortcut ? (
-            <kbd aria-hidden className="mr-2.5 hidden self-center rounded-[3px] border border-rule px-1.5 font-sans text-[0.75rem] leading-5 text-ink-faint md:inline-block">
+            <kbd aria-hidden className="mr-2.5 hidden self-center rounded-ui border border-rule px-1.5 font-sans text-[0.75rem] leading-5 text-ink-faint md:inline-block">
               /
             </kbd>
           ) : null}
           <button
             type="submit"
             aria-label="Search"
-            className={`-my-px -mr-px flex shrink-0 items-center justify-center rounded-r-[3px] bg-ink text-paper transition-colors hover:bg-accent focus-visible:bg-accent ${
+            className={`-my-px -mr-px flex shrink-0 items-center justify-center rounded-r-ui bg-ink text-paper transition-colors hover:bg-accent focus-visible:bg-accent ${
               variant === 'line' ? 'w-9' : 'w-12'
             }`}
           >
@@ -148,7 +148,7 @@ export const SearchBox: React.FC<{ variant?: 'line' | 'box'; autoFocus?: boolean
 
       {show ? (
         <div
-          className={`absolute top-full z-50 mt-1.5 rounded-[3px] border border-ink bg-paper shadow-[0_24px_40px_-20px_rgb(17_17_17/0.35)] ${
+          className={`absolute top-full z-50 mt-1.5 rounded-ui border border-ink bg-paper shadow-[0_24px_40px_-20px_rgb(17_17_17/0.35)] ${
             // The header box is compact; its suggestions get more room, lined up with its right edge.
             variant === 'line' ? 'right-0 w-[26rem] max-w-[calc(100vw-2rem)]' : 'inset-x-0'
           }`}

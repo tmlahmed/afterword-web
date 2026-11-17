@@ -157,7 +157,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
         role="dialog"
         aria-label="Your bag"
         hidden={!open}
-        className="absolute inset-x-0 top-full z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto border-b border-ink bg-paper shadow-[0_24px_40px_-24px_rgb(26_29_27/0.4)] md:left-auto md:right-4 md:w-[25rem] md:overflow-visible md:border"
+        className="absolute inset-x-0 top-full z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto border-b border-ink bg-paper shadow-[0_24px_40px_-24px_rgb(26_29_27/0.4)] md:left-auto md:right-4 md:w-[25rem] md:overflow-visible md:rounded-ui md:border"
       >
         {/* A small notch pointing at the icon (wider screens). */}
         <span aria-hidden className="absolute -top-[7px] right-5 hidden h-3 w-3 rotate-45 border-l border-t border-ink bg-paper md:block" />

@@ -147,7 +147,7 @@ export const BagView: React.FC<{
       {promotion ? (
         <div>
           <p className="text-[0.8125rem] font-semibold">Promotion code</p>
-          <div className="mt-2 flex items-center justify-between gap-3 border border-primary bg-card px-3 py-2.5">
+          <div className="mt-2 flex items-center justify-between gap-3 border rounded-ui border-primary bg-card px-3 py-2.5">
             <span className="text-[0.9375rem]">
               <span className="mr-1.5 text-primary" aria-hidden>
                 ✓
@@ -186,7 +186,7 @@ export const BagView: React.FC<{
               placeholder="Enter code"
               aria-invalid={Boolean(promoState.message)}
               aria-describedby={promoState.message ? 'promo-error' : undefined}
-              className={`h-11 min-w-0 flex-1 border bg-card px-3 uppercase placeholder:normal-case placeholder:text-ink-faint focus:border-primary focus:outline-none ${promoState.message ? 'border-[#9b2c1f]' : 'border-ink/60'}`}
+              className={`h-11 min-w-0 flex-1 border rounded-ui bg-card px-3 uppercase placeholder:normal-case placeholder:text-ink-faint focus:border-primary focus:outline-none ${promoState.message ? 'border-[#9b2c1f]' : 'border-ink/60'}`}
             />
             <button type="submit" disabled={promoPending} className="btn btn-quiet !min-h-11 shrink-0 px-5">
               {promoPending ? 'Checking…' : 'Apply'}
@@ -203,7 +203,7 @@ export const BagView: React.FC<{
   )
 
   const gift = (
-    <section className="mt-8 border border-rule p-5">
+    <section className="mt-8 border rounded-ui border-rule p-5">
       <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
@@ -234,7 +234,7 @@ export const BagView: React.FC<{
               setNoteSaved(false)
             }}
             onBlur={() => note !== savedNote && saveGift(wrap, note)}
-            className="w-full max-w-xl border border-ink/60 bg-card px-3 py-2 text-[0.9375rem]"
+            className="w-full max-w-xl border rounded-ui border-ink/60 bg-card px-3 py-2 text-[0.9375rem]"
           />
           <p className="mt-1 text-[0.75rem] text-ink-faint" aria-live="polite">
             {noteSaved ? 'Saved.' : `${240 - note.length} characters left`}
@@ -333,7 +333,7 @@ export const BagView: React.FC<{
         {/* Right: summary, promotion code and checkout, level with the top of the page */}
         {lines.length ? (
           <aside className="mt-10 md:sticky md:top-36 md:mt-2">
-            <section className="border border-ink p-5">
+            <section className="border rounded-ui border-ink p-5">
               <h2 className="display text-[1.5rem]">Order summary</h2>
               <dl className="mt-4 space-y-2 text-[0.9375rem]">
                 <div className="flex justify-between">

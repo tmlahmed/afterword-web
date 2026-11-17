@@ -126,7 +126,7 @@ export const ShelfPage: React.FC<{ shared: number[] }> = ({ shared }) => {
 
   if (books.length === 0)
     return (
-      <div className="border border-rule px-6 py-14 text-center">
+      <div className="border rounded-ui border-rule px-6 py-14 text-center">
         <p className="font-display text-[1.25rem]">Your Shelf is empty.</p>
         <p className="mx-auto mt-2 max-w-md text-ink-soft">
           Tap “Save to The Shelf” on any book to keep it here for later. No account needed.

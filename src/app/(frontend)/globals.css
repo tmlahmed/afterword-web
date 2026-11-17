@@ -29,6 +29,9 @@
   --font-display: var(--font-jost), 'Century Gothic', 'Avenir Next', Avenir, ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
+  /* One small corner radius for buttons, fields, boxes and pop-ups (class: rounded-ui). Covers keep their own. */
+  --radius-ui: 3px;
+
   --shadow-book: 0 1px 1px rgb(17 17 17 / 0.16), 0 10px 22px -10px rgb(17 17 17 / 0.4);
 }
 
@@ -103,7 +106,7 @@
     font-size: 0.9375rem;
     font-weight: 600;
     letter-spacing: 0.01em;
-    border-radius: 2px;
+    border-radius: var(--radius-ui);
     transition: background-color 150ms ease, color 150ms ease;
   }
   .btn-primary {

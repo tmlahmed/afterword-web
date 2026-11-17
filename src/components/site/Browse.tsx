@@ -46,7 +46,7 @@ const Group: React.FC<{
               >
                 <span
                   aria-hidden
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? 'border-primary bg-primary text-paper' : 'border-ink-faint'}`}
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center border rounded-ui ${on ? 'border-primary bg-primary text-paper' : 'border-ink-faint'}`}
                 >
                   {on ? (
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8">

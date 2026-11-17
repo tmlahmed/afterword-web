@@ -61,7 +61,7 @@ export const FeaturedBook: React.FC<{
   eyebrow?: string | null
   flip?: boolean
 }> = ({ book, note, eyebrow, flip }) => (
-  <div className="grid border border-rule md:grid-cols-[4fr_8fr]">
+  <div className="grid overflow-hidden border rounded-ui border-rule md:grid-cols-[4fr_8fr]">
     <Link href={`/book/${book.slug}`} className={`flex items-center justify-center px-8 py-9 ${tintFor(book.id)} ${flip ? 'md:order-2' : ''}`}>
       <Cover title={book.title} author={book.authorLine} src={book.coverUrl} className="h-[14rem] md:h-[17rem]" />
     </Link>

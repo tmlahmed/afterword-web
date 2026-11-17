@@ -18,7 +18,7 @@ export const QtyStepper: React.FC<{
   const box = size === 'md' ? 'h-10 w-10' : 'h-8 w-8'
   const atOne = quantity <= 1
   return (
-    <div className="inline-flex items-center border border-rule bg-card" role="group" aria-label={`Quantity of ${title}`}>
+    <div className="inline-flex items-center overflow-hidden rounded-ui border border-rule bg-card" role="group" aria-label={`Quantity of ${title}`}>
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}

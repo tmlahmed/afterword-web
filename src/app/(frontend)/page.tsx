@@ -41,41 +41,38 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={organisation} />
+      {/* The featured book: a framed panel within the page width, cover on the left. */}
       {feature ? (
-        <section className="border-b border-rule">
-          <div className="mx-auto grid max-w-6xl md:grid-cols-[5fr_7fr]">
+        <section className="mx-auto max-w-6xl px-4 pt-6 md:pt-10">
+          <div className="grid overflow-hidden border rounded-ui border-rule md:grid-cols-[3fr_5fr]">
             <Link
               href={`/book/${feature.slug}`}
-              className={`flex items-center justify-center px-8 py-10 md:py-16 ${tintFor(feature.id)}`}
+              className={`flex items-center justify-center px-8 py-10 md:px-6 md:py-12 lg:px-10 lg:py-14 ${tintFor(feature.id)}`}
             >
               <Cover
                 title={feature.title}
                 author={feature.authorLine}
                 src={feature.coverUrl}
                 priority
-                sizes="(min-width: 768px) 16rem, 12rem"
-                className="h-[17rem] md:h-[24rem]"
+                sizes="(min-width: 1024px) 15rem, (min-width: 768px) 12rem, 12rem"
+                className="h-[16rem] md:h-[17rem] lg:h-[21rem]"
               />
             </Link>
-            <div className="flex flex-col justify-center px-4 py-9 md:px-14 md:py-16">
+            <div className="flex flex-col justify-center border-t border-rule px-5 py-8 md:border-l md:border-t-0 md:px-8 md:py-12 lg:px-12 lg:py-14">
               <p className="eyebrow !text-accent">{home.eyebrow || 'Book of the Month'}</p>
-              <h1 className="display mt-3 text-[2.375rem] md:text-[3.5rem]">
+              <h1 className="display mt-3 text-[2.25rem] md:text-[2.625rem] lg:text-[3.25rem]">
                 <Link href={`/book/${feature.slug}`}>{feature.title}</Link>
               </h1>
-              {feature.authorLine ? (
-                <p className="mt-2 font-display text-[1.25rem] text-ink-soft">{feature.authorLine}</p>
-              ) : null}
+              {feature.authorLine ? <p className="mt-2 font-display text-[1.1875rem] text-ink-soft">{feature.authorLine}</p> : null}
 
               {featureNote ? (
-                <figure className="mt-7 border-l border-accent pl-5">
-                  <blockquote className="font-display text-[1.125rem] leading-relaxed md:text-[1.1875rem]">
-                    {featureNote.body}
-                  </blockquote>
+                <figure className="mt-6 max-w-xl border-l-2 border-accent pl-5">
+                  <blockquote className="font-display text-[1.0625rem] leading-relaxed md:text-[1.125rem]">{featureNote.body}</blockquote>
                   <figcaption className="eyebrow mt-3">The Afterword · {featureNote.signedBy}</figcaption>
                 </figure>
               ) : null}
 
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
                 <Link href={`/book/${feature.slug}`} className="btn btn-primary">
                   View the book <ArrowIcon />
                 </Link>
@@ -89,12 +86,13 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <section aria-label="Our promises" className="border-b border-rule">
-        <ul className="mx-auto grid max-w-6xl divide-y divide-rule px-4 md:grid-cols-3 md:divide-x md:divide-y-0 md:px-0">
+      {/* Three promises, framed to match the panel above. */}
+      <section aria-label="Our promises" className={`mx-auto max-w-6xl px-4 ${feature ? 'mt-4 md:mt-5' : 'pt-6 md:pt-10'}`}>
+        <ul className="grid divide-y divide-rule border rounded-ui border-rule md:grid-cols-3 md:divide-x md:divide-y-0">
           {PROMISES.map((p) => (
-            <li key={p.title} className="py-4 md:px-8 md:py-6">
+            <li key={p.title} className="px-5 py-4 md:px-8 md:py-6">
               <p className="font-display text-[1.0625rem]">{p.title}</p>
-              <p className="text-[0.875rem] text-ink-soft">{p.body}</p>
+              <p className="mt-0.5 text-[0.875rem] text-ink-soft">{p.body}</p>
             </li>
           ))}
         </ul>
@@ -156,7 +154,7 @@ export default async function HomePage() {
         ) : null}
 
         <section className="mx-auto max-w-6xl px-4">
-          <div className="border border-ink px-6 py-10 text-center md:py-14">
+          <div className="border rounded-ui border-ink px-6 py-10 text-center md:py-14">
             <p className="eyebrow">On Request</p>
             <h2 className="display mx-auto mt-3 max-w-2xl text-[1.875rem] md:text-[2.5rem]">
               Can’t find it? We’ll bring it in.
