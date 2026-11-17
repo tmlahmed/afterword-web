@@ -77,7 +77,7 @@ export default async function HomePage() {
                   View the book <ArrowIcon />
                 </Link>
                 <p className="flex items-baseline gap-4 text-[0.9375rem]">
-                  <Price price={feature.price} was={feature.compareAtPrice} className="text-[1.0625rem]" />
+                  <Price price={feature.price} was={feature.compareAtPrice} showSaving className="text-[1.0625rem]" />
                   <AvailabilityMark availability={availabilityOf(feature, settings)} className="text-ink-soft" />
                 </p>
               </div>

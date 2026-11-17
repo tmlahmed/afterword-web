@@ -3,7 +3,7 @@ import type { CollectionConfig, FieldAccess } from 'payload'
 import { allow, allowField, publishedOrStaff } from '../access/roles'
 import { importIsbnEndpoint } from '../endpoints/importIsbn'
 import { normaliseIsbn } from '../lib/isbn/isbn'
-import { computePrice } from '../lib/pricing'
+import { computePrice, derivePrices } from '../lib/pricing'
 import { removeBook, syncBook } from '../lib/search'
 import { slugify } from '../lib/slug'
 
@@ -89,19 +89,22 @@ export const Editions: CollectionConfig = {
         }
         return data
       },
-      // Selling price: a manual price always wins; otherwise it is calculated from the list price.
-      async ({ data, req }) => {
-        if (typeof data.priceOverride === 'number' && data.priceOverride > 0) {
-          data.price = data.priceOverride
-          return data
-        }
+      // Prices: the original price comes from the list price and your pricing rules; a selling
+      // price set by staff wins, and when it is lower the original is shown struck through.
+      async ({ data, req, originalDoc }) => {
         const pricing = await req.payload.findGlobal({ slug: 'pricing', req })
-        const computed = computePrice(data.listPrice, data.listCurrency, {
+        const listPrice = data.listPrice !== undefined ? data.listPrice : originalDoc?.listPrice
+        const listCurrency = data.listCurrency !== undefined ? data.listCurrency : originalDoc?.listCurrency
+        const selling = data.priceOverride !== undefined ? data.priceOverride : originalDoc?.priceOverride
+        const original = computePrice(listPrice, listCurrency, {
           rates: (pricing.rates ?? []).map((r) => ({ currency: r.currency, rate: r.rate })),
           margin: pricing.defaultMargin ?? 1,
           roundTo: pricing.roundTo ?? 10,
         })
-        if (computed !== null) data.price = computed
+        const { price, compareAtPrice } = derivePrices(original, selling, data.price ?? originalDoc?.price)
+        data.originalPrice = original
+        data.price = price
+        data.compareAtPrice = compareAtPrice
         return data
       },
       // A plain-text author line for lists, search and cards.
@@ -249,7 +252,7 @@ export const Editions: CollectionConfig = {
                   type: 'number',
                   min: 0,
                   access: { read: staffOnly },
-                  admin: { description: 'The publisher’s printed price.' },
+                  admin: { description: 'The price printed on the book, e.g. 599.' },
                 },
                 {
                   name: 'listCurrency',
@@ -263,30 +266,35 @@ export const Editions: CollectionConfig = {
               type: 'row',
               fields: [
                 {
-                  name: 'price',
+                  name: 'originalPrice',
                   type: 'number',
-                  min: 0,
-                  label: 'Selling price (৳)',
+                  label: 'Original price (৳)',
+                  access: { read: staffOnly },
                   admin: {
                     readOnly: true,
-                    description: 'Calculated from the list price and your pricing rules.',
+                    description: 'List price × your rate for the currency (Settings → Pricing rules), rounded. Updated when you save.',
                   },
                 },
                 {
                   name: 'priceOverride',
                   type: 'number',
                   min: 0,
-                  label: 'Manual price (৳)',
-                  admin: { description: 'Optional. If set, this is the price charged.' },
+                  label: 'Selling price (৳)',
+                  admin: {
+                    description: 'Optional. Leave empty to sell at the original price. A lower price shows as a discount.',
+                  },
                   access: { read: staffOnly, update: allowField('manager', 'catalogue') },
                 },
-                {
-                  name: 'compareAtPrice',
-                  type: 'number',
-                  min: 0,
-                  label: 'Was price (৳)',
-                  admin: { description: 'Optional. Shown struck through beside the price.' },
-                },
+              ],
+            },
+            { name: 'pricePreview', type: 'ui', admin: { components: { Field: '/components/admin/PricePreview#PricePreview' } } },
+            {
+              type: 'row',
+              admin: { condition: () => false },
+              fields: [
+                // Worked out on save from the two fields above; what the shop shows and charges.
+                { name: 'price', type: 'number', min: 0, label: 'Customers pay (৳)' },
+                { name: 'compareAtPrice', type: 'number', min: 0, label: 'Shown struck through (৳)' },
               ],
             },
             {

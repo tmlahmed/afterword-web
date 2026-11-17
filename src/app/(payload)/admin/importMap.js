@@ -1,3 +1,4 @@
+import { PricePreview as PricePreview_1460c48b201553b2b3a44b18eb8bd40c } from '../../../components/admin/PricePreview'
 import { ImportIsbn as ImportIsbn_5b8e4b9ed7e21d5260df7bfe903c0a44 } from '../../../components/admin/ImportIsbn'
 import { CatalogueImport as CatalogueImport_8aec08aee3b4c03adc7f208cb948aa61 } from '../../../components/admin/CatalogueImport'
 import { ImportProgressField as ImportProgressField_8aec08aee3b4c03adc7f208cb948aa61 } from '../../../components/admin/CatalogueImport'
@@ -35,6 +36,7 @@ import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } f
 
 /** @type import('payload').ImportMap */
 export const importMap = {
+  "/components/admin/PricePreview#PricePreview": PricePreview_1460c48b201553b2b3a44b18eb8bd40c,
   "/components/admin/ImportIsbn#ImportIsbn": ImportIsbn_5b8e4b9ed7e21d5260df7bfe903c0a44,
   "/components/admin/CatalogueImport#CatalogueImport": CatalogueImport_8aec08aee3b4c03adc7f208cb948aa61,
   "/components/admin/CatalogueImport#ImportProgressField": ImportProgressField_8aec08aee3b4c03adc7f208cb948aa61,

@@ -49,7 +49,7 @@ Deploy in a quiet hour; Dhaka late evening is usually best. A restart takes the 
 
 **Search shows nothing or old results.** Search runs on Meilisearch. If it is down, the shop falls back to plain database search without filters, so customers can still find books. Run `systemctl status meilisearch`, restart it, then run `pnpm search:reindex`.
 
-**Prices look wrong.** Check **Settings → Pricing rules** (exchange rates and margin) and the book's **Manual price**. Remember that a book is re-priced only when it is saved.
+**Prices look wrong.** Check **Settings → Pricing rules** (exchange rates and margin) and the book's **Selling price**. A book's original price is recalculated only when the book is saved, so after changing exchange rates, re-save the books you want re-priced.
 
 **Stock looks wrong.** Stock is the sum of the book's stock movements, which you can see on the book's page. Never change it directly. Add a **Stock count correction** movement with a note. If the stock figure and the ledger ever disagree, tell the developer; the order test checks they stay equal.
 

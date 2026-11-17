@@ -33,3 +33,23 @@ const roundUp = (amount: number, step: number): number => {
 
 /** "৳1,450" — whole taka with thousands separators. */
 export const formatTaka = (amount: number): string => `৳${Math.round(amount).toLocaleString('en-IN')}`
+
+/**
+ * What a book sells for, from its original price (list price converted to taka) and an
+ * optional selling price set by staff. A selling price below the original shows the original
+ * struck through, as a discount.
+ */
+export const derivePrices = (
+  original: number | null,
+  selling: number | null | undefined,
+  current?: number | null,
+): { price: number | null; compareAtPrice: number | null } => {
+  if (typeof selling === 'number' && selling > 0) {
+    return { price: selling, compareAtPrice: original !== null && original > selling ? original : null }
+  }
+  return { price: original ?? current ?? null, compareAtPrice: null }
+}
+
+/** Whole-number discount, e.g. ৳1,200 → ৳1,020 is 15. Null when there is no saving. */
+export const discountPercent = (price?: number | null, was?: number | null): number | null =>
+  price && was && was > price ? Math.round(((was - price) / was) * 100) : null

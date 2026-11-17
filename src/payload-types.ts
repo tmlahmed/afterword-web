@@ -241,21 +241,19 @@ export interface Edition {
   spineMm?: number | null;
   weightG?: number | null;
   /**
-   * The publisher’s printed price.
+   * The price printed on the book, e.g. 599.
    */
   listPrice?: number | null;
   listCurrency?: ('GBP' | 'USD' | 'INR' | 'EUR' | 'BDT') | null;
   /**
-   * Calculated from the list price and your pricing rules.
+   * List price × your rate for the currency (Settings → Pricing rules), rounded. Updated when you save.
    */
-  price?: number | null;
+  originalPrice?: number | null;
   /**
-   * Optional. If set, this is the price charged.
+   * Optional. Leave empty to sell at the original price. A lower price shows as a discount.
    */
   priceOverride?: number | null;
-  /**
-   * Optional. Shown struck through beside the price.
-   */
+  price?: number | null;
   compareAtPrice?: number | null;
   sourcing: 'standard' | 'pre_order' | 'out_of_print';
   expectedDate?: string | null;
@@ -1394,8 +1392,9 @@ export interface EditionsSelect<T extends boolean = true> {
   weightG?: T;
   listPrice?: T;
   listCurrency?: T;
-  price?: T;
+  originalPrice?: T;
   priceOverride?: T;
+  price?: T;
   compareAtPrice?: T;
   sourcing?: T;
   expectedDate?: T;

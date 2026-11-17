@@ -4,7 +4,7 @@ import React from 'react'
 
 import { type Availability, availabilityOf } from '../../lib/availability'
 import type { BookCardData } from '../../lib/catalogue'
-import { formatTaka } from '../../lib/pricing'
+import { discountPercent, formatTaka } from '../../lib/pricing'
 import { ArrowIcon } from './Brand'
 
 const TINTS = ['bg-tint-sage', 'bg-tint-clay', 'bg-tint-slate', 'bg-tint-straw'] as const
@@ -62,25 +62,40 @@ export const AvailabilityMark: React.FC<{ availability: Availability; className?
   </span>
 )
 
-export const Price: React.FC<{ price?: number | null; was?: number | null; className?: string }> = ({
+export const Price: React.FC<{ price?: number | null; was?: number | null; className?: string; showSaving?: boolean }> = ({
   price,
   was,
   className = '',
-}) =>
-  price ? (
+  showSaving = false,
+}) => {
+  const off = discountPercent(price, was)
+  return price ? (
     <span className={`tabular-nums ${className}`}>
       <span className="font-semibold">{formatTaka(price)}</span>
-      {was && was > price ? <s className="ml-2 font-normal text-ink-faint">{formatTaka(was)}</s> : null}
+      {off ? <s className="ml-2 font-normal text-ink-faint">{formatTaka(was!)}</s> : null}
+      {off && showSaving ? (
+        <span className="ml-2 whitespace-nowrap text-[0.8125rem] font-semibold text-accent">{off}% off</span>
+      ) : null}
     </span>
   ) : (
     <span className={`text-ink-faint ${className}`}>Price on request</span>
   )
+}
+
+/** A small red tag in the corner of a cover, e.g. "−15%". */
+export const DiscountTag: React.FC<{ price?: number | null; was?: number | null; className?: string }> = ({ price, was, className = '' }) => {
+  const off = discountPercent(price, was)
+  return off ? (
+    <span className={`rounded-ui bg-accent px-1.5 py-0.5 text-[0.75rem] font-semibold tabular-nums text-paper ${className}`}>−{off}%</span>
+  ) : null
+}
 
 export const BookCard: React.FC<{ book: BookCardData; className?: string }> = ({ book, className = '' }) => {
   const availability = availabilityOf(book)
   return (
     <Link href={`/book/${book.slug}`} className={`group block ${className}`}>
-      <div className={`flex h-[13.5rem] items-end justify-center px-4 pb-0 pt-5 md:h-[15.5rem] ${tintFor(book.id)}`}>
+      <div className={`relative flex h-[13.5rem] items-end justify-center px-4 pb-0 pt-5 md:h-[15.5rem] ${tintFor(book.id)}`}>
+        <DiscountTag price={book.price} was={book.compareAtPrice} className="absolute left-2 top-2 z-10" />
         <Cover
           title={book.title}
           author={book.authorLine}

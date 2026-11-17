@@ -81,7 +81,7 @@ export const FeaturedBook: React.FC<{
         <Link href={`/book/${book.slug}`} className="btn btn-primary">
           View the book <ArrowIcon />
         </Link>
-        <Price price={book.price} was={book.compareAtPrice} className="text-[1.0625rem]" />
+        <Price price={book.price} was={book.compareAtPrice} showSaving className="text-[1.0625rem]" />
         <AvailabilityMark availability={availabilityOf(book)} className="text-ink-soft" />
       </p>
     </div>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { availabilityOf } from '../../src/lib/availability'
 import { isbn10to13, isValidIsbn13, normaliseIsbn } from '../../src/lib/isbn/isbn'
-import { computePrice, formatTaka } from '../../src/lib/pricing'
+import { computePrice, derivePrices, discountPercent, formatTaka } from '../../src/lib/pricing'
 import { slugify } from '../../src/lib/slug'
 
 const rules = { rates: [{ currency: 'GBP', rate: 165 }, { currency: 'INR', rate: 1.45 }], margin: 1.2, roundTo: 10 }
@@ -70,5 +70,24 @@ describe('slugify', () => {
     expect(slugify('Gabriel García Márquez')).toBe('gabriel-garcia-marquez')
     expect(slugify("Midnight's Children")).toBe('midnights-children')
     expect(slugify('Jonathan Strange & Mr Norrell')).toBe('jonathan-strange-and-mr-norrell')
+  })
+})
+
+
+describe('original and selling prices', () => {
+  it('sells at the original price when no selling price is set', () => {
+    expect(derivePrices(1200, null)).toEqual({ price: 1200, compareAtPrice: null })
+  })
+  it('shows the original struck through when the selling price is lower', () => {
+    expect(derivePrices(1200, 1020)).toEqual({ price: 1020, compareAtPrice: 1200 })
+    expect(discountPercent(1020, 1200)).toBe(15)
+  })
+  it('shows no discount when the selling price is the same or higher', () => {
+    expect(derivePrices(1200, 1300)).toEqual({ price: 1300, compareAtPrice: null })
+    expect(discountPercent(1200, 1200)).toBeNull()
+  })
+  it('keeps a hand-set price for books with no list price', () => {
+    expect(derivePrices(null, null, 950)).toEqual({ price: 950, compareAtPrice: null })
+    expect(derivePrices(null, 900)).toEqual({ price: 900, compareAtPrice: null })
   })
 })

@@ -58,7 +58,8 @@ An order changes only through the buttons at the top of its page. Never type ove
 ## 3. Catalogue (catalogue editors)
 
 **Adding one book.** In Catalogue → Books, type or scan the ISBN into **Add a book by ISBN**. The title, author, publisher, description and cover are filled in from the book databases, and the cover is copied into our own store. The book is saved as a **draft**. Check it, then:
-- set the **list price and currency** (the price on the book), so the selling price is worked out from Settings → Pricing rules, or type a **Manual price** in taka;
+- set the **list price and currency**, the price printed on the book (for example 599 INR). The **original price** in taka is worked out from Settings → Pricing rules (599 × 2 = ৳1,198, rounded to ৳1,200);
+- optionally type a **selling price** in taka. If it is lower than the original, customers see the original struck through and the discount, for example ~~৳1,200~~ ৳1,020 · 15% off, with a red "−15%" tag on the cover. Leave it empty to sell at the original price. The **Customers see** box under the fields shows the result as you type;
 - choose its **subjects**;
 - set **Sourcing**: *Standard* (shows "In stock" when we have copies, otherwise "On Request"), *Pre-order* (add the date it reaches Dhaka), or *Out of print*;
 - change the status to **Published**.

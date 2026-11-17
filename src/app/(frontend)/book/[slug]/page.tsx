@@ -232,7 +232,7 @@ export default async function BookPage({ params }: Props) {
           {/* Buy box */}
           <div className="mt-7 border-y border-ink py-6">
             <div className="flex items-baseline justify-between gap-4">
-              <Price price={book.price} was={book.compareAtPrice} className="font-display text-[2rem] leading-none" />
+              <Price price={book.price} was={book.compareAtPrice} showSaving className="font-display text-[2rem] leading-none" />
               <AvailabilityMark availability={availability} className="text-[0.9375rem] font-semibold" />
             </div>
             <p className="mt-3 text-[0.9375rem] text-ink-soft">{availability.detail}</p>
