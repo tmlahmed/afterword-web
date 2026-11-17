@@ -12,13 +12,13 @@ createdb afterword        # once
 cp .env.example .env      # once, then fill in the two values
 pnpm install
 pnpm seed                 # loads about 200 real books as sample data (takes about five minutes)
-pnpm search               # starts the search engine (leave it running in its own terminal)
 pnpm seed:content         # sample menu, journal articles, About and Help pages; also builds the search index
-pnpm dev
+pnpm dev                  # starts the search engine too, if Meilisearch is installed
 ```
 
-Search needs Meilisearch (`brew install meilisearch`). If it is not running the shop still works:
-grids and search fall back to the database, without filters or typo tolerance.
+Search uses Meilisearch (`brew install meilisearch`); `pnpm dev` starts it and stops it with the server
+(`pnpm search` starts it on its own). Without it the shop still works: search, suggestions and grids fall
+back to the database, without filters or typo tolerance. `pnpm dev:web` starts only the website.
 
 - Shop: http://localhost:3000
 - Admin: http://localhost:3000/admin — the first account you create becomes the Owner.

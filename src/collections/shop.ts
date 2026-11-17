@@ -9,9 +9,11 @@ export const Notes: CollectionConfig = {
   slug: 'notes',
   labels: { singular: 'Bookseller note', plural: 'Bookseller notes' },
   admin: {
-    useAsTitle: 'signedBy',
+    // Listed as "Book title — Bookseller" so a note is never confused with another book's.
+    useAsTitle: 'label',
     group: 'Content',
-    defaultColumns: ['edition', 'signedBy', 'updatedAt'],
+    defaultColumns: ['label', 'edition', 'signedBy', 'updatedAt'],
+    listSearchableFields: ['label', 'signedBy'],
     description: 'The Afterword — two to four sentences on why this book, signed by a bookseller.',
   },
   access: {
@@ -20,10 +22,25 @@ export const Notes: CollectionConfig = {
     update: allow('manager', 'catalogue', 'writer'),
     delete: allow('manager', 'writer'),
   },
+  hooks: {
+    beforeChange: [
+      async ({ data, req, originalDoc }) => {
+        const edition = data.edition ?? originalDoc?.edition
+        const editionId = typeof edition === 'object' && edition ? edition.id : edition
+        const book = editionId
+          ? await req.payload.findByID({ collection: 'editions', id: editionId, depth: 0, select: { title: true }, req, disableErrors: true })
+          : null
+        const signedBy = data.signedBy ?? originalDoc?.signedBy ?? ''
+        data.label = [book?.title, signedBy].filter(Boolean).join(' — ')
+        return data
+      },
+    ],
+  },
   fields: [
     { name: 'edition', type: 'relationship', relationTo: 'editions', required: true, index: true },
     { name: 'body', type: 'textarea', required: true, maxLength: 700 },
     { name: 'signedBy', type: 'text', required: true, admin: { description: 'The bookseller’s name.' } },
+    { name: 'label', type: 'text', index: true, admin: { hidden: true } },
   ],
 }
 

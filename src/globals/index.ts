@@ -184,7 +184,15 @@ export const Home: GlobalConfig = {
           name: 'note',
           type: 'relationship',
           relationTo: 'notes',
-          admin: { description: 'The bookseller note to quote beside the cover.' },
+          // Only the notes written about the book chosen above.
+          filterOptions: ({ siblingData }) => {
+            const book = (siblingData as { edition?: number | { id: number } | null })?.edition
+            const id = typeof book === 'object' && book ? book.id : book
+            return id ? { edition: { equals: id } } : false
+          },
+          admin: {
+            description: 'The bookseller note to quote beside the cover. Only notes about the book above are listed; choose the book first. To write one, add it under Content → Bookseller notes.',
+          },
         },
       ],
     },

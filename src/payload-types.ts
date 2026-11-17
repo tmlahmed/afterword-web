@@ -494,6 +494,7 @@ export interface Note {
    * The bookseller’s name.
    */
   signedBy: string;
+  label?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1538,6 +1539,7 @@ export interface NotesSelect<T extends boolean = true> {
   edition?: T;
   body?: T;
   signedBy?: T;
+  label?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1979,7 +1981,7 @@ export interface Home {
     eyebrow?: string | null;
     edition?: (number | null) | Edition;
     /**
-     * The bookseller note to quote beside the cover.
+     * The bookseller note to quote beside the cover. Only notes about the book above are listed; choose the book first. To write one, add it under Content → Bookseller notes.
      */
     note?: (number | null) | Note;
   };
