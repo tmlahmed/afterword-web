@@ -16,7 +16,9 @@ const fail = (message: string): never => {
 export type OrderAction =
   | { action: 'confirm' }
   | { action: 'record_payment'; amount: number; method: string; reference?: string }
-  | { action: 'ship'; courier: string; trackingId: string; parcel?: number }
+  | { action: 'ship'; courier: string; trackingId: string; parcel?: number; courierStatus?: string; courierFee?: number }
+  | { action: 'unship'; parcel?: number; reason?: string }
+  | { action: 'courier_status'; parcel: number; courierStatus: string; note?: string }
   | { action: 'deliver'; parcel?: number }
   | { action: 'return'; parcel?: number }
   | { action: 'cancel'; reason?: string }
@@ -132,7 +134,15 @@ export const runOrderAction = async (payload: Payload, orderId: number, input: O
       if (order.status === 'placed') fail('Confirm the order before handing it to a courier.')
       const i = pickParcel(parcels, input.parcel, 'packing', 'handed to a courier')
       if (!input.courier?.trim() || !input.trackingId?.trim()) fail('Enter the courier and the tracking number.')
-      parcels[i] = { ...parcels[i], status: 'shipped', courier: input.courier.trim(), trackingId: input.trackingId.trim() }
+      parcels[i] = {
+        ...parcels[i],
+        status: 'shipped',
+        courier: input.courier.trim(),
+        trackingId: input.trackingId.trim(),
+        courierStatus: input.courierStatus ?? null,
+        courierFee: input.courierFee ?? null,
+        courierCheckedAt: input.courierStatus ? new Date().toISOString() : null,
+      }
       const next = await save(
         payload,
         order,
@@ -142,6 +152,33 @@ export const runOrderAction = async (payload: Payload, orderId: number, input: O
       )
       notifyOrder(payload, next, 'shipped')
       return next
+    }
+
+    case 'unship': {
+      // The courier never took the parcel (pickup cancelled, or booked by mistake): back to packing.
+      const i = pickParcel(parcels, input.parcel, 'shipped', 'taken back from the courier')
+      const was = parcels[i]
+      parcels[i] = { ...was, status: 'packing', courier: null, trackingId: null, courierStatus: null, courierFee: null, courierCheckedAt: null }
+      const other = parcels.find((p) => p.status === 'shipped')
+      return save(
+        payload,
+        order,
+        { parcels, status: overallStatus(parcels), courier: other?.courier ?? null, trackingId: other?.trackingId ?? null, payOnDelivery: stillToCollect(parcels) },
+        `${name(i)} back to packing: ${was.courier ?? 'the courier'} did not take it${was.trackingId ? ` (${was.trackingId})` : ''}${input.reason ? `. ${input.reason}` : ''}`,
+        by,
+      )
+    }
+
+    case 'courier_status': {
+      // What the courier says about a parcel. Only shown, and recorded in the history when it changes.
+      const p = parcels[input.parcel]
+      if (!p) fail('There is no such parcel.')
+      const changed = p.courierStatus !== input.courierStatus
+      parcels[input.parcel] = { ...p, courierStatus: input.courierStatus, courierCheckedAt: new Date().toISOString() }
+      if (!changed && !input.note) {
+        return payload.update({ collection: 'orders', id: order.id, data: { parcels }, depth: 0, overrideAccess: true })
+      }
+      return save(payload, order, { parcels }, `${name(input.parcel)}: ${p.courier ?? 'courier'} says “${input.courierStatus}”${input.note ? `. ${input.note}` : ''}`, by)
     }
 
     case 'deliver': {

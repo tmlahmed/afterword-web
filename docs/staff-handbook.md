@@ -44,11 +44,23 @@ An order changes only through the buttons at the top of its page. Never type ove
 
 Each parcel has its own **Packing slip**, **Hand to courier**, **Mark delivered** and **Came back undelivered** buttons on the order page. The slip shows what the courier collects for that parcel.
 
-**Packing.** Press **Packing slip ↗** for the parcel. It has a pick list and the address; gift orders print without prices and include the gift note. Pack the books, choose the courier, type the **tracking number** and press **Hand to courier**. The customer gets the tracking number by text.
+**Packing.** Press **Packing slip ↗** for the parcel. It has a pick list and the address; gift orders print without prices and include the gift note. Pack the books, then:
+- **Pathao:** press **Book Pathao pickup**. The parcel is booked in Pathao with the customer's address, the weight and the amount to collect, and Pathao's consignment ID becomes the tracking number. Write the consignment ID on the parcel (or print Pathao's label from their panel). It can take up to a minute.
+- **Any other courier:** choose it, type the **tracking number** and press **Hand to courier**.
 
-**Delivered.** When the courier confirms delivery, press **Mark delivered** on that parcel. It records the cash the courier collected, so match it against the courier's payout.
+Either way the customer gets the tracking number by text.
+
+**Following Pathao parcels.** The order page shows what Pathao last said ("Pickup Requested", "In Transit"…). The shop asks Pathao every half hour, and at once when Pathao calls it. Press **Check with Pathao** to ask now.
+- When Pathao says **Delivered**, the parcel is marked delivered and the cash recorded, by itself.
+- When Pathao says **Return**, the parcel is marked returned and its books go back into stock.
+- When Pathao **cancels the pickup**, the parcel goes back to "To pack" so you can book it again.
+- A **partial delivery** or **exchange** is left for you: check it in the Pathao panel and finish the parcel by hand.
+
+**Delivered.** For other couriers, press **Mark delivered** on the parcel when the courier confirms delivery. It records the cash the courier collected, so match it against the courier's payout (for Pathao, compare with Pathao's invoice; the order shows Pathao's charge for each parcel).
 
 **Came back undelivered.** Press **Came back undelivered** on the parcel when it is returned. Its books go back into stock automatically.
+
+**Courier did not take it.** If a parcel was marked with the courier but never left (booked by mistake, pickup missed), press **Courier did not take it**. It goes back to "To pack". Cancel the booking in the courier's own panel too.
 
 **Cancelling.** Press **Cancel order** with a short reason. Any copies set aside go back into stock. A parcel already with a courier cannot be cancelled; wait for it to come back and mark it returned. If the first parcel has been delivered, the button reads **Cancel the rest** and cancels only the books not yet sent; the advance paid for them is owed back. If the customer paid anything, refund it through bKash or SSLCommerz, then note it on the order.
 

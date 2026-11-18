@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { allow, nobody } from '../access/roles'
-import { orderActionEndpoint } from '../endpoints/orderAction'
+import { courierModeEndpoint, orderActionEndpoint } from '../endpoints/orderAction'
 import { receivePurchaseOrderEndpoint } from '../endpoints/receivePurchaseOrder'
 import { afterOrderCreated, prepareOrder } from '../lib/orders/prepare'
 import { DISTRICTS } from '../lib/orders/pricing'
@@ -189,7 +189,7 @@ export const Orders: CollectionConfig = {
     update: allow('manager', 'orders'),
     delete: nobody,
   },
-  endpoints: [orderActionEndpoint],
+  endpoints: [courierModeEndpoint, orderActionEndpoint],
   hooks: {
     beforeChange: [
       async ({ data, operation, req, context }) => (operation === 'create' ? prepareOrder(data, req, context) : data),
@@ -456,6 +456,14 @@ export const Orders: CollectionConfig = {
                     { name: 'collect', type: 'number', label: 'Courier collects (৳)' },
                     { name: 'courier', type: 'text' },
                     { name: 'trackingId', type: 'text', label: 'Tracking number' },
+                  ],
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    { name: 'courierStatus', type: 'text', label: 'Courier says' },
+                    { name: 'courierFee', type: 'number', label: 'Courier’s charge (৳)' },
+                    { name: 'courierCheckedAt', type: 'date', label: 'Last checked', admin: { date: { pickerAppearance: 'dayAndTime' } } },
                   ],
                 },
               ],

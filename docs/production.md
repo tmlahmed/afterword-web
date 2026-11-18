@@ -19,7 +19,7 @@ The plan: one **Hostinger KVM 2** server runs the whole shop, with free Cloudfla
 | **bKash** personal or merchant number | Send Money advances checked by hand, until online bKash is connected | free | Enter in Settings → Shop settings |
 | **Google Merchant Center** and **Meta Commerce Manager** | Books in Google Shopping and in Facebook and Instagram Shops | free to list | Feeds ready at `/feeds/google.xml` and `/feeds/meta.xml` |
 | **Brevo**, **Mailchimp** or similar | Sending the newsletter to subscribers | free tiers to a few hundred or thousand contacts | Download the list from the admin and import it |
-| **Pathao and/or Steadfast** merchant account | Deliveries and cash-on-delivery collection | per parcel | Staff enter tracking numbers by hand for now |
+| **Pathao** merchant account (Steadfast optional) | Deliveries and cash-on-delivery collection | per parcel | Pathao connected: staff book pickups from the order page, and statuses update by themselves. Needs your live API credentials (section 9a). Other couriers: tracking numbers by hand |
 | **Lark Suite** mail | Staff password-reset emails from the shop | free for a few users | Needs Lark's SMTP settings (section 7) |
 | **Backblaze B2** or **Cloudflare R2** | Off-site copy of the daily backup | free at this size | |
 | **UptimeRobot** or **Better Stack** | Alerts to your phone if the shop goes down | free | |
@@ -176,6 +176,8 @@ EMAIL_FROM=shop@your-domain.com
 # SSLCZ_STORE_PASSWORD=
 # SSLCZ_LIVE=true
 # BKASH_APP_KEY=  BKASH_APP_SECRET=  BKASH_USERNAME=  BKASH_PASSWORD=  BKASH_LIVE=true
+# PATHAO_CLIENT_ID=  PATHAO_CLIENT_SECRET=  PATHAO_USERNAME=  PATHAO_PASSWORD=  PATHAO_STORE_ID=  PATHAO_LIVE=true
+# PATHAO_WEBHOOK_SECRET=  PATHAO_WEBHOOK_REPLY=
 # RCLONE_REMOTE=b2:afterword-backups
 ```
 Lock the file down with `chmod 600 .env`.
@@ -235,8 +237,9 @@ If your Lark plan does not allow SMTP sending, use the free tier of Brevo or Res
 **Daily backup.** As the `afterword` user, run `crontab -e` and add:
 ```
 15 3 * * *  cd /home/afterword/afterword-web && sh scripts/backup.sh >> backups/backup.log 2>&1
+*/30 * * * *  cd /home/afterword/afterword-web && pnpm -s courier:sync >> backups/courier.log 2>&1
 ```
-It keeps the newest 14 copies on the server.
+The backup keeps the newest 14 copies on the server. The second line asks Pathao about parcels every half hour (section 9a).
 
 **Off-site copy.** Make a free Backblaze B2 (or Cloudflare R2) bucket, install rclone (`curl https://rclone.org/install.sh | sudo bash`), run `rclone config` to add it as a remote called `b2`, and set `RCLONE_REMOTE=b2:afterword-backups` in `.env`. Every backup is then copied off the server as well.
 
@@ -249,6 +252,22 @@ It keeps the newest 14 copies on the server.
 ## 9. Connecting the SMS provider (code change)
 
 On the live site, customers can only sign in with an SMS code. Choose a Bangladeshi bulk SMS provider (SSL Wireless, Alpha SMS, BulkSMSBD and others have simple APIs), open an account, and apply for a **sender name** (masking) early, since approval can take a while. Then the developer adds that provider in `src/lib/notify.ts` and puts its API key in `.env`. Until then, every message is only logged under Orders → Messages sent.
+
+---
+
+## 9a. Pathao: switching to live
+
+The shop already talks to Pathao. Locally it uses Pathao's **test server** (no rider ever comes). To go live:
+
+1. In the Pathao merchant panel, open **Developer's API** and press **Generate Credentials**. You get a *client ID* and *client secret*. Your *username* and *password* are your merchant panel login.
+2. Under **Stores**, check your pickup store is active, and note its **store ID** (or leave `PATHAO_STORE_ID` empty to use the default store).
+3. Put them in `.env` on the server with `PATHAO_LIVE=true`, then restart the shop (`sudo systemctl restart afterword`).
+4. Book one real parcel to yourself from the order page to check it appears in the Pathao panel.
+5. **Webhook (optional but best):** in the Pathao panel's webhook settings, set the address to `https://your-domain.com/courier/pathao`. Choose a secret and put it in `PATHAO_WEBHOOK_SECRET`. If Pathao shows an *integration secret* that your webhook must return, put that in `PATHAO_WEBHOOK_REPLY`. Restart the shop, then add the webhook in the panel. Statuses then update within seconds; without it, the half-hourly `courier:sync` still catches everything.
+
+The webhook never trusts what it is told: it only names a parcel, and the shop reads that parcel's status back from Pathao itself.
+
+If Pathao gives you a different live API address with your credentials, set it as `PATHAO_BASE_URL`.
 
 ---
 

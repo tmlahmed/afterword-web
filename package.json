@@ -22,7 +22,9 @@
     "seed:content": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/content.ts",
     "import:catalogue": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/import-catalogue.ts",
     "covers:copy": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/copy-covers.ts",
-    "check:orders": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/check-orders.ts"
+    "check:orders": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/check-orders.ts",
+    "check:courier": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/check-courier.ts",
+    "courier:sync": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/courier-sync.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.93.0",

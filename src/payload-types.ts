@@ -1029,6 +1029,9 @@ export interface Order {
         collect?: number | null;
         courier?: string | null;
         trackingId?: string | null;
+        courierStatus?: string | null;
+        courierFee?: number | null;
+        courierCheckedAt?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -1758,6 +1761,9 @@ export interface OrdersSelect<T extends boolean = true> {
         collect?: T;
         courier?: T;
         trackingId?: T;
+        courierStatus?: T;
+        courierFee?: T;
+        courierCheckedAt?: T;
         id?: T;
       };
   timeline?:

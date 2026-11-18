@@ -19,6 +19,13 @@ const PARCEL_TEXT: Record<string, string> = {
   cancelled: 'Cancelled',
 }
 
+/** The courier's own status, worded for the customer. "Pending" at the courier means booked, not yet collected. */
+const forCustomer = (status?: string | null): string | null => {
+  if (!status) return null
+  if (/^pending$|pickup requested|assigned for pickup/i.test(status)) return 'waiting for the courier to collect it'
+  return status.toLowerCase()
+}
+
 export const metadata: Metadata = { title: 'Your order', robots: { index: false } }
 
 const STEPS = ['placed', 'awaiting_stock', 'packing', 'shipped', 'delivered'] as const
@@ -55,7 +62,10 @@ export default async function OrderPage({ params, searchParams }: Props) {
         : 'We will confirm it by text message or a short call before it is packed.'
   } else if (order.status === 'awaiting_stock') detail = 'We have ordered your books from the publisher. We will text you the moment they reach Dhaka.'
   else if (order.status === 'packing') detail = 'Your books are being packed and will be with the courier shortly.'
-  else if (order.status === 'shipped') detail = `On its way with ${order.courier}. Tracking number ${order.trackingId}.`
+  else if (order.status === 'shipped') {
+    const latest = forCustomer((order.parcels ?? []).find((p) => p.status === 'shipped')?.courierStatus)
+    detail = `On its way with ${order.courier}. Tracking number ${order.trackingId}.${latest ? ` Latest: ${latest}.` : ''}`
+  }
   else if (order.status === 'delivered')
     detail = `We hope you enjoy them.${order.pointsEarned ? ` You earned ${order.pointsEarned} reward points (worth ${formatTaka(order.pointsEarned)}) to spend next time.` : ''}`
   else if (order.status === 'cancelled') detail = (order.paid ?? 0) > 0 ? `Your payment of ${formatTaka(order.paid ?? 0)} will be refunded.` : 'Nothing has been charged.'
@@ -105,6 +115,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
                     ? 'Here and set aside for you; packed once your order is confirmed'
                     : (PARCEL_TEXT[p.status] ?? p.status)}
                   {p.status === 'shipped' && p.courier ? ` with ${p.courier}, tracking ${p.trackingId}` : ''}
+                  {p.status === 'shipped' && forCustomer(p.courierStatus) ? <span className="text-ink-soft"> · {forCustomer(p.courierStatus)}</span> : null}
                 </p>
                 <p className="mt-1 text-[0.875rem] text-ink-soft">{linesIn(order.lines, i).map((l) => l.title).join(', ')}</p>
                 {['pending', 'packing', 'shipped'].includes(p.status) ? (

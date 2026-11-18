@@ -16,7 +16,17 @@ type OrderState = {
   paymentSender?: string | null
   token?: string
   lines?: { allocated?: boolean; parcel?: number | null; title?: string | null; quantity?: number }[]
-  parcels?: { status: string; collect?: number | null; courier?: string | null; trackingId?: string | null }[] | null
+  parcels?:
+    | {
+        status: string
+        collect?: number | null
+        courier?: string | null
+        trackingId?: string | null
+        courierStatus?: string | null
+        courierFee?: number | null
+        courierCheckedAt?: string | null
+      }[]
+    | null
 }
 
 const PARCEL_STAGE: Record<string, string> = {
@@ -65,6 +75,7 @@ export const OrderActions: React.FC = () => {
   const [reference, setReference] = useState('')
   const [courier, setCourier] = useState('Pathao')
   const [trackingId, setTrackingId] = useState('')
+  const [pathao, setPathao] = useState<'off' | 'test' | 'live'>('off')
 
   useEffect(() => {
     if (!id) return
@@ -72,6 +83,10 @@ export const OrderActions: React.FC = () => {
     fetch(`/api/orders/${id}?depth=0`, { credentials: 'include' })
       .then((res) => (res.ok ? (res.json() as Promise<OrderState>) : null))
       .then((data) => live && data && setOrder(data))
+      .catch(() => undefined)
+    fetch('/api/orders/courier-mode', { credentials: 'include' })
+      .then((res) => (res.ok ? (res.json() as Promise<{ pathao: 'off' | 'test' | 'live' }>) : null))
+      .then((data) => live && data && setPathao(data.pathao))
       .catch(() => undefined)
     return () => {
       live = false
@@ -91,7 +106,7 @@ export const OrderActions: React.FC = () => {
       const data = (await res.json()) as { message?: string }
       if (!res.ok) toast.error(data.message ?? 'That did not work.')
       else {
-        toast.success('Done.')
+        toast.success(data.message ?? 'Done.')
         // Reload so every field on the page shows the order as it now stands.
         window.location.reload()
       }
@@ -190,6 +205,27 @@ export const OrderActions: React.FC = () => {
               {p.courier ? ` — ${p.courier} ${p.trackingId ?? ''}` : ''}
             </div>
 
+            {order.status !== 'placed' && p.status === 'packing' && pathao !== 'off' ? (
+              <div style={{ ...row, marginBottom: '0.5rem' }}>
+                <Button
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      { action: 'book_pathao', parcel: i },
+                      `Book a Pathao pickup for this parcel? Pathao will collect ৳${p.collect ?? 0} from the customer.${pathao === 'test' ? ' (Pathao test server: no rider will come.)' : ''}`,
+                    )
+                  }
+                  buttonStyle="primary"
+                  size="medium"
+                >
+                  Book Pathao pickup
+                </Button>
+                <span style={{ fontSize: 13, opacity: 0.8 }}>
+                  {pathao === 'test' ? 'Pathao test server. ' : ''}Or another courier, by hand:
+                </span>
+              </div>
+            ) : null}
+
             {order.status !== 'placed' && p.status === 'packing' ? (
               <div style={row}>
                 <select style={input} value={courier} onChange={(e) => setCourier(e.target.value)} aria-label="Courier">
@@ -199,14 +235,32 @@ export const OrderActions: React.FC = () => {
                   <option>Own delivery</option>
                 </select>
                 <input style={input} placeholder="Tracking number" value={trackingId} onChange={(e) => setTrackingId(e.target.value)} />
-                <Button disabled={busy || !trackingId.trim()} onClick={() => run({ action: 'ship', parcel: i, courier, trackingId })} buttonStyle="primary" size="medium">
+                <Button
+                  disabled={busy || !trackingId.trim()}
+                  onClick={() => run({ action: 'ship', parcel: i, courier, trackingId })}
+                  buttonStyle={pathao !== 'off' ? 'secondary' : 'primary'}
+                  size="medium"
+                >
                   Hand to courier
                 </Button>
               </div>
             ) : null}
 
+            {p.status === 'shipped' && p.courierStatus ? (
+              <div style={{ fontSize: 13, margin: '0 0 0.5rem' }}>
+                {p.courier} says: <strong>{p.courierStatus}</strong>
+                {p.courierCheckedAt ? ` · checked ${new Date(p.courierCheckedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}` : ''}
+                {typeof p.courierFee === 'number' ? ` · their charge ৳${p.courierFee}` : ''}
+              </div>
+            ) : null}
+
             {p.status === 'shipped' ? (
               <div style={row}>
+                {p.courier === 'Pathao' && pathao !== 'off' ? (
+                  <Button disabled={busy} onClick={() => run({ action: 'check_courier', parcel: i })} buttonStyle="secondary" size="medium">
+                    Check with Pathao
+                  </Button>
+                ) : null}
                 <Button
                   disabled={busy}
                   onClick={() => run({ action: 'deliver', parcel: i }, p.collect ? `Mark delivered and record ৳${p.collect} collected by the courier?` : 'Mark delivered?')}
@@ -217,6 +271,17 @@ export const OrderActions: React.FC = () => {
                 </Button>
                 <Button disabled={busy} onClick={() => run({ action: 'return', parcel: i }, 'Mark as returned undelivered? The books go back into stock.')} buttonStyle="secondary" size="medium">
                   Came back undelivered
+                </Button>
+                <Button
+                  disabled={busy}
+                  onClick={() => {
+                    const reason = window.prompt('The courier did not take this parcel? It goes back to “To pack”. Give a short reason (optional).')
+                    if (reason !== null) void run({ action: 'unship', parcel: i, reason })
+                  }}
+                  buttonStyle="secondary"
+                  size="medium"
+                >
+                  Courier did not take it
                 </Button>
               </div>
             ) : null}
