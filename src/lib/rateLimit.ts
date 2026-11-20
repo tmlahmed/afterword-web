@@ -16,6 +16,7 @@ export const RULES = {
   order: { limit: 10, windowMs: 60 * 60_000 },
   request: { limit: 10, windowMs: 60 * 60_000 },
   bag: { limit: 120, windowMs: 60_000 },
+  details: { limit: 30, windowMs: 60 * 60_000 }, // account details saved
 } as const
 
 export type RuleName = keyof typeof RULES

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 
 import { changeBag, emptyBag, getBag } from '../../lib/bag'
-import { normalisePhone } from '../../lib/orders/pricing'
+import { DISTRICTS, normalisePhone } from '../../lib/orders/pricing'
 import { findPromotion } from '../../lib/orders/prepare'
 import { requestOtp, verifyOtp } from '../../lib/otp'
 import { type PayMethod, payMethods, payStartPath } from '../../lib/payments'
@@ -116,6 +116,40 @@ export async function signOut() {
   await endSession()
   revalidatePath('/', 'layout')
   redirect('/')
+}
+
+// --- Your details ------------------------------------------------------------
+
+/** `errors`: a message per field; `values`: what was typed, so the form keeps it. */
+export type DetailsState = { saved?: number; errors?: Record<string, string>; message?: string; values?: Record<string, string> }
+
+/** The customer's name, email and usual delivery address, offered again at checkout. */
+export async function saveDetails(_prev: DetailsState, form: FormData): Promise<DetailsState> {
+  const customer = await getCustomer()
+  if (!customer) redirect('/account/sign-in?next=/account?view=details')
+  const values = { name: text(form, 'name', 80), email: text(form, 'email', 120), street: text(form, 'street', 300), district: text(form, 'district', 40) }
+  const errors: Record<string, string> = {}
+  if (values.name.length < 2) errors.name = 'Enter your full name.'
+  if (values.email && !isEmail(values.email)) errors.email = 'Enter a valid email address, or leave it empty.'
+  if (values.district && !(DISTRICTS as readonly string[]).includes(values.district)) errors.district = 'Choose your district.'
+  if (values.street && values.street.length < 6) errors.street = 'Add your house, road and area.'
+  if (Object.keys(errors).length) return { errors, values }
+  if (!(await allowed('details'))) return { message: SLOW_DOWN, values }
+
+  const payload = await getPayload({ config })
+  await payload.update({
+    collection: 'customers',
+    id: customer!.id,
+    data: {
+      name: values.name,
+      email: values.email || null,
+      address: { district: (values.district || null) as never, street: values.street || null, area: customer!.address?.area ?? null },
+    },
+    depth: 0,
+    overrideAccess: true,
+  })
+  revalidatePath('/account')
+  return { saved: Date.now(), values }
 }
 
 // --- Checkout ----------------------------------------------------------------

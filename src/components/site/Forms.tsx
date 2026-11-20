@@ -4,7 +4,7 @@ import Image from 'next/image'
 import React, { useActionState, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { addToBag, type AddToBagState, type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
+import { addToBag, type AddToBagState, type CheckoutState, type DetailsState, saveDetails, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
 import { canSplit, type DeliveryPlan, DISTRICTS, parcelCount, type PaymentPlan, planParcels, type PricedLine, type ShopRules, totalsForParcels, type Totals } from '../../lib/orders/pricing'
 import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
@@ -806,5 +806,111 @@ export const AddToBag: React.FC<{ edition: number; label: string }> = ({ edition
         </div>
       ) : null}
     </div>
+  )
+}
+
+// --- Your details ----------------------------------------------------------------
+
+/** The customer's name, email and usual delivery address. Saved details fill in the checkout. */
+export const DetailsForm: React.FC<{ phone: string; name?: string | null; email?: string | null; street?: string | null; district?: string | null }> = (saved) => {
+  const [state, action, pending] = useActionState<DetailsState, FormData>(saveDetails, {})
+  // Fields changed since the last answer: their errors go, and "Saved" goes once anything changes.
+  const [edits, setEdits] = useState<{ after?: DetailsState; keys: Record<string, true> }>({ keys: {} })
+  const edited = edits.after === state ? edits.keys : {}
+  const shownSaved = state.saved && Object.keys(edited).length === 0
+  // After a failed save, take the customer to the first field to fix.
+  React.useEffect(() => {
+    const first = ['name', 'email', 'street', 'district'].find((k) => state.errors?.[k])
+    const el = first ? document.getElementById(`d-${first}`) : null
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el?.focus({ preventScroll: true })
+  }, [state])
+  const v = (k: 'name' | 'email' | 'street' | 'district') => state.values?.[k] ?? saved[k] ?? ''
+  const err = (k: string) => (edited[k] ? undefined : state.errors?.[k])
+  const cls = (k: string, extra = '') => `${field} ${extra} ${err(k) ? fieldError : ''}`
+  const aria = (k: string) => (err(k) ? { 'aria-invalid': true as const, 'aria-describedby': `d-${k}-error` } : {})
+
+  return (
+    <form
+      action={action}
+      onInput={(e) => {
+        const name = (e.target as HTMLInputElement).name
+        if (name) setEdits((x) => ({ after: state, keys: { ...(x.after === state ? x.keys : {}), [name]: true } }))
+      }}
+      className="space-y-8"
+      noValidate
+    >
+      <fieldset className="space-y-4">
+        <legend className="mb-4 font-display text-[1.125rem] font-medium">About you</legend>
+        <div>
+          <label className={label} htmlFor="d-name">
+            Full name
+          </label>
+          <input id="d-name" name="name" autoComplete="name" defaultValue={v('name')} className={cls('name')} {...aria('name')} />
+          <FieldError id="d-name-error" message={err('name')} />
+        </div>
+        <div>
+          <label className={label} htmlFor="d-email">
+            Email <span className="font-normal text-ink-soft">(optional)</span>
+          </label>
+          <input id="d-email" name="email" type="email" autoComplete="email" defaultValue={v('email')} className={cls('email')} {...aria('email')} />
+          <FieldError id="d-email-error" message={err('email')} />
+        </div>
+        <div>
+          <span className={label}>Mobile number</span>
+          <p className="flex h-12 items-center justify-between rounded-ui border border-rule bg-paper-deep px-3 tabular-nums">
+            {saved.phone.replace(/^\+88/, '')}
+            <span className="text-[0.75rem] text-ink-faint">Used to sign in</span>
+          </p>
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="mb-1 font-display text-[1.125rem] font-medium">Delivery address</legend>
+        <p className="!mt-0 text-[0.875rem] text-ink-soft">Filled in for you at checkout. You can still change it there for one order.</p>
+        <div>
+          <label className={label} htmlFor="d-street">
+            House, road and landmark
+          </label>
+          <textarea
+            id="d-street"
+            name="street"
+            rows={2}
+            autoComplete="street-address"
+            defaultValue={v('street')}
+            placeholder="e.g. House 12, Road 5, Dhanmondi, near the mosque"
+            className={cls('street', 'h-auto py-2.5')}
+            {...aria('street')}
+          />
+          <FieldError id="d-street-error" message={err('street')} />
+        </div>
+        <div>
+          <label className={label} htmlFor="d-district">
+            District
+          </label>
+          <select id="d-district" name="district" defaultValue={v('district') || 'Dhaka'} className={cls('district')} {...aria('district')}>
+            {DISTRICTS.map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
+          <FieldError id="d-district-error" message={err('district')} />
+        </div>
+      </fieldset>
+
+      <div className="flex flex-wrap items-center gap-4 border-t border-rule pt-6">
+        <button type="submit" disabled={pending} className="btn btn-primary">
+          {pending ? 'Saving…' : 'Save details'}
+        </button>
+        {shownSaved ? (
+          <p role="status" className="flex items-center gap-1.5 text-[0.9375rem] font-medium">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m3 8.5 3 3 7-7" />
+            </svg>
+            Saved
+          </p>
+        ) : null}
+        <ErrorNote message={state.message} />
+      </div>
+    </form>
   )
 }
