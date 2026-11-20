@@ -124,17 +124,8 @@ export const getBookBySlug = cache(async (slug: string): Promise<Edition | null>
   return found.docs[0] ?? null
 })
 
-export const getNoteFor = async (editionId: number): Promise<Note | null> => {
-  const payload = await client()
-  const found = await payload.find({
-    collection: 'notes',
-    where: { edition: { equals: editionId } },
-    depth: 0,
-    limit: 1,
-    sort: '-updatedAt',
-  })
-  return found.docs[0] ?? null
-}
+/** The note a bookseller chose for the book; failing that, the most recently edited one. */
+export const getNoteFor = async (editionId: number): Promise<Note | null> => (await getNotesFor([editionId])).get(editionId) ?? null
 
 /** Other editions of the same work, books by the same author, and books on the same shelf of the shop. */
 export const getRelated = async (book: Edition) => {
@@ -290,9 +281,10 @@ export const getNotesFor = async (editionIds: number[]): Promise<Map<number, Not
     sort: '-updatedAt',
   })
   const map = new Map<number, Note>()
+  // Newest first, so the first note seen for a book is the newest; a chosen note replaces it.
   for (const note of found.docs) {
     const id = idOf(note.edition as number | { id: number })
-    if (id && !map.has(id)) map.set(id, note)
+    if (id && (!map.has(id) || (note.chosen && !map.get(id)!.chosen))) map.set(id, note)
   }
   return map
 }

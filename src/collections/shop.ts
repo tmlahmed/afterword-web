@@ -12,7 +12,7 @@ export const Notes: CollectionConfig = {
     // Listed as "Book title — Bookseller" so a note is never confused with another book's.
     useAsTitle: 'label',
     group: 'Content',
-    defaultColumns: ['label', 'edition', 'signedBy', 'updatedAt'],
+    defaultColumns: ['label', 'edition', 'signedBy', 'chosen', 'updatedAt'],
     listSearchableFields: ['label', 'signedBy'],
     description: 'The Afterword — two to four sentences on why this book, signed by a bookseller.',
   },
@@ -35,11 +35,48 @@ export const Notes: CollectionConfig = {
         return data
       },
     ],
+    // Only one note per book can be the chosen one: choosing this one unticks the others.
+    afterChange: [
+      async ({ doc, previousDoc, req, context }) => {
+        if (context.unchoosing) return doc
+        const editionId = typeof doc.edition === 'object' && doc.edition ? doc.edition.id : doc.edition
+        // Keep the book's own "The Afterword shown" field in step with this box.
+        if (!context.fromEdition && editionId && Boolean(doc.chosen) !== Boolean(previousDoc?.chosen)) {
+          const book = await req.payload.findByID({ collection: 'editions', id: editionId, depth: 0, req, overrideAccess: true, disableErrors: true, select: { afterwordNote: true } })
+          const current = book ? (typeof book.afterwordNote === 'object' && book.afterwordNote ? book.afterwordNote.id : book.afterwordNote) : null
+          const wanted = doc.chosen ? doc.id : current === doc.id ? null : current
+          if (book && wanted !== current) {
+            await req.payload.update({ collection: 'editions', id: editionId, data: { afterwordNote: wanted }, depth: 0, req, overrideAccess: true, context: { fromNote: true, skipSearchSync: true } })
+          }
+        }
+        if (!doc.chosen) return doc
+        await req.payload.update({
+          collection: 'notes',
+          where: { and: [{ edition: { equals: editionId } }, { id: { not_equals: doc.id } }, { chosen: { equals: true } }] },
+          data: { chosen: false },
+          depth: 0,
+          req,
+          overrideAccess: true,
+          context: { unchoosing: true },
+        })
+        return doc
+      },
+    ],
   },
   fields: [
     { name: 'edition', type: 'relationship', relationTo: 'editions', required: true, index: true },
     { name: 'body', type: 'textarea', required: true, maxLength: 700 },
     { name: 'signedBy', type: 'text', required: true, admin: { description: 'The bookseller’s name.' } },
+    {
+      name: 'chosen',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Show this one as The Afterword',
+      admin: {
+        description:
+          'Only matters when a book has more than one note. Ticking it here unticks the book’s other notes. If none is ticked, the most recently edited note is shown.',
+      },
+    },
     { name: 'label', type: 'text', index: true, admin: { hidden: true } },
   ],
 }

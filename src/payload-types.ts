@@ -276,6 +276,10 @@ export interface Edition {
    * Where the book data came from.
    */
   importSource?: string | null;
+  /**
+   * Which bookseller note appears on the book’s page. Only this book’s notes are listed. Leave empty to show the most recently edited note. The same choice can be made on the note itself (“Show this one as The Afterword”).
+   */
+  afterwordNote?: (number | null) | Note;
   notes?: {
     docs?: (number | Note)[];
     hasNextPage?: boolean;
@@ -492,6 +496,10 @@ export interface Note {
    * The bookseller’s name.
    */
   signedBy: string;
+  /**
+   * Only matters when a book has more than one note. Ticking it here unticks the book’s other notes. If none is ticked, the most recently edited note is shown.
+   */
+  chosen?: boolean | null;
   label?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -1438,6 +1446,7 @@ export interface EditionsSelect<T extends boolean = true> {
   authorLine?: T;
   slug?: T;
   importSource?: T;
+  afterwordNote?: T;
   notes?: T;
   stockMovements?: T;
   updatedAt?: T;
@@ -1568,6 +1577,7 @@ export interface NotesSelect<T extends boolean = true> {
   edition?: T;
   body?: T;
   signedBy?: T;
+  chosen?: T;
   label?: T;
   updatedAt?: T;
   createdAt?: T;

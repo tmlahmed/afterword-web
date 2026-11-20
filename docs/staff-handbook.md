@@ -90,7 +90,7 @@ Either way the customer gets the tracking number by text.
 
 **Covers.** To replace a cover, upload a new image in the book's **Cover** field. The shop uses it at once.
 
-**Bookseller notes ("The Afterword").** Content → Bookseller notes: two to four sentences on why this book, signed with your name. They appear on the book's page.
+**Bookseller notes ("The Afterword").** Content → Bookseller notes: two to four sentences on why this book, signed with your name. They appear on the book's page. If a book has more than one note, choose the one to show: either in the book's own page under **The Afterword shown for this book** (it lists only that book's notes), or by ticking **Show this one as The Afterword** on the note. Both stay in step, and the book's other notes are unticked for you. With none ticked, the most recently edited note is shown.
 
 **Collections.** Content → Collections: hand-picked lists such as monthly picks, prize lists and gift guides. Drag the books into order and write a sentence or two of introduction.
 

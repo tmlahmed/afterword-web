@@ -59,6 +59,21 @@ export const Editions: CollectionConfig = {
         if (!context?.skipSearchSync) setTimeout(() => void syncBook(req.payload, doc.id), 600)
         return doc
       },
+      // The Afterword chosen here is ticked on the note itself (which unticks the book's others).
+      async ({ doc, previousDoc, req, context }) => {
+        if (context?.fromNote) return doc
+        const idOf = (v: unknown) => (typeof v === 'object' && v !== null ? (v as { id: number }).id : (v as number | null | undefined)) ?? null
+        const now = idOf(doc.afterwordNote)
+        const before = idOf(previousDoc?.afterwordNote)
+        if (now === before) return doc
+        if (now) {
+          await req.payload.update({ collection: 'notes', id: now, data: { chosen: true }, depth: 0, req, overrideAccess: true, context: { fromEdition: true } })
+        } else if (before) {
+          // The note may have been deleted since; then there is nothing to untick.
+          await req.payload.update({ collection: 'notes', id: before, data: { chosen: false }, depth: 0, req, overrideAccess: true, context: { fromEdition: true } }).catch(() => undefined)
+        }
+        return doc
+      },
     ],
     afterDelete: [
       ({ id, req }) => {
@@ -406,7 +421,19 @@ export const Editions: CollectionConfig = {
       access: { read: staffOnly },
       admin: { position: 'sidebar', readOnly: true, description: 'Where the book data came from.' },
     },
-    { name: 'notes', type: 'join', collection: 'notes', on: 'edition' },
+    {
+      name: 'afterwordNote',
+      type: 'relationship',
+      relationTo: 'notes',
+      label: 'The Afterword shown for this book',
+      // Only this book's own notes can be chosen.
+      filterOptions: ({ id }) => (id ? { edition: { equals: id } } : false),
+      admin: {
+        description:
+          'Which bookseller note appears on the book’s page. Only this book’s notes are listed. Leave empty to show the most recently edited note. The same choice can be made on the note itself (“Show this one as The Afterword”).',
+      },
+    },
+    { name: 'notes', type: 'join', collection: 'notes', on: 'edition', label: 'All bookseller notes for this book' },
     { name: 'stockMovements', type: 'join', collection: 'stock-movements', on: 'edition', access: { read: staffOnly } },
   ],
 }
