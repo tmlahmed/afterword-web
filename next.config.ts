@@ -30,9 +30,6 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
-  // `pnpm share` shows the development site through a Cloudflare quick tunnel; let those
-  // addresses load the page code. Development only: production ignores this.
-  allowedDevOrigins: ['*.trycloudflare.com'],
   experimental: {
     // Show security-upgrade reminders in the development overlay.
     agentUpgrade: 'security',

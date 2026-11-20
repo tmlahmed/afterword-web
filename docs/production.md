@@ -6,14 +6,6 @@ The plan: one **Hostinger KVM 2** server runs the whole shop, with free Cloudfla
 
 ---
 
-## 0. Showing the site before it is online
-
-While the shop runs only on your computer, `pnpm share` (with `pnpm dev` running) gives a temporary `https://….trycloudflare.com` address through a Cloudflare quick tunnel. No account is needed (`brew install cloudflared` once). The address changes every time and works only while your computer, the development server and the tunnel are running; stop it with Ctrl+C.
-
-- It shows the **development** site: pages are slower the first time they are opened, and sign-in codes appear on screen, so anyone with the link can sign in with any number. Treat orders placed there as test orders.
-- The admin is meant to be used at `http://localhost:3000/admin`; it only trusts sign-ins from the shop's own address.
-- Nothing about it carries over to the live server, which uses Cloudflare's normal proxy (section 6), not a tunnel.
-
 ## 1. What you need
 
 | What | Why | Cost | Status |
