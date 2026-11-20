@@ -324,7 +324,7 @@ export const Orders: CollectionConfig = {
                     { label: 'Books in stock now, the rest when they arrive', value: 'split' },
                     { label: 'Everything together when all books are here', value: 'together' },
                   ],
-                  admin: { description: 'Only matters when the order has books in stock and books to order in. No second delivery fee either way.' },
+                  admin: { description: 'Only matters when the order has books in stock and books to order in. Two parcels cost two delivery fees (both free when the order gets free delivery).' },
                 },
                 {
                   name: 'usePoints',

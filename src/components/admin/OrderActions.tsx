@@ -191,7 +191,6 @@ export const OrderActions: React.FC = () => {
               </strong>
               <span>
                 Courier collects <strong>৳{p.collect ?? 0}</strong>
-                {two && i === 1 ? ' (no second delivery fee)' : ''}
                 {' · '}
                 <a href={`/desk/slip/${id}${two ? `?parcel=${i}` : ''}`} target="_blank" rel="noreferrer">
                   Packing slip ↗

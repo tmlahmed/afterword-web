@@ -51,7 +51,7 @@ export const priceOrder = (
   lines: PricedLine[],
   zone: Zone,
   rules: ShopRules,
-  options: { giftWrap?: boolean; promotion?: Promotion | null; rewardCredit?: number } = {},
+  options: { giftWrap?: boolean; promotion?: Promotion | null; rewardCredit?: number; parcels?: number } = {},
 ): Totals => {
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
   const promo = promotionApplies(options.promotion, subtotal) ? options.promotion : null
@@ -62,7 +62,9 @@ export const priceOrder = (
 
   const baseFee = zone === 'inside_dhaka' ? rules.insideDhakaFee : rules.outsideDhakaFee
   const freeByThreshold = rules.freeDeliveryAbove > 0 && subtotal - discount >= rules.freeDeliveryAbove
-  const delivery = lines.length === 0 || freeByThreshold || promo?.type === 'free_delivery' ? 0 : baseFee
+  // Each parcel is its own delivery. Free delivery (by threshold or code) covers every parcel.
+  const parcels = Math.max(1, options.parcels ?? 1)
+  const delivery = lines.length === 0 || freeByThreshold || promo?.type === 'free_delivery' ? 0 : baseFee * parcels
   const giftWrap = options.giftWrap ? rules.giftWrapFee : 0
   // Points come off the books only (never delivery), after any promotion.
   const rewards = Math.max(0, Math.min(Math.floor(options.rewardCredit ?? 0), subtotal - discount))
@@ -101,20 +103,35 @@ export const plansFor = (totals: Totals): PaymentPlan[] =>
 export const canSplit = (lines: Pick<PricedLine, 'kind'>[]): boolean =>
   lines.some((l) => l.kind === 'in_stock') && lines.some((l) => l.kind !== 'in_stock')
 
+/** How many parcels an order goes in: two only when it can be split and the customer chose that. */
+export const parcelCount = (lines: Pick<PricedLine, 'kind'>[], delivery: DeliveryPlan): 1 | 2 => (delivery === 'split' && canSplit(lines) ? 2 : 1)
+
+/**
+ * The same totals for another number of parcels: each parcel adds one delivery fee, unless
+ * delivery is free. For the checkout, where the customer switches between one and two parcels.
+ */
+export const totalsForParcels = (t: Totals, from: number, to: number): Totals => {
+  if (t.delivery === 0 || from === to) return t
+  const delivery = (t.delivery / from) * to
+  const total = t.total - t.delivery + delivery
+  return { ...t, delivery, total, advanceDue: Math.min(t.advanceDue, total) }
+}
+
 export type ParcelPlan = { later: boolean; collect: number }
 
 /**
  * How an order is delivered and what the courier collects each time.
- * Split: parcel 1 has the books in stock (cash on delivery for them, plus the one delivery fee);
+ * Split: parcel 1 has the books in stock (cash on delivery for them, plus its delivery fee);
  * parcel 2 has the books ordered in, sent when they arrive, for the rest of their price after the
- * advance. There is never a second delivery fee.
+ * advance, plus its own delivery fee. `totals` must be priced for two parcels.
  */
 export const planParcels = (lines: PricedLine[], totals: Totals, plan: PaymentPlan, delivery: DeliveryPlan): ParcelPlan[] => {
   const { payNow } = splitPayment(totals, plan)
   const remaining = Math.max(0, totals.total - payNow)
   if (!canSplit(lines) || delivery === 'together') return [{ later: lines.some((l) => l.kind !== 'in_stock'), collect: remaining }]
   const laterValue = lines.filter((l) => l.kind !== 'in_stock').reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
-  const laterDue = plan === 'full' ? 0 : Math.max(0, laterValue - (plan === 'advance' ? totals.advanceDue : 0))
+  const secondFee = totals.delivery / 2
+  const laterDue = plan === 'full' ? 0 : Math.max(0, laterValue - (plan === 'advance' ? totals.advanceDue : 0)) + secondFee
   const second = Math.min(remaining, laterDue)
   return [
     { later: false, collect: remaining - second },

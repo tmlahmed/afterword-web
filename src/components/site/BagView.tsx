@@ -375,6 +375,7 @@ export const BagView: React.FC<{
               {t.advanceDue > 0 ? (
                 <p className="mt-3 text-[0.8125rem] text-ink-soft">
                   Books we order in for you need {rules.advancePercent}% paid in advance ({formatTaka(t.advanceDue)}). Books in stock are paid on delivery.
+                  {lines.some((l) => l.kind === 'in_stock') && !deliveryFree ? ' At checkout you can have the books in stock sent first, as a second parcel with its own delivery fee.' : ''}
                 </p>
               ) : null}
 

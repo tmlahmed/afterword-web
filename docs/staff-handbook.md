@@ -39,8 +39,8 @@ An order changes only through the buttons at the top of its page. Never type ove
 - For a bKash Send Money advance, the order shows **the bKash number the customer sent from** and the **transaction ID** they gave. Find that payment in your bKash app (same number, same ID, same amount) before recording it.
 
 **Orders in two parcels.** When an order has books in stock *and* books to order in, the customer chooses at checkout:
-- *Send the books in stock now:* **Parcel 1** (in stock) is packed straight away. The courier collects the price of those books plus the delivery fee. **Parcel 2** (ordered in) waits; when its books are received it moves to "To pack" by itself and the customer gets a text. The courier collects the rest of those books' price, with **no second delivery fee**.
-- *Send everything together:* one parcel, sent when every book is here.
+- *Send the books in stock now:* **Parcel 1** (in stock) is packed straight away. The courier collects the price of those books plus the delivery fee. **Parcel 2** (ordered in) waits; when its books are received it moves to "To pack" by itself and the customer gets a text. The courier collects the rest of those books' price **plus a second delivery fee**: each parcel is its own delivery. When the order qualifies for free delivery, both parcels are free.
+- *Send everything together:* one parcel and one delivery fee, sent when every book is here.
 
 Each parcel has its own **Packing slip**, **Hand to courier**, **Mark delivered** and **Came back undelivered** buttons on the order page. The slip shows what the courier collects for that parcel.
 

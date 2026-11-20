@@ -153,7 +153,7 @@ check('customer messages are logged', msgs.totalDocs >= 6, `${msgs.totalDocs} me
   check('one review per customer per book', !(await reviewEligibility(payload, cust, inStock.id)).canReview)
 }
 
-// 12. Books in stock now, the rest when they arrive: two parcels, one delivery fee
+// 12. Books in stock now, the rest when they arrive: two parcels, a delivery fee each
 const mixedIds: number[] = []
 const mixedBefore = new Map<number, number>()
 {
@@ -173,8 +173,11 @@ const mixedBefore = new Map<number, number>()
   check('the bKash number it was sent from is kept', m.paymentSender === '+8801811111111', String(m.paymentSender))
   const p = m.parcels ?? []
   check('two parcels: the book in stock now, the other later', p.length === 2 && m.lines![0].parcel === 0 && m.lines![1].parcel === 1)
-  check('the in-stock parcel is full cash on delivery with the one delivery fee', p[0]?.collect === mixedStock.price! + (m.delivery ?? 0), `collect ${p[0]?.collect}`)
-  check('the later parcel collects the rest of its book, with no delivery fee', p[1]?.collect === mixedLater.price! - adv, `collect ${p[1]?.collect}`)
+  const { rules: shop } = await shopRules({ payload })
+  const fee = shop.freeDeliveryAbove > 0 && mixedStock.price! + mixedLater.price! >= shop.freeDeliveryAbove ? 0 : shop.insideDhakaFee
+  check('two parcels cost two delivery fees (or none with free delivery)', m.delivery === fee * 2, `delivery ${m.delivery}, fee ${fee}`)
+  check('the in-stock parcel is full cash on delivery with its delivery fee', p[0]?.collect === mixedStock.price! + fee, `collect ${p[0]?.collect}`)
+  check('the later parcel collects the rest of its book and its own delivery fee', p[1]?.collect === mixedLater.price! - adv + fee, `collect ${p[1]?.collect}`)
 
   m = await runOrderAction(payload, m.id, { action: 'record_payment', amount: adv, method: 'bKash', reference: 'TESTMIX' }, 'Test')
   check('paying the advance readies the in-stock parcel; the rest waits', m.status === 'packing' && m.parcels?.[0].status === 'packing' && m.parcels?.[1].status === 'pending', `${m.status} ${m.parcels?.map((x) => x.status)}`)
@@ -189,7 +192,7 @@ const mixedBefore = new Map<number, number>()
   check('when the book arrives, the second parcel is ready to pack', m.status === 'packing' && m.parcels?.[1].status === 'packing', `${m.status} ${m.parcels?.map((x) => x.status)}`)
   m = await runOrderAction(payload, m.id, { action: 'ship', parcel: 1, courier: 'Pathao', trackingId: 'TESTP2' }, 'Test')
   m = await runOrderAction(payload, m.id, { action: 'deliver', parcel: 1 }, 'Test')
-  check('both parcels delivered, paid in full, one delivery fee', m.status === 'delivered' && m.paid === m.total && m.paymentStatus === 'paid' && m.total === mixedStock.price! + mixedLater.price! + (m.delivery ?? 0), `paid ${m.paid} of ${m.total}`)
+  check('both parcels delivered, paid in full, two delivery fees', m.status === 'delivered' && m.paid === m.total && m.paymentStatus === 'paid' && m.total === mixedStock.price! + mixedLater.price! + (m.delivery ?? 0), `paid ${m.paid} of ${m.total}`)
 }
 
 // 10. Reports agree with the orders

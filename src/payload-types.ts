@@ -979,7 +979,7 @@ export interface Order {
   giftWrap?: boolean | null;
   promoCode?: string | null;
   /**
-   * Only matters when the order has books in stock and books to order in. No second delivery fee either way.
+   * Only matters when the order has books in stock and books to order in. Two parcels cost two delivery fees (both free when the order gets free delivery).
    */
   deliveryPlan?: ('split' | 'together') | null;
   /**

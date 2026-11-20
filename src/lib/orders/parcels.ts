@@ -2,7 +2,7 @@ import type { Order } from '../../payload-types'
 
 /**
  * Parcels: an order goes out as one parcel, or as two when books in stock are sent first and
- * the books ordered in follow when they arrive (with no second delivery fee). Each parcel has its
+ * the books ordered in follow when they arrive (each parcel has its own delivery fee). Each parcel has its
  * own stage and the amount the courier collects for it.
  */
 export type Parcel = NonNullable<Order['parcels']>[number]

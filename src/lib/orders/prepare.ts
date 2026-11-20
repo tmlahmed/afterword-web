@@ -5,7 +5,7 @@ import { APIError, type PayloadRequest, type RequestContext } from 'payload'
 import type { Order } from '../../payload-types'
 import { notifyOrder } from '../notify'
 import { overallStatus, readyParcels, stillToCollect } from './parcels'
-import { type DeliveryPlan, type LineKind, normalisePhone, parcelFor, type PaymentPlan, planParcels, plansFor, pointsToSpend, priceOrder, type Promotion, type RewardRules, splitPayment, zoneFor } from './pricing'
+import { type DeliveryPlan, type LineKind, normalisePhone, parcelCount, parcelFor, type PaymentPlan, planParcels, plansFor, pointsToSpend, priceOrder, type Promotion, type RewardRules, splitPayment, zoneFor } from './pricing'
 import { recordMovement, takeCopies, takePoints } from './stock'
 
 const fail = (message: string): never => {
@@ -103,12 +103,15 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
   if (data.promoCode?.trim() && !promotion && fromCheckout) fail('That promotion code is not valid.')
   const zone = zoneFor(data.district!)
   const priced = lines.map((l) => ({ unitPrice: l.unitPrice!, quantity: l.quantity, kind: l.kind as LineKind }))
-  const beforePoints = priceOrder(priced, zone, rules, { giftWrap: Boolean(data.giftWrap), promotion })
+  // Parcels: books in stock now and the rest when they arrive (a delivery fee each), or everything together.
+  const deliveryPlan: DeliveryPlan = data.deliveryPlan === 'together' ? 'together' : 'split'
+  const parcelsWanted = parcelCount(priced, deliveryPlan)
+  const beforePoints = priceOrder(priced, zone, rules, { giftWrap: Boolean(data.giftWrap), promotion, parcels: parcelsWanted })
 
   // Reward points: as many as the rules allow, taken off the balance in the same transaction.
   const pointsUsed = data.usePoints ? pointsToSpend(customer.rewardPoints ?? 0, beforePoints.subtotal - beforePoints.discount, rewards) : 0
   if (pointsUsed > 0 && !(await takePoints(payload, customer.id, pointsUsed, req))) fail('Your points balance has just changed. Please check your order and try again.')
-  const totals = pointsUsed ? priceOrder(priced, zone, rules, { giftWrap: Boolean(data.giftWrap), promotion, rewardCredit: pointsUsed }) : beforePoints
+  const totals = pointsUsed ? priceOrder(priced, zone, rules, { giftWrap: Boolean(data.giftWrap), promotion, rewardCredit: pointsUsed, parcels: parcelsWanted }) : beforePoints
 
   const plan = (data.paymentPlan ?? 'cod') as PaymentPlan
   // Customers must follow the advance rules. Staff may override them for a customer they know.
@@ -121,8 +124,6 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
   const paymentSender = data.payNowVia === 'bkash_manual' && payNow > 0 ? normalisePhone(String(data.paymentSender ?? '')) : null
   if (data.payNowVia === 'bkash_manual' && payNow > 0 && fromCheckout && !paymentSender) fail('Enter the bKash number you sent the money from, for example 01712345678.')
 
-  // Parcels: books in stock now and the rest when they arrive, or everything together.
-  const deliveryPlan: DeliveryPlan = data.deliveryPlan === 'together' ? 'together' : 'split'
   const parcelPlan = planParcels(priced, totals, plan, deliveryPlan)
   for (const line of lines) line.parcel = parcelFor(line.kind as LineKind, parcelPlan)
   let parcels = parcelPlan.map((p) => ({ status: 'pending' as const, collect: p.collect }))

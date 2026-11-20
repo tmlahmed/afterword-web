@@ -4,7 +4,7 @@ import Image from 'next/image'
 import React, { useActionState, useState } from 'react'
 
 import { addToBag, type AddToBagState, type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
-import { canSplit, type DeliveryPlan, DISTRICTS, type PaymentPlan, planParcels, type PricedLine, type ShopRules, type Totals } from '../../lib/orders/pricing'
+import { canSplit, type DeliveryPlan, DISTRICTS, parcelCount, type PaymentPlan, planParcels, type PricedLine, type ShopRules, totalsForParcels, type Totals } from '../../lib/orders/pricing'
 import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
 import { BAG_ADDED_EVENT } from './MiniBag'
@@ -155,7 +155,7 @@ export const CheckoutForm: React.FC<{
   const [usePoints, setUsePoints] = useState(false)
   const zone = district === 'Dhaka' ? 'inside_dhaka' : 'outside_dhaka'
   const spending = usePoints && points.usable > 0
-  const t = spending ? withPoints.totals[zone] : totals[zone]
+  const one = spending ? withPoints.totals[zone] : totals[zone]
   const offered = (spending ? withPoints.plans : plans)[zone].filter((p) => p === 'cod' || methods.length > 0)
   const [plan, setPlan] = useState<PaymentPlan>(offered[0] ?? 'cod')
   const chosen = offered.includes(plan) ? plan : (offered[0] ?? 'cod')
@@ -164,6 +164,10 @@ export const CheckoutForm: React.FC<{
   const [delivery, setDelivery] = useState<DeliveryPlan>('split')
   const lines: PricedLine[] = items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity, kind: i.kind }))
   const splittable = canSplit(lines)
+  // The server prices one parcel; two parcels add a second delivery fee.
+  const parcelsWanted = parcelCount(lines, delivery)
+  const t = totalsForParcels(one, 1, parcelsWanted)
+  const fee = one.delivery
   const parcels = planParcels(lines, t, chosen, delivery)
   const payNow = chosen === 'full' ? t.total : chosen === 'advance' ? t.advanceDue : 0
   const count = items.reduce((n, i) => n + i.quantity, 0)
@@ -226,7 +230,7 @@ export const CheckoutForm: React.FC<{
                 {zone === 'inside_dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'}
                 <span className="text-ink-soft"> · {days} after dispatch</span>
               </span>
-              <strong className="font-medium tabular-nums">{t.delivery === 0 ? 'Free' : formatTaka(t.delivery)}</strong>
+              <strong className="font-medium tabular-nums">{fee === 0 ? 'Free' : parcelsWanted > 1 ? `${formatTaka(fee)} a parcel` : formatTaka(fee)}</strong>
             </div>
             <div>
               <label className={label} htmlFor="deliveryNote">
@@ -238,7 +242,7 @@ export const CheckoutForm: React.FC<{
         </Step>
 
         {splittable ? (
-          <Step title="Shipment" aside="One delivery fee either way">
+          <Step title="Shipment" aside={fee === 0 ? 'Free delivery either way' : 'A delivery fee for each parcel'}>
             <div className="grid gap-2.5 sm:grid-cols-2">
               <Choice
                 name="deliveryPlan"
@@ -247,6 +251,7 @@ export const CheckoutForm: React.FC<{
                 onChange={() => setDelivery('split')}
                 title="Two parcels"
                 body="Books in stock come now; the books we order in follow when they arrive."
+                side={fee === 0 ? 'Free' : formatTaka(fee * 2)}
               />
               <Choice
                 name="deliveryPlan"
@@ -255,6 +260,7 @@ export const CheckoutForm: React.FC<{
                 onChange={() => setDelivery('together')}
                 title="One parcel"
                 body="Everything together, once all your books are here."
+                side={fee === 0 ? 'Free' : formatTaka(fee)}
               />
             </div>
           </Step>
@@ -406,7 +412,7 @@ export const CheckoutForm: React.FC<{
           {t.discount ? <Row label="Discount" value={`−${formatTaka(t.discount)}`} className="text-accent" /> : null}
           {t.rewards ? <Row label="Reward points" value={`−${formatTaka(t.rewards)}`} className="text-accent" /> : null}
           {t.giftWrap ? <Row label="Gift wrap" value={formatTaka(t.giftWrap)} /> : null}
-          <Row label="Delivery fee" value={t.delivery === 0 ? 'Free' : formatTaka(t.delivery)} />
+          <Row label={parcelsWanted > 1 && t.delivery > 0 ? 'Delivery fee (2 parcels)' : 'Delivery fee'} value={t.delivery === 0 ? 'Free' : formatTaka(t.delivery)} />
           <Row label="Total" value={formatTaka(t.total)} className="mt-1 border-t border-rule pt-3 font-display text-[1.375rem] font-medium" />
         </dl>
 

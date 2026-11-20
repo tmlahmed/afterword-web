@@ -127,7 +127,6 @@ export default async function OrderPage({ params, searchParams }: Props) {
                     ) : (
                       'Nothing to pay on delivery'
                     )}
-                    {i === 1 ? <span className="text-ink-soft"> · no extra delivery charge</span> : null}
                   </p>
                 ) : null}
               </li>

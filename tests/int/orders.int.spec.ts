@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { canSplit, normalisePhone, parcelFor, planParcels, plansFor, pointsEarned, pointsToSpend, priceOrder, splitPayment, zoneFor } from '../../src/lib/orders/pricing'
+import { canSplit, normalisePhone, parcelCount, parcelFor, planParcels, plansFor, pointsEarned, pointsToSpend, priceOrder, splitPayment, totalsForParcels, zoneFor } from '../../src/lib/orders/pricing'
 
 const rules = { insideDhakaFee: 70, outsideDhakaFee: 130, freeDeliveryAbove: 3000, giftWrapFee: 80, advancePercent: 50 }
 const stock = (unitPrice: number, quantity = 1) => ({ unitPrice, quantity, kind: 'in_stock' as const })
@@ -99,32 +99,47 @@ describe('reward points', () => {
 describe('parcels', () => {
   const later = { unitPrice: 1650, quantity: 1, kind: 'on_request' as const }
   const mixed = [stock(1000), later]
-  const t = priceOrder(mixed, 'inside_dhaka', rules) // 2650 + 70 delivery = 2720; advance 830 on the ordered-in book
+  const t = priceOrder(mixed, 'inside_dhaka', rules) // one parcel: 2650 + 70 delivery = 2720; advance 830 on the ordered-in book
+  const t2 = priceOrder(mixed, 'inside_dhaka', rules, { parcels: 2 }) // two parcels: 2650 + 2 × 70 = 2790
 
   it('splits books in stock from books ordered in', () => {
     expect(canSplit(mixed)).toBe(true)
     expect(canSplit([stock(1000)])).toBe(false)
   })
-  it('sends in-stock books now as full cash on delivery, the rest later with no second delivery fee', () => {
-    const parcels = planParcels(mixed, t, 'advance', 'split')
+  it('charges a delivery fee for each parcel', () => {
+    expect(parcelCount(mixed, 'split')).toBe(2)
+    expect(parcelCount(mixed, 'together')).toBe(1)
+    expect(parcelCount([stock(1000)], 'split')).toBe(1)
+    expect(t2.delivery).toBe(140)
+    expect(t2.total).toBe(2790)
+    expect(t2.advanceDue).toBe(830)
+    expect(totalsForParcels(t, 1, 2)).toEqual(t2)
+  })
+  it('makes both parcels free when the order gets free delivery', () => {
+    const big = [stock(2000), { ...later, unitPrice: 1500 }]
+    expect(priceOrder(big, 'inside_dhaka', rules, { parcels: 2 }).delivery).toBe(0)
+    expect(priceOrder(mixed, 'inside_dhaka', rules, { parcels: 2, promotion: { code: 'X', type: 'free_delivery', value: 0 } }).delivery).toBe(0)
+  })
+  it('sends in-stock books now as full cash on delivery, the rest later, each with its own delivery fee', () => {
+    const parcels = planParcels(mixed, t2, 'advance', 'split')
     expect(parcels).toEqual([
       { later: false, collect: 1000 + 70 },
-      { later: true, collect: 1650 - 830 },
+      { later: true, collect: 1650 - 830 + 70 },
     ])
-    expect(parcels.reduce((s, p) => s + p.collect, 0) + t.advanceDue).toBe(t.total)
+    expect(parcels.reduce((s, p) => s + p.collect, 0) + t2.advanceDue).toBe(t2.total)
   })
   it('sends everything together in one parcel when asked', () => {
     expect(planParcels(mixed, t, 'advance', 'together')).toEqual([{ later: true, collect: t.total - 830 }])
   })
   it('collects nothing when paid in full', () => {
-    expect(planParcels(mixed, t, 'full', 'split').map((p) => p.collect)).toEqual([0, 0])
+    expect(planParcels(mixed, t2, 'full', 'split').map((p) => p.collect)).toEqual([0, 0])
   })
   it('uses one parcel when nothing needs ordering in', () => {
     const plain = priceOrder([stock(1000)], 'inside_dhaka', rules)
     expect(planParcels([stock(1000)], plain, 'cod', 'split')).toEqual([{ later: false, collect: 1070 }])
   })
   it('puts each book in the right parcel', () => {
-    const parcels = planParcels(mixed, t, 'advance', 'split')
+    const parcels = planParcels(mixed, t2, 'advance', 'split')
     expect(parcelFor('in_stock', parcels)).toBe(0)
     expect(parcelFor('on_request', parcels)).toBe(1)
     expect(parcelFor('on_request', [{ later: true, collect: 1 }])).toBe(0)
