@@ -244,7 +244,7 @@ export const Orders: CollectionConfig = {
               type: 'row',
               fields: [
                 { name: 'district', type: 'select', required: true, options: DISTRICT_OPTIONS },
-                { name: 'area', type: 'text', required: true, label: 'Area or thana' },
+                { name: 'area', type: 'text', label: 'Area or thana', admin: { description: 'Optional. The website no longer asks for it; the address above is enough.' } },
               ],
             },
             { name: 'street', type: 'textarea', required: true, label: 'House, road and landmark' },

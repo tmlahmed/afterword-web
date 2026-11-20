@@ -947,7 +947,10 @@ export interface Order {
     | 'Sylhet'
     | 'Tangail'
     | 'Thakurgaon';
-  area: string;
+  /**
+   * Optional. The website no longer asks for it; the address above is enough.
+   */
+  area?: string | null;
   street: string;
   deliveryNote?: string | null;
   channel?: ('web' | 'phone' | 'facebook' | 'whatsapp' | 'instagram') | null;

@@ -33,7 +33,7 @@ const KIND: Record<string, string> = { in_stock: 'From stock', pre_order: 'Pre-o
 
 type Props = { params: Promise<{ token: string }>; searchParams: Promise<{ placed?: string; paid?: string }> }
 
-/** The customer's tracking page. Anyone with the link can see it, so it shows no more of the address than the area. */
+/** The customer's tracking page. Anyone with the link can see it, so it shows no more of the address than the area and district. */
 export default async function OrderPage({ params, searchParams }: Props) {
   const [{ token }, { placed, paid }] = await Promise.all([params, searchParams])
   if (!/^[a-f0-9]{36}$/.test(token)) notFound()
@@ -200,7 +200,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
           <p className="mt-1.5">
             {order.contactName}
             <br />
-            {order.area}, {order.district}
+            {[order.area, order.district].filter(Boolean).join(', ')}
           </p>
           <p className="mt-1 text-ink-soft">{order.zone === 'inside_dhaka' ? settings.insideDhakaDays : settings.outsideDhakaDays} after dispatch</p>
         </div>

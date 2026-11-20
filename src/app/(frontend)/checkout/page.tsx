@@ -30,7 +30,7 @@ export default async function CheckoutPage() {
 
   return (
     <>
-      <PageHeading eyebrow="Checkout" title="Almost there" />
+      <PageHeading title="Checkout" />
       <div className="mx-auto max-w-6xl px-4">
         <CheckoutForm
           customer={{
@@ -38,8 +38,8 @@ export default async function CheckoutPage() {
             name: customer.name,
             email: customer.email,
             district: customer.address?.district,
-            area: customer.address?.area,
-            street: customer.address?.street,
+            // Older saved addresses kept the area apart; fold it back into the address line.
+            street: [customer.address?.street, customer.address?.area].filter(Boolean).join(', '),
           }}
           rules={{ ...bag.rules, insideDays: settings.insideDhakaDays ?? '', outsideDays: settings.outsideDhakaDays ?? '' }}
           totals={{ inside_dhaka: inside, outside_dhaka: outside }}
@@ -50,11 +50,19 @@ export default async function CheckoutPage() {
           }}
           points={{ balance: bag.rewards.enabled ? balance : 0, usable, minimum: bag.rewards.redeemMinimum }}
           methods={methods}
-          lines={bag.lines.map((l) => ({ unitPrice: l.edition.price ?? 0, quantity: l.quantity, kind: l.kind }))}
+          items={bag.lines.map((l) => ({
+            id: l.edition.id,
+            title: l.edition.title,
+            authorLine: l.edition.authorLine,
+            coverUrl: l.edition.coverUrl,
+            unitPrice: l.edition.price ?? 0,
+            quantity: l.quantity,
+            kind: l.kind,
+          }))}
           bkashNumber={settings.bkashNumber}
           needsAdvanceBecause={
             hasBackorder
-              ? `We order some of your books in specially, so we ask for ${settings.advancePercent ?? 50}% of their price now.`
+              ? 'Books we order in for you need a small advance; books in stock are always cash on delivery.'
               : null
           }
         />

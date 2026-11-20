@@ -49,7 +49,7 @@ export default async function SlipPage({ params, searchParams }: { params: Promi
           <p>{order.contactPhone}</p>
           <p className="whitespace-pre-line">{order.street}</p>
           <p>
-            {order.area}, {order.district}
+            {[order.area, order.district].filter(Boolean).join(', ')}
           </p>
           {order.deliveryNote ? <p className="mt-1 italic">Note: {order.deliveryNote}</p> : null}
         </div>

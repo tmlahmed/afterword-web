@@ -4,7 +4,7 @@ import type { Order } from '../../payload-types'
 import { linesIn, PARCEL_NAME, parcelsOf } from '../orders/parcels'
 import { runOrderAction } from '../orders/transitions'
 import { type Consignment, pathaoBook, pathaoCities, pathaoInfo, pathaoMode, pathaoStoreId, pathaoZones } from './pathao'
-import { buildBooking, matchCity, matchZone, outcomeOf, statusText } from './pathao-rules'
+import { buildBooking, findZoneIn, matchCity, matchZone, outcomeOf, statusText } from './pathao-rules'
 
 export const PATHAO = 'Pathao'
 
@@ -43,7 +43,8 @@ export const bookWithPathao = async (payload: Payload, orderId: number, parcel: 
     // Send Pathao's city and zone when the area matches one clearly; otherwise Pathao reads the address.
     const cities = await pathaoCities().catch(() => [])
     const city = matchCity(order.district, cities)
-    const zone = city ? matchZone(order.area, await pathaoZones(city.id).catch(() => [])) : undefined
+    const zones = city ? await pathaoZones(city.id).catch(() => []) : []
+    const zone = (order.area ? matchZone(order.area, zones) : undefined) ?? findZoneIn(order.street, zones)
 
     const built = buildBooking({
       storeId: await pathaoStoreId(),
@@ -51,7 +52,7 @@ export const bookWithPathao = async (payload: Payload, orderId: number, parcel: 
       name: order.contactName,
       phone: order.contactPhone,
       street: order.street,
-      area: order.area,
+      area: order.area ?? '',
       district: order.district,
       note: order.deliveryNote,
       gift: Boolean(order.giftWrap),

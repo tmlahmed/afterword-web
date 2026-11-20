@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import React, { useActionState, useState } from 'react'
 
 import { addToBag, type AddToBagState, type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
@@ -65,15 +66,76 @@ const METHOD_LABEL: Record<PayMethod, string> = { bkash: 'bKash', sslcommerz: 'C
 const PLAN_COPY: Record<PaymentPlan, { title: string; body: (t: Totals, pct: number) => string }> = {
   cod: { title: 'Cash on delivery', body: (t) => `Pay ${formatTaka(t.total)} to the courier when your books arrive.` },
   advance: {
-    title: 'Pay the advance now, the rest on delivery',
-    body: (t, pct) =>
-      `Pay ${formatTaka(t.advanceDue)} now: ${pct}% of the books we order in for you. Everything else, including books in stock, is cash on delivery.`,
+    title: 'Advance now, the rest on delivery',
+    body: (t, pct) => `${formatTaka(t.advanceDue)} now (${pct}% of the books we order in). Everything else is cash on delivery.`,
   },
-  full: { title: 'Pay in full now', body: (t) => `Pay ${formatTaka(t.total)} now. Nothing to pay on delivery.` },
+  full: { title: 'Pay in full now', body: (t) => `${formatTaka(t.total)} now. Nothing to pay on delivery.` },
 }
 
+const KIND_TAG: Record<CheckoutItem['kind'], string | null> = { in_stock: null, pre_order: 'Pre-order', on_request: 'Ordered in' }
+
+export type CheckoutItem = {
+  id: number
+  title: string
+  authorLine?: string | null
+  coverUrl?: string | null
+  unitPrice: number
+  quantity: number
+  kind: 'in_stock' | 'pre_order' | 'on_request'
+}
+
+/** One step of the checkout: a titled panel. */
+const Step: React.FC<{ title: string; aside?: React.ReactNode; children: React.ReactNode }> = ({ title, aside, children }) => (
+  <section className="rounded-ui border border-rule bg-paper p-5 sm:p-6">
+    <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h2 className="font-display text-[1.25rem] font-medium">{title}</h2>
+      {aside ? <div className="text-[0.8125rem] text-ink-soft">{aside}</div> : null}
+    </div>
+    {children}
+  </section>
+)
+
+/** A choice drawn as a card: radio or checkbox, a title and one line under it. */
+const Choice: React.FC<{
+  type?: 'radio' | 'checkbox'
+  name: string
+  value?: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  title: React.ReactNode
+  body?: React.ReactNode
+  side?: React.ReactNode
+}> = ({ type = 'radio', name, value, checked, onChange, title, body, side }) => (
+  <label
+    className={`flex cursor-pointer items-start gap-3 rounded-ui border px-4 py-3.5 transition-colors ${
+      checked ? 'border-ink bg-card shadow-[inset_0_0_0_1px_var(--color-ink)]' : 'border-rule hover:border-ink/50'
+    }`}
+  >
+    <input
+      type={type}
+      name={name}
+      value={value}
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="mt-[0.3rem] size-4 shrink-0 accent-[var(--color-primary)]"
+    />
+    <span className="min-w-0 flex-1">
+      <span className="block font-medium">{title}</span>
+      {body ? <span className="mt-0.5 block text-[0.875rem] leading-snug text-ink-soft">{body}</span> : null}
+    </span>
+    {side ? <span className="shrink-0 text-[0.9375rem] font-medium tabular-nums">{side}</span> : null}
+  </label>
+)
+
+const Row: React.FC<{ label: React.ReactNode; value: React.ReactNode; className?: string }> = ({ label: name, value, className = '' }) => (
+  <div className={`flex justify-between gap-4 ${className}`}>
+    <dt>{name}</dt>
+    <dd className="tabular-nums">{value}</dd>
+  </div>
+)
+
 export const CheckoutForm: React.FC<{
-  customer: { phone: string; name?: string | null; email?: string | null; district?: string | null; area?: string | null; street?: string | null }
+  customer: { phone: string; name?: string | null; email?: string | null; district?: string | null; street?: string | null }
   rules: ShopRules & { insideDays: string; outsideDays: string }
   /** Totals for each zone, worked out on the server. */
   totals: { inside_dhaka: Totals; outside_dhaka: Totals }
@@ -85,9 +147,9 @@ export const CheckoutForm: React.FC<{
   methods: PayMethod[]
   bkashNumber?: string | null
   needsAdvanceBecause: string | null
-  /** The books, priced, so the parcels can be worked out as choices change. */
-  lines: PricedLine[]
-}> = ({ customer, rules, totals, plans, withPoints, points, methods, bkashNumber, needsAdvanceBecause, lines }) => {
+  /** The books, for the order summary and for working out the parcels as choices change. */
+  items: CheckoutItem[]
+}> = ({ customer, rules, totals, plans, withPoints, points, methods, bkashNumber, needsAdvanceBecause, items }) => {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, {})
   const [district, setDistrict] = useState(customer.district ?? 'Dhaka')
   const [usePoints, setUsePoints] = useState(false)
@@ -100,19 +162,18 @@ export const CheckoutForm: React.FC<{
   const [method, setMethod] = useState<PayMethod | undefined>(methods[0])
   const via = method && methods.includes(method) ? method : methods[0]
   const [delivery, setDelivery] = useState<DeliveryPlan>('split')
+  const lines: PricedLine[] = items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity, kind: i.kind }))
   const splittable = canSplit(lines)
   const parcels = planParcels(lines, t, chosen, delivery)
   const payNow = chosen === 'full' ? t.total : chosen === 'advance' ? t.advanceDue : 0
+  const count = items.reduce((n, i) => n + i.quantity, 0)
+  const days = zone === 'inside_dhaka' ? rules.insideDays : rules.outsideDays
 
   return (
-    <form action={action} className="md:grid md:grid-cols-[1fr_22rem] md:items-start md:gap-12">
-      <div className="space-y-10">
-        <section>
-          <h2 className="display border-t border-ink pt-3 text-[1.5rem]">1. Your details</h2>
-          <p className="mt-2 text-[0.9375rem] text-ink-soft">
-            Signed in as <strong className="text-ink">{customer.phone}</strong>. Order updates go to this number.
-          </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+    <form action={action} className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-10">
+      <div className="space-y-5">
+        <Step title="Contact information" aside={<>Signed in as <strong className="font-semibold text-ink tabular-nums">{customer.phone.replace(/^\+88/, '')}</strong></>}>
+          <div className="space-y-4">
             <div>
               <label className={label} htmlFor="name">
                 Full name
@@ -124,17 +185,32 @@ export const CheckoutForm: React.FC<{
                 Email <span className="font-normal text-ink-soft">(optional)</span>
               </label>
               <input id="email" name="email" type="email" autoComplete="email" defaultValue={customer.email ?? ''} className={field} />
-              <label className="mt-2 flex items-start gap-2 text-[0.8125rem] text-ink-soft">
-                <input type="checkbox" name="newsletter" className="mt-0.5 accent-[var(--color-primary)]" />
-                Send me the AFTERWORD newsletter, about once a month. Unsubscribe any time.
-              </label>
             </div>
+            <label className="flex items-start gap-2.5 text-[0.875rem] text-ink-soft">
+              <input type="checkbox" name="newsletter" className="mt-0.5 size-4 accent-[var(--color-primary)]" />
+              Send me the AFTERWORD newsletter, about once a month.
+            </label>
+            <p className="text-[0.8125rem] text-ink-faint">Order updates are sent by text to your mobile number.</p>
           </div>
-        </section>
+        </Step>
 
-        <section>
-          <h2 className="display border-t border-ink pt-3 text-[1.5rem]">2. Delivery address</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Step title="Delivery">
+          <div className="space-y-4">
+            <div>
+              <label className={label} htmlFor="street">
+                House, road and landmark
+              </label>
+              <textarea
+                id="street"
+                name="street"
+                required
+                rows={2}
+                autoComplete="street-address"
+                defaultValue={customer.street ?? ''}
+                placeholder="e.g. House 12, Road 5, Dhanmondi, near the mosque"
+                className={`${field} h-auto py-2.5`}
+              />
+            </div>
             <div>
               <label className={label} htmlFor="district">
                 District
@@ -145,103 +221,97 @@ export const CheckoutForm: React.FC<{
                 ))}
               </select>
             </div>
+            <div className="flex items-center justify-between gap-4 rounded-ui bg-paper-deep px-4 py-3 text-[0.9375rem]">
+              <span>
+                {zone === 'inside_dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'}
+                <span className="text-ink-soft"> · {days} after dispatch</span>
+              </span>
+              <strong className="font-medium tabular-nums">{t.delivery === 0 ? 'Free' : formatTaka(t.delivery)}</strong>
+            </div>
             <div>
-              <label className={label} htmlFor="area">
-                Area or thana
-              </label>
-              <input id="area" name="area" required defaultValue={customer.area ?? ''} placeholder="e.g. Dhanmondi" className={field} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={label} htmlFor="street">
-                House, road and landmark
-              </label>
-              <textarea id="street" name="street" required rows={2} defaultValue={customer.street ?? ''} className={`${field} h-auto py-2.5`} />
-            </div>
-            <div className="sm:col-span-2">
               <label className={label} htmlFor="deliveryNote">
                 Note for the courier <span className="font-normal text-ink-soft">(optional)</span>
               </label>
-              <input id="deliveryNote" name="deliveryNote" maxLength={160} className={field} />
+              <input id="deliveryNote" name="deliveryNote" maxLength={160} placeholder="e.g. Call before coming" className={field} />
             </div>
           </div>
-          <p className="mt-4 border rounded-ui border-rule px-4 py-3 text-[0.9375rem]">
-            {zone === 'inside_dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'}:{' '}
-            <strong>{t.delivery === 0 ? 'free delivery' : formatTaka(t.delivery)}</strong>, {zone === 'inside_dhaka' ? rules.insideDays : rules.outsideDays}{' '}
-            after dispatch.
-          </p>
-        </section>
-
-        {points.balance > 0 ? (
-          <section>
-            <h2 className="display border-t border-ink pt-3 text-[1.5rem]">Reward points</h2>
-            {points.usable > 0 ? (
-              <label className={`mt-4 flex cursor-pointer gap-3 border rounded-ui px-4 py-3.5 ${usePoints ? 'border-primary bg-card' : 'border-rule'}`}>
-                <input type="checkbox" name="usePoints" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-1 accent-[var(--color-primary)]" />
-                <span>
-                  <span className="block font-semibold">Use {points.usable} of my {points.balance} points</span>
-                  <span className="block text-[0.9375rem] text-ink-soft">Takes {formatTaka(points.usable)} off the books.</span>
-                </span>
-              </label>
-            ) : (
-              <p className="mt-2 text-[0.9375rem] text-ink-soft">
-                You have {points.balance} points. They can be spent once you have {points.minimum}.
-              </p>
-            )}
-          </section>
-        ) : null}
+        </Step>
 
         {splittable ? (
-          <section>
-            <h2 className="display border-t border-ink pt-3 text-[1.5rem]">Sending your books</h2>
-            <p className="mt-2 text-[0.9375rem] text-ink-soft">
-              Some of your books are in stock and some we order in for you. One delivery fee either way.
-            </p>
-            <div className="mt-4 space-y-2">
-              {(
-                [
-                  ['split', 'Send the books in stock now', 'The rest follow in a second parcel when they arrive, at no extra delivery charge.'],
-                  ['together', 'Send everything together', 'One parcel, once all your books are here.'],
-                ] as const
-              ).map(([value, title, body]) => (
-                <label key={value} className={`flex cursor-pointer gap-3 border rounded-ui px-4 py-3.5 ${delivery === value ? 'border-primary bg-card' : 'border-rule'}`}>
-                  <input type="radio" name="deliveryPlan" value={value} checked={delivery === value} onChange={() => setDelivery(value)} className="mt-1 accent-[var(--color-primary)]" />
-                  <span>
-                    <span className="block font-semibold">{title}</span>
-                    <span className="block text-[0.9375rem] text-ink-soft">{body}</span>
-                  </span>
-                </label>
-              ))}
+          <Step title="Shipment" aside="One delivery fee either way">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <Choice
+                name="deliveryPlan"
+                value="split"
+                checked={delivery === 'split'}
+                onChange={() => setDelivery('split')}
+                title="Two parcels"
+                body="Books in stock come now; the books we order in follow when they arrive."
+              />
+              <Choice
+                name="deliveryPlan"
+                value="together"
+                checked={delivery === 'together'}
+                onChange={() => setDelivery('together')}
+                title="One parcel"
+                body="Everything together, once all your books are here."
+              />
             </div>
-          </section>
+          </Step>
         ) : null}
 
-        <section>
-          <h2 className="display border-t border-ink pt-3 text-[1.5rem]">3. Payment</h2>
-          {needsAdvanceBecause && t.advanceDue > 0 ? <p className="mt-2 text-[0.9375rem] text-ink-soft">{needsAdvanceBecause}</p> : null}
+        {points.balance > 0 ? (
+          <Step title="Reward points" aside={`${points.balance} points`}>
+            {points.usable > 0 ? (
+              <Choice
+                type="checkbox"
+                name="usePoints"
+                checked={usePoints}
+                onChange={setUsePoints}
+                title={`Use ${points.usable} points`}
+                body="One point is worth ৳1."
+                side={`−${formatTaka(points.usable)}`}
+              />
+            ) : (
+              <p className="text-[0.9375rem] text-ink-soft">Points can be spent once you have {points.minimum}.</p>
+            )}
+          </Step>
+        ) : null}
+
+        <Step title="Payment">
+          {needsAdvanceBecause && t.advanceDue > 0 ? <p className="-mt-2 mb-4 text-[0.875rem] text-ink-soft">{needsAdvanceBecause}</p> : null}
           {offered.length === 0 ? (
-            <p className="mt-4 border rounded-ui border-rule px-4 py-3">
+            <p className="rounded-ui bg-paper-deep px-4 py-3 text-[0.9375rem]">
               This order needs an advance, and online payment is not connected yet. Please message us to arrange it.
             </p>
           ) : (
-            <div className="mt-4 space-y-2">
+            <div className="space-y-2.5">
               {offered.map((p) => (
-                <label key={p} className={`flex cursor-pointer gap-3 border rounded-ui px-4 py-3.5 ${chosen === p ? 'border-primary bg-card' : 'border-rule'}`}>
-                  <input type="radio" name="paymentPlan" value={p} checked={chosen === p} onChange={() => setPlan(p)} className="mt-1 accent-[var(--color-primary)]" />
-                  <span>
-                    <span className="block font-semibold">{PLAN_COPY[p].title}</span>
-                    <span className="block text-[0.9375rem] text-ink-soft">{PLAN_COPY[p].body(t, rules.advancePercent)}</span>
-                  </span>
-                </label>
+                <Choice
+                  key={p}
+                  name="paymentPlan"
+                  value={p}
+                  checked={chosen === p}
+                  onChange={() => setPlan(p)}
+                  title={PLAN_COPY[p].title}
+                  body={PLAN_COPY[p].body(t, rules.advancePercent)}
+                />
               ))}
             </div>
           )}
+
           {chosen !== 'cod' && methods.length > 1 ? (
             <fieldset className="mt-5">
               <legend className={label}>Pay with</legend>
               <div className="grid gap-2 sm:grid-cols-3">
                 {methods.map((m) => (
-                  <label key={m} className={`flex cursor-pointer items-center gap-2.5 border rounded-ui px-3 py-3 text-[0.9375rem] ${via === m ? 'border-primary bg-card' : 'border-rule'}`}>
-                    <input type="radio" name="payNowVia" value={m} checked={via === m} onChange={() => setMethod(m)} className="accent-[var(--color-primary)]" />
+                  <label
+                    key={m}
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-ui border px-3 py-3 text-[0.9375rem] ${
+                      via === m ? 'border-ink bg-card shadow-[inset_0_0_0_1px_var(--color-ink)]' : 'border-rule hover:border-ink/50'
+                    }`}
+                  >
+                    <input type="radio" name="payNowVia" value={m} checked={via === m} onChange={() => setMethod(m)} className="size-4 accent-[var(--color-primary)]" />
                     {METHOD_LABEL[m]}
                   </label>
                 ))}
@@ -250,17 +320,29 @@ export const CheckoutForm: React.FC<{
           ) : chosen !== 'cod' && via ? (
             <input type="hidden" name="payNowVia" value={via} />
           ) : null}
+
           {chosen !== 'cod' && via === 'bkash' ? (
-            <p className="mt-4 text-[0.9375rem] text-ink-soft">You will be taken to bKash to approve the payment with your bKash PIN, then brought back here.</p>
+            <p className="mt-4 text-[0.875rem] text-ink-soft">You will approve the payment in bKash with your PIN, then come back here.</p>
+          ) : null}
+          {chosen !== 'cod' && via === 'sslcommerz' ? (
+            <p className="mt-4 text-[0.875rem] text-ink-soft">You will pay on our payment partner’s secure page, then come back here.</p>
           ) : null}
           {chosen !== 'cod' && via === 'bkash_manual' ? (
-            <div className="mt-4 bg-paper-deep px-4 py-4">
-              <p className="text-[0.9375rem]">
-                Send <strong>{formatTaka(chosen === 'full' ? t.total : t.advanceDue)}</strong> by bKash (Send Money) to{' '}
-                <strong className="tabular-nums">{bkashNumber}</strong>, then tell us the number you sent from and the transaction
-                ID. We check it before confirming your order.
-              </p>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 rounded-ui border border-rule bg-card p-4 sm:p-5">
+              <ol className="space-y-2 text-[0.9375rem]">
+                <li className="flex gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.75rem] font-semibold text-paper">1</span>
+                  <span>
+                    Send <strong className="tabular-nums">{formatTaka(payNow)}</strong> by bKash <em className="not-italic font-medium">Send Money</em> to{' '}
+                    <strong className="tabular-nums">{bkashNumber}</strong>
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.75rem] font-semibold text-paper">2</span>
+                  <span>Enter the number you sent from and the transaction ID. We check it before confirming your order.</span>
+                </li>
+              </ol>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={label} htmlFor="paymentSender">
                     bKash number you sent from
@@ -279,78 +361,75 @@ export const CheckoutForm: React.FC<{
                 </div>
                 <div>
                   <label className={label} htmlFor="paymentReference">
-                    bKash transaction ID
+                    Transaction ID
                   </label>
                   <input id="paymentReference" name="paymentReference" required maxLength={40} placeholder="e.g. 9A7B6C5D4E" className={`${field} uppercase placeholder:normal-case`} />
                 </div>
               </div>
             </div>
           ) : null}
-          {chosen !== 'cod' && via === 'sslcommerz' ? (
-            <p className="mt-4 text-[0.9375rem] text-ink-soft">You will be taken to our payment partner’s secure page to pay by card, bKash or bank.</p>
-          ) : null}
-        </section>
+        </Step>
       </div>
 
-      <aside className="mt-10 border rounded-ui border-ink p-5 md:sticky md:top-36 md:mt-0">
-        <h2 className="eyebrow">Order total</h2>
-        <dl className="mt-3 space-y-1.5 text-[0.9375rem]">
-          <div className="flex justify-between">
-            <dt>Books</dt>
-            <dd className="tabular-nums">{formatTaka(t.subtotal)}</dd>
-          </div>
-          {t.discount ? (
-            <div className="flex justify-between text-primary">
-              <dt>Discount</dt>
-              <dd className="tabular-nums">−{formatTaka(t.discount)}</dd>
-            </div>
-          ) : null}
-          {t.rewards ? (
-            <div className="flex justify-between text-primary">
-              <dt>Reward points</dt>
-              <dd className="tabular-nums">−{formatTaka(t.rewards)}</dd>
-            </div>
-          ) : null}
-          {t.giftWrap ? (
-            <div className="flex justify-between">
-              <dt>Gift wrap</dt>
-              <dd className="tabular-nums">{formatTaka(t.giftWrap)}</dd>
-            </div>
-          ) : null}
-          <div className="flex justify-between">
-            <dt>Delivery</dt>
-            <dd className="tabular-nums">{t.delivery === 0 ? 'Free' : formatTaka(t.delivery)}</dd>
-          </div>
-          <div className="flex justify-between border-t border-ink pt-2 font-display text-[1.375rem]">
-            <dt>Total</dt>
-            <dd className="tabular-nums">{formatTaka(t.total)}</dd>
-          </div>
+      <aside className="rounded-ui border border-rule bg-card p-5 sm:p-6 lg:sticky lg:top-32">
+        <h2 className="font-display text-[1.25rem] font-medium">Order summary</h2>
+
+        <ul className="mt-4 max-h-[17rem] space-y-3.5 overflow-y-auto pr-1">
+          {items.map((i) => (
+            <li key={i.id} className="flex items-center gap-3.5">
+              <span className="relative shrink-0">
+                {i.coverUrl ? (
+                  <Image src={i.coverUrl} alt="" width={44} height={66} sizes="44px" className="h-[3.75rem] w-[2.6rem] rounded-[2px] object-contain shadow-book" />
+                ) : (
+                  <span className="block h-[3.75rem] w-[2.6rem] rounded-[2px] bg-paper-deep" />
+                )}
+                {i.quantity > 1 ? (
+                  <span className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-ink text-[0.6875rem] font-semibold text-paper tabular-nums">
+                    {i.quantity}
+                  </span>
+                ) : null}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="line-clamp-1 text-[0.9375rem] font-medium">{i.title}</span>
+                <span className="line-clamp-1 text-[0.8125rem] text-ink-soft">
+                  {i.authorLine}
+                  {KIND_TAG[i.kind] ? <span className="ml-1.5 text-accent">· {KIND_TAG[i.kind]}</span> : null}
+                </span>
+              </span>
+              <span className="shrink-0 text-[0.9375rem] tabular-nums">{formatTaka(i.unitPrice * i.quantity)}</span>
+            </li>
+          ))}
+        </ul>
+
+        <dl className="mt-5 space-y-2 border-t border-rule pt-4 text-[0.9375rem]">
+          <Row label={`Items (${count})`} value={formatTaka(t.subtotal)} />
+          {t.discount ? <Row label="Discount" value={`−${formatTaka(t.discount)}`} className="text-accent" /> : null}
+          {t.rewards ? <Row label="Reward points" value={`−${formatTaka(t.rewards)}`} className="text-accent" /> : null}
+          {t.giftWrap ? <Row label="Gift wrap" value={formatTaka(t.giftWrap)} /> : null}
+          <Row label="Delivery fee" value={t.delivery === 0 ? 'Free' : formatTaka(t.delivery)} />
+          <Row label="Total" value={formatTaka(t.total)} className="mt-1 border-t border-rule pt-3 font-display text-[1.375rem] font-medium" />
         </dl>
+
         {/* When the money is paid: now, and to the courier for each parcel. */}
-        {payNow > 0 || parcels.length > 1 ? (
-          <dl className="mt-4 space-y-1.5 border-t border-rule pt-3 text-[0.875rem]">
-            {payNow > 0 ? (
-              <div className="flex justify-between font-semibold">
-                <dt>Pay now by bKash</dt>
-                <dd className="tabular-nums">{formatTaka(payNow)}</dd>
-              </div>
-            ) : null}
-            {parcels.map((p, i) => (
-              <div key={i} className="flex justify-between gap-3">
-                <dt className="text-ink-soft">
-                  {parcels.length > 1 ? (p.later ? 'On delivery of the books we order in' : 'On delivery of the books in stock') : 'On delivery'}
-                </dt>
-                <dd className="tabular-nums">{formatTaka(p.collect)}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : null}
-        <div className="mt-4 space-y-3">
+        <dl className="mt-4 space-y-1.5 rounded-ui bg-paper-deep px-4 py-3 text-[0.875rem]">
+          {payNow > 0 ? <Row label={`Pay now${via ? ` by ${via === 'sslcommerz' ? 'card or wallet' : 'bKash'}` : ''}`} value={formatTaka(payNow)} className="font-semibold" /> : null}
+          {parcels.map((p, i) =>
+            p.collect <= 0 && parcels.length === 1 ? null : (
+              <Row
+                key={i}
+                label={<span className="text-ink-soft">{parcels.length > 1 ? (p.later ? 'COD of the books we order in' : 'COD of the books in stock') : 'Cash on delivery'}</span>}
+                value={formatTaka(p.collect)}
+              />
+            ),
+          )}
+        </dl>
+
+        <div className="mt-5 space-y-3">
           <ErrorNote message={state.message} />
           <button type="submit" disabled={pending || offered.length === 0} className="btn btn-primary w-full">
             {pending ? 'Placing your order…' : chosen === 'cod' ? 'Place order' : 'Place order and pay'}
           </button>
-          <p className="text-center text-[0.75rem] text-ink-faint">Every book is an original edition. Prices include all charges.</p>
+          <p className="text-center text-[0.75rem] text-ink-faint">Original editions only. Prices include all charges.</p>
         </div>
       </aside>
     </form>

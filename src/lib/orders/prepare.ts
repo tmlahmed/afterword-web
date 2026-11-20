@@ -60,7 +60,7 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
 
   const phone = normalisePhone(String(data.contactPhone ?? '')) ?? fail('Enter a valid Bangladeshi mobile number, for example 01712345678.')
   if (!data.contactName?.trim()) fail('Enter the customer’s name.')
-  if (!data.district || !data.area?.trim() || !data.street?.trim()) fail('Enter the full delivery address.')
+  if (!data.district || !data.street?.trim()) fail('Enter the full delivery address.')
 
   // Customer: matched by phone, created on first order.
   const existing = await payload.find({ collection: 'customers', where: { phone: { equals: phone } }, limit: 1, depth: 0, overrideAccess: true, req })

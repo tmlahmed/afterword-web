@@ -146,7 +146,6 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
         contactPhone: customer!.phone,
         contactEmail: text(form, 'email', 120) || undefined,
         district: text(form, 'district', 40) as never,
-        area: text(form, 'area', 80),
         street: text(form, 'street', 300),
         deliveryNote: text(form, 'deliveryNote', 160) || undefined,
         lines: bag.lines.map((l) => ({ edition: l.edition.id, quantity: l.quantity })),

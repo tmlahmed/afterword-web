@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildBooking, localPhone, matchCity, matchZone, outcomeOf, parcelWeight, statusText } from '../../src/lib/courier/pathao-rules'
+import { buildBooking, findZoneIn, localPhone, matchCity, matchZone, outcomeOf, parcelWeight, statusText } from '../../src/lib/courier/pathao-rules'
 
 const cities = [
   { id: 1, name: 'Dhaka' },
@@ -35,6 +35,13 @@ describe('Pathao places', () => {
     expect(matchZone('Uttara', zones)?.id).toBe(80)
     expect(matchZone('Gulshan', zones)).toBeUndefined()
     expect(matchZone('A', zones)).toBeUndefined()
+  })
+
+  it('finds the zone inside a full address when there is no separate area', () => {
+    expect(findZoneIn('House 3, Road 14, Dhanmondi', zones)?.id).toBe(60)
+    expect(findZoneIn('Flat 2B, Mirpur 10 roundabout', zones)?.id).toBe(70)
+    expect(findZoneIn('Road 5, Mirpur', zones)).toBeUndefined()
+    expect(findZoneIn('House 9, Gulshan Avenue', zones)).toBeUndefined()
   })
 })
 

@@ -61,6 +61,20 @@ export const matchZone = (area: string, zones: PathaoPlace[]): PathaoPlace | und
   return longer.length === 1 ? longer[0] : undefined
 }
 
+/**
+ * The zone named somewhere in a free-text address ("House 3, Road 14, Dhanmondi"), when the
+ * customer gave no separate area. The longest zone name found wins; a tie means unclear.
+ */
+export const findZoneIn = (address: string, zones: PathaoPlace[]): PathaoPlace | undefined => {
+  const words = ` ${address.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `
+  const found = zones
+    .map((z) => ({ z, name: ` ${z.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} ` }))
+    .filter(({ name }) => name.trim().length >= 4 && words.includes(name))
+    .sort((a, b) => b.name.length - a.name.length)
+  if (!found[0] || (found[1] && found[1].name.length === found[0].name.length)) return undefined
+  return found[0].z
+}
+
 /** Pathao wants 01XXXXXXXXX. */
 export const localPhone = (phone: string): string => {
   const digits = phone.replace(/[^\d]/g, '')
