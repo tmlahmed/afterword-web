@@ -32,7 +32,9 @@ export const Cover: React.FC<{
       height={600}
       sizes={sizes}
       priority={priority}
-      className={`block w-auto max-w-full rounded-[2px] object-contain shadow-book ${className}`}
+      // shadow-cover follows the picture's own edges, so a cover narrower or wider than its
+      // space never shows a shadow around the empty part of the box.
+      className={`block w-auto max-w-full rounded-[2px] object-contain shadow-cover ${className}`}
     />
   ) : (
     <div

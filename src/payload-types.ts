@@ -227,6 +227,19 @@ export interface Edition {
    * Where the imported cover came from.
    */
   coverSource?: string | null;
+  /**
+   * Optional. The back cover, the spine, inside pages, the edition in hand. Shown after the cover on the book’s page, in this order (drag to reorder).
+   */
+  photos?:
+    | {
+        image: number | Media;
+        /**
+         * Optional, e.g. “Back cover” or “First page”.
+         */
+        caption?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   subjects?: (number | Subject)[] | null;
   work?: (number | null) | Work;
   series?: (number | null) | Series;
@@ -1415,6 +1428,13 @@ export interface EditionsSelect<T extends boolean = true> {
   cover?: T;
   coverUrl?: T;
   coverSource?: T;
+  photos?:
+    | T
+    | {
+        image?: T;
+        caption?: T;
+        id?: T;
+      };
   subjects?: T;
   work?: T;
   series?: T;

@@ -54,9 +54,22 @@ const subscribe = (cb: () => void) => {
 }
 const useShelf = () => useSyncExternalStore(subscribe, snapshot, () => EMPTY)
 
-export const ShelfButton: React.FC<{ id: number; title: string }> = ({ id, title }) => {
+export const ShelfButton: React.FC<{ id: number; title: string; iconOnly?: boolean }> = ({ id, title, iconOnly = false }) => {
   const ids = useShelf()
   const on = ids.includes(id)
+  if (iconOnly)
+    return (
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={() => write(on ? ids.filter((i) => i !== id) : [id, ...ids])}
+        title={on ? 'On your Shelf' : 'Save to The Shelf'}
+        aria-label={on ? `Remove ${title} from The Shelf` : `Save ${title} to The Shelf`}
+        className={`btn btn-quiet !min-h-11 !w-12 !px-0 ${on ? '!bg-ink !text-paper' : ''}`}
+      >
+        <ShelfIcon className={on ? 'fill-current' : ''} />
+      </button>
+    )
   return (
     <button
       type="button"

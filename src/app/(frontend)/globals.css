@@ -64,6 +64,10 @@
 
 @layer components {
   /* Small-caps label used above titles and in tables. */
+  /* A book cover's shadow, drawn around the picture itself rather than its box. */
+  .shadow-cover {
+    filter: drop-shadow(0 1px 1px rgb(17 17 17 / 0.16)) drop-shadow(0 10px 11px rgb(17 17 17 / 0.22));
+  }
   .eyebrow {
     font-family: var(--font-sans);
     font-size: 0.6875rem;

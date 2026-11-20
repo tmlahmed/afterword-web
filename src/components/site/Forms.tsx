@@ -552,7 +552,7 @@ export const CheckoutForm: React.FC<{
             <li key={i.id} className="flex items-center gap-3.5">
               <span className="relative shrink-0">
                 {i.coverUrl ? (
-                  <Image src={i.coverUrl} alt="" width={44} height={66} sizes="44px" className="h-[3.75rem] w-[2.6rem] rounded-[2px] object-contain shadow-book" />
+                  <Image src={i.coverUrl} alt="" width={44} height={66} sizes="44px" className="h-[3.75rem] w-[2.6rem] rounded-[2px] object-contain shadow-cover" />
                 ) : (
                   <span className="block h-[3.75rem] w-[2.6rem] rounded-[2px] bg-paper-deep" />
                 )}
@@ -679,13 +679,13 @@ export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
   const [rating, setRating] = useState(0)
   if (state.done)
     return (
-      <div className="border rounded-ui border-primary px-5 py-6">
+      <div className="px-7 py-10 text-center">
         <p className="font-display text-[1.25rem]">Thank you for your review.</p>
         <p className="mt-1.5 text-ink-soft">A bookseller reads every review before it appears, usually within a day or two.</p>
       </div>
     )
   return (
-    <form action={action} className="max-w-[38rem] space-y-4 bg-paper-deep px-5 py-6">
+    <form action={action} className="space-y-4 bg-paper px-5 py-6 sm:px-7 sm:py-7">
       <p className="font-display text-[1.25rem]">You bought this book. What did you think?</p>
       <input type="hidden" name="edition" value={edition} />
       <fieldset>
@@ -760,7 +760,7 @@ export const NewsletterForm: React.FC = () => {
  * The buy button. Adds a copy without leaving the page: the button says "Added" for a moment
  * and the bag opens from the header to show it.
  */
-export const AddToBag: React.FC<{ edition: number; label: string }> = ({ edition, label }) => {
+export const AddToBag: React.FC<{ edition: number; label: string; compact?: boolean }> = ({ edition, label, compact = false }) => {
   const [flash, setFlash] = useState(0)
   const announced = React.useRef(0)
   const [state, action, pending] = useActionState<AddToBagState, FormData>(async (prev, form) => {
@@ -782,10 +782,10 @@ export const AddToBag: React.FC<{ edition: number; label: string }> = ({ edition
   }, [pending, flash])
 
   return (
-    <div className="mt-5">
+    <div className={compact ? '' : 'mt-5'}>
       <form action={action}>
         <input type="hidden" name="edition" value={edition} />
-        <button type="submit" disabled={pending} aria-live="polite" className="btn btn-primary w-full gap-2">
+        <button type="submit" disabled={pending} aria-live="polite" className={`btn btn-primary w-full gap-2 ${compact ? "!min-h-11 !px-4 text-[0.9375rem]" : ""}`}>
           {pending ? (
             'Adding…'
           ) : flash ? (

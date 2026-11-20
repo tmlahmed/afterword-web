@@ -15,6 +15,48 @@ export const getReviews = async (payload: Payload, editionId: number, limit = 20
     })
   ).docs
 
+export type ReviewSort = 'newest' | 'highest' | 'lowest'
+/** A review as the public sees it, small enough to send to the browser. */
+export type ReviewItem = { id: number; rating: number; title: string; body: string; displayName: string; createdAt: string; reply?: string | null }
+export const REVIEWS_PER_PAGE = 5
+
+const SORTS: Record<ReviewSort, string[]> = { newest: ['-createdAt'], highest: ['-rating', '-createdAt'], lowest: ['rating', '-createdAt'] }
+
+/** One page of a book's published reviews, and whether there are more. */
+export const reviewPage = async (payload: Payload, editionId: number, page = 1, sort: ReviewSort = 'newest'): Promise<{ items: ReviewItem[]; hasMore: boolean }> => {
+  const found = await payload.find({
+    collection: 'reviews',
+    where: { and: [{ edition: { equals: editionId } }, { status: { equals: 'published' } }] },
+    sort: SORTS[sort] ?? SORTS.newest,
+    limit: REVIEWS_PER_PAGE,
+    page: Math.max(1, Math.floor(page)),
+    depth: 0,
+    overrideAccess: false, // as the public sees them: no customer or order fields
+  })
+  return {
+    items: found.docs.map((r) => ({ id: r.id, rating: r.rating, title: r.title, body: r.body, displayName: r.displayName ?? 'A reader', createdAt: r.createdAt, reply: r.reply })),
+    hasMore: found.hasNextPage,
+  }
+}
+
+/** How many published reviews gave each number of stars, for the bars beside the average. */
+export const ratingCounts = async (payload: Payload, editionId: number): Promise<Record<1 | 2 | 3 | 4 | 5, number>> => {
+  const found = await payload.find({
+    collection: 'reviews',
+    where: { and: [{ edition: { equals: editionId } }, { status: { equals: 'published' } }] },
+    select: { rating: true },
+    pagination: false,
+    depth: 0,
+    overrideAccess: false,
+  })
+  const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  for (const r of found.docs) {
+    const n = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5
+    counts[n]++
+  }
+  return counts
+}
+
 /**
  * Can this customer review this book? Only after an order with the book has been delivered,
  * and only once per book. Returns the order to link the review to.

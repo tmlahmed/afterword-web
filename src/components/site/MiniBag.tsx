@@ -184,7 +184,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                 <li key={l.id} className="flex gap-3.5 border-t border-rule py-3.5">
                   <Link href={`/book/${l.slug}`} onClick={() => setOpen(false)} className="shrink-0">
                     {l.coverUrl ? (
-                      <Image src={l.coverUrl} alt="" width={56} height={84} sizes="56px" className="h-[5.25rem] w-auto max-w-[3.5rem] rounded-[2px] object-contain shadow-book" />
+                      <Image src={l.coverUrl} alt="" width={56} height={84} sizes="56px" className="h-[5.25rem] w-auto max-w-[3.5rem] rounded-[2px] object-contain shadow-cover" />
                     ) : (
                       <span className="block h-[5.25rem] w-14 rounded-[2px] bg-primary" />
                     )}

@@ -4,16 +4,18 @@ import { notFound } from 'next/navigation'
 import React from 'react'
 
 import { AvailabilityMark, Cover, Price, Shelf, tintFor } from '../../../../components/site/Books'
+import { BookGallery, Expandable, type GalleryPhoto, StickyBuyBar } from '../../../../components/site/BookParts'
 import { AddToBag } from '../../../../components/site/Forms'
 import { ShelfButton } from '../../../../components/site/TheShelf'
 import { availabilityOf } from '../../../../lib/availability'
 import { getBookBySlug, getNoteFor, getRelated, getSettings } from '../../../../lib/catalogue'
-import type { Contributor, Edition, Publisher, Series, Subject } from '../../../../payload-types'
+import type { Contributor, Edition, Media, Publisher, Series, Subject } from '../../../../payload-types'
 import { siteUrl } from '../../../../lib/notify'
 import { robotsFor, SHARE_DEFAULTS } from '../../../../lib/seo'
 import { JsonLd } from '../../../../components/site/JsonLd'
-import { ReaderReviews, Stars } from '../../../../components/site/Reviews'
-import { getReviews, reviewEligibility } from '../../../../lib/reviews'
+import { ReaderReviews } from '../../../../components/site/Reviews'
+import { ratingCounts, reviewEligibility, reviewPage } from '../../../../lib/reviews'
+import { formatTaka } from '../../../../lib/pricing'
 import { getCustomer } from '../../../../lib/session'
 import config from '@payload-config'
 import { getPayload } from 'payload'
@@ -68,13 +70,18 @@ export default async function BookPage({ params }: Props) {
   if (!book) notFound()
 
   const payload = await getPayload({ config })
-  const [settings, note, related, reviews, customer] = await Promise.all([
+  const [settings, note, related, firstReviews, counts, customer] = await Promise.all([
     getSettings(),
     getNoteFor(book.id),
     getRelated(book),
-    getReviews(payload, book.id),
+    reviewPage(payload, book.id),
+    ratingCounts(payload, book.id),
     getCustomer(),
   ])
+  const reviews = firstReviews.items
+  // The average and count straight from the published reviews, so the stars always match the bars.
+  const reviewCount = Object.values(counts).reduce((a, b) => a + b, 0)
+  const reviewAverage = reviewCount ? Object.entries(counts).reduce((sum, [stars, n]) => sum + Number(stars) * n, 0) / reviewCount : null
   const eligibility = await reviewEligibility(payload, customer, book.id)
   const availability = availabilityOf(book, settings)
   const people = contributorsOf(book)
@@ -85,6 +92,28 @@ export default async function BookPage({ params }: Props) {
   const series = typeof book.series === 'object' ? (book.series as Series | null) : null
   const year = yearOf(book.publicationDate)
   const paragraphs = (book.synopsis ?? '').split(/\n{2,}/).filter(Boolean)
+
+  // The cover first, then any extra photos added in the admin.
+  const photos: GalleryPhoto[] = [
+    // The cover's real proportions when it is an upload, so it is drawn at its own shape.
+    ...(book.coverUrl
+      ? [
+          {
+            src: book.coverUrl,
+            alt: `Cover of ${book.title}`,
+            width: (typeof book.cover === 'object' && book.cover?.width) || 400,
+            height: (typeof book.cover === 'object' && book.cover?.height) || 600,
+            caption: null,
+          },
+        ]
+      : []),
+    ...(book.photos ?? [])
+      .map((p) => ({ media: typeof p.image === 'object' ? (p.image as Media) : null, caption: p.caption }))
+      .filter((p): p is { media: Media; caption: string | null | undefined } => Boolean(p.media?.filename))
+      // A path on this site (like the covers), not Payload's full URL, so the image server accepts it.
+      .map(({ media, caption }) => ({ src: `/api/media/file/${encodeURIComponent(media.filename!)}`, alt: media.alt || caption || `Photo of ${book.title}`, width: media.width, height: media.height, caption })),
+  ]
+  const label = availability.state === 'pre_order' ? 'Pre-order' : availability.state === 'on_request' ? 'Order on request' : 'Add to bag'
 
   const details: [string, string | number | null | undefined][] = [
     ['Format', FORMAT_LABEL[book.format] ?? book.format],
@@ -116,8 +145,8 @@ export default async function BookPage({ params }: Props) {
     image: book.coverUrl ?? undefined,
     description: book.synopsis ?? undefined,
     url: `${siteUrl()}/book/${book.slug}`,
-    aggregateRating: book.ratingCount
-      ? { '@type': 'AggregateRating', ratingValue: book.ratingAverage, reviewCount: book.ratingCount, bestRating: 5, worstRating: 1 }
+    aggregateRating: reviewCount
+      ? { '@type': 'AggregateRating', ratingValue: Number(reviewAverage!.toFixed(1)), reviewCount, bestRating: 5, worstRating: 1 }
       : undefined,
     review: reviews.slice(0, 5).map((r) => ({
       '@type': 'Review',
@@ -160,32 +189,53 @@ export default async function BookPage({ params }: Props) {
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumbs} />
 
-      <article className="mx-auto max-w-6xl md:grid md:grid-cols-[5fr_7fr] md:gap-x-14 md:px-4 md:pt-10">
-        {/* Cover */}
-        <div className="md:sticky md:top-36 md:self-start">
-          <div className={`flex items-center justify-center px-8 py-10 md:py-14 ${tintFor(book.id)}`}>
-            <Cover title={book.title} author={book.authorLine} src={book.coverUrl} priority sizes="(min-width: 768px) 18rem, 13rem" className="h-[19rem] md:h-[26rem]" />
-          </div>
+      {/* Where the book sits in the shop */}
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-6xl px-4 pt-6 text-[0.8125rem] text-ink-soft md:pt-8">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          <li>
+            <Link href="/" className="hover:text-ink">
+              Home
+            </Link>
+          </li>
+          {subject ? (
+            <>
+              <li aria-hidden>/</li>
+              <li>
+                <Link href={`/subjects/${subject.slug}`} className="hover:text-ink">
+                  {subject.name}
+                </Link>
+              </li>
+            </>
+          ) : null}
+          <li aria-hidden>/</li>
+          <li aria-current="page" className="max-w-[16rem] truncate text-ink">
+            {book.title}
+          </li>
+        </ol>
+      </nav>
+
+      <article className="mx-auto mt-5 grid max-w-6xl gap-8 px-4 md:mt-6 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-10 lg:gap-14">
+        {/* Photos */}
+        <div className="md:sticky md:top-32 md:self-start">
+          <BookGallery
+            photos={photos}
+            tint={tintFor(book.id)}
+            fallback={<Cover title={book.title} author={book.authorLine} src={null} className="h-[19rem] md:h-[26rem]" />}
+          />
         </div>
 
-        <div className="px-4 pt-7 md:px-0 md:pt-2">
-          {subject ? (
-            <nav aria-label="Breadcrumb" className="eyebrow">
-              <Link href={`/subjects/${subject.slug}`} className="hover:text-ink">
-                {subject.name}
-              </Link>
-            </nav>
-          ) : null}
-
-          <h1 className="display mt-3 text-[2.25rem] md:text-[3.25rem]">{book.title}</h1>
-          {book.subtitle ? <p className="mt-2 font-display text-[1.25rem] text-ink-soft">{book.subtitle}</p> : null}
+        {/* Title, buy box and The Afterword */}
+        <div className="min-w-0">
+          <h1 className="display text-[2.125rem] leading-[1.08] md:text-[2.875rem]">{book.title}</h1>
+          {book.subtitle ? <p className="mt-2 font-display text-[1.1875rem] text-ink-soft">{book.subtitle}</p> : null}
 
           {authors.length ? (
-            <p className="mt-3 font-display text-[1.25rem] text-ink-soft">
+            <p className="mt-3 text-[1.0625rem]">
+              <span className="text-ink-soft">by </span>
               {authors.map((a, i) => (
                 <React.Fragment key={a.person.id}>
                   {i > 0 ? ', ' : ''}
-                  <Link href={`/authors/${a.person.slug}`} className="hover:underline hover:decoration-accent hover:underline-offset-4">
+                  <Link href={`/authors/${a.person.slug}`} className="font-medium underline decoration-rule underline-offset-4 hover:decoration-accent">
                     {a.person.name}
                   </Link>
                 </React.Fragment>
@@ -200,116 +250,131 @@ export default async function BookPage({ params }: Props) {
               </Link>
             </p>
           ))}
-          {series ? (
-            <p className="mt-2 text-[0.9375rem] text-ink-soft">
-              {book.seriesNumber ? `Book ${book.seriesNumber} of ` : 'Part of '}
-              <Link href={`/series/${series.slug}`} className="link">
-                {series.name}
-              </Link>
-            </p>
-          ) : null}
 
-          {book.ratingCount && book.ratingAverage ? (
-            <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-[0.875rem] text-ink-soft hover:text-ink">
-              <Stars rating={book.ratingAverage} />
-              {book.ratingAverage.toFixed(1)} · {book.ratingCount} {book.ratingCount === 1 ? 'review' : 'reviews'}
-            </a>
-          ) : null}
-
-          <p className="mt-4 text-[0.875rem] text-ink-soft">
-            {FORMAT_LABEL[book.format]}
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.875rem] text-ink-soft">
+            <span>{FORMAT_LABEL[book.format] ?? book.format}</span>
             {publisher ? (
-              <>
-                {' · '}
-                <Link href={`/publishers/${publisher.slug}`} className="hover:text-ink hover:underline">
-                  {publisher.name}
-                </Link>
-              </>
+              <Link href={`/publishers/${publisher.slug}`} className="hover:text-ink hover:underline">
+                {publisher.name}
+              </Link>
             ) : null}
-            {year ? ` · ${year}` : ''}
-          </p>
+            {year ? <span>{year}</span> : null}
+            {series ? (
+              <Link href={`/series/${series.slug}`} className="hover:text-ink hover:underline">
+                {book.seriesNumber ? `${series.name} #${book.seriesNumber}` : series.name}
+              </Link>
+            ) : null}
+          </div>
 
           {/* Buy box */}
-          <div className="mt-7 border-y border-ink py-6">
-            <div className="flex items-baseline justify-between gap-4">
+          <section id="buy-box" aria-label="Buy this book" className="mt-6 rounded-ui border border-rule bg-paper p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
               <Price price={book.price} was={book.compareAtPrice} showSaving className="font-display text-[2rem] leading-none" />
               <AvailabilityMark availability={availability} className="text-[0.9375rem] font-semibold" />
             </div>
-            <p className="mt-3 text-[0.9375rem] text-ink-soft">{availability.detail}</p>
 
-            {availability.orderable && book.price ? (
-              <AddToBag
-                edition={book.id}
-                label={availability.state === 'pre_order' ? 'Pre-order' : availability.state === 'on_request' ? 'Order on request' : 'Add to bag'}
-              />
-            ) : (
-              <button type="button" className="btn btn-primary mt-5 w-full" disabled>
-                Unavailable
-              </button>
-            )}
-            {availability.state !== 'in_stock' && availability.orderable ? (
-              <p className="mt-2 text-center text-[0.8125rem] text-ink-soft">
-                {settings.advancePercent ?? 50}% is paid in advance, the rest on delivery.
-              </p>
-            ) : null}
-
-            <div className="mt-4">
-              <ShelfButton id={book.id} title={book.title} />
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2">
+              {availability.orderable && book.price ? (
+                <AddToBag compact edition={book.id} label={label} />
+              ) : (
+                <button type="button" className="btn btn-primary w-full" disabled>
+                  Unavailable
+                </button>
+              )}
+              <ShelfButton iconOnly id={book.id} title={book.title} />
             </div>
 
-            <p className="mt-5 flex items-start gap-2.5 text-[0.875rem]">
-              <span aria-hidden className="mt-[0.4rem] inline-block h-[7px] w-[7px] shrink-0 rotate-45 bg-accent" />
-              <span>
-                <strong className="font-semibold">Original edition.</strong> A genuine copy from the publisher, never a
-                reprint.
-              </span>
-            </p>
-          </div>
+            <ul className="mt-5 space-y-2 border-t border-rule pt-4 text-[0.875rem]">
+              <li className="flex items-center gap-3">
+                <ClockIcon />
+                {availability.detail.replace(/\.$/, '')}
+              </li>
+              <li className="flex items-center gap-3">
+                <TruckIcon />
+                <span>
+                  Delivery {formatTaka(settings.insideDhakaFee ?? 70)} in Dhaka, {formatTaka(settings.outsideDhakaFee ?? 130)} elsewhere
+                </span>
+              </li>
+              <li className="flex items-center gap-3">
+                <CashIcon />
+                {availability.state === 'in_stock' ? 'Cash on delivery' : `${settings.advancePercent ?? 50}% advance, the rest on delivery`}
+              </li>
+              <li className="flex items-center gap-3">
+                <SealIcon />
+                Original edition, never a reprint
+              </li>
+            </ul>
+          </section>
 
-          {/* The Afterword — the bookseller's note sits above the synopsis, on purpose. */}
+          {/* The Afterword: the bookseller's note sits right under the buy box, on purpose. */}
           {note ? (
-            <figure className="mt-9 bg-paper-deep px-6 py-7">
-              <p className="eyebrow !text-accent">The Afterword</p>
-              <blockquote className="mt-3 font-display text-[1.1875rem] leading-relaxed">{note.body}</blockquote>
-              <figcaption className="mt-4 text-[0.875rem] text-ink-soft">— {note.signedBy}</figcaption>
+            <figure className="mt-5 rounded-ui bg-paper-deep px-5 py-6 sm:px-6">
+              <p className="text-[0.75rem] font-semibold tracking-[0.16em] text-accent uppercase">The Afterword</p>
+              <blockquote className="mt-2.5 font-display text-[1.125rem] leading-relaxed">“{note.body}”</blockquote>
+              <figcaption className="mt-3 text-[0.875rem] text-ink-soft">— {note.signedBy}, bookseller</figcaption>
             </figure>
           ) : null}
+        </div>
+      </article>
 
+      {/* About the book, with the details beside it */}
+      <div className="mx-auto mt-14 grid max-w-6xl gap-10 px-4 md:mt-20 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-14">
+        <section id="about" aria-labelledby="about-title" className="min-w-0 scroll-mt-32">
+          <h2 id="about-title" className="font-display text-[1.5rem] font-medium md:text-[1.75rem]">
+            About the book
+          </h2>
           {paragraphs.length ? (
-            <section className="mt-10">
-              <h2 className="eyebrow">About the book</h2>
-              <div className="prose-book mt-3 max-w-[38rem] text-[1.0625rem] leading-[1.7]">
+            <Expandable lines={9} className="mt-4 max-w-[42rem]">
+              <div className="prose-book space-y-4 text-[1.0625rem] leading-[1.75]">
                 {paragraphs.map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
               </div>
-            </section>
-          ) : null}
+            </Expandable>
+          ) : (
+            <p className="mt-4 text-ink-soft">We are writing a description for this book.</p>
+          )}
+        </section>
 
-          <section className="mt-10">
-            <h2 className="eyebrow">Details</h2>
-            <dl className="mt-3 max-w-[38rem] border-t border-rule text-[0.9375rem]">
+        <aside aria-labelledby="details-title" className="lg:pt-1">
+          <div className="rounded-ui border border-rule bg-paper p-5">
+            <h2 id="details-title" className="font-medium">
+              Book details
+            </h2>
+            <dl className="mt-3 text-[0.875rem]">
               {details
                 .filter(([, value]) => value !== null && value !== undefined && value !== '')
-                .map(([label, value]) => (
-                  <div key={label} className="flex justify-between gap-6 border-b border-rule py-2.5">
-                    <dt className="text-ink-soft">{label}</dt>
+                .map(([name, value]) => (
+                  <div key={name} className="flex justify-between gap-4 border-t border-rule py-2.5 first:border-t-0 first:pt-0">
+                    <dt className="text-ink-soft">{name}</dt>
                     <dd className="text-right tabular-nums">{value}</dd>
                   </div>
                 ))}
             </dl>
-          </section>
+          </div>
+        </aside>
+      </div>
 
-          <ReaderReviews
-            editionId={book.id}
-            slug={book.slug}
-            reviews={reviews}
-            average={book.ratingAverage}
-            count={book.ratingCount}
-            eligibility={eligibility}
-          />
-        </div>
-      </article>
+      <div className="mx-auto mt-14 max-w-6xl border-t border-rule px-4 pt-12 md:mt-20 md:pt-16">
+        <ReaderReviews editionId={book.id} slug={book.slug} first={firstReviews} counts={counts} average={reviewAverage} eligibility={eligibility} />
+      </div>
+
+      {/* Phones: price and button stay at hand once the buy box has scrolled away */}
+      {availability.orderable && book.price ? (
+        <StickyBuyBar watch="buy-box">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[0.8125rem] text-ink-soft">{book.title}</p>
+              <Price price={book.price} was={book.compareAtPrice} className="font-display text-[1.125rem] leading-tight" />
+            </div>
+            <div className="w-[11rem] shrink-0">
+              <AddToBag compact edition={book.id} label={label} />
+            </div>
+          </div>
+        </StickyBuyBar>
+      ) : null}
+      {/* Room at the very end of the page for that bar */}
+      <div aria-hidden className="h-20 md:hidden" />
 
       <div className="mt-16 space-y-14 md:mt-24 md:space-y-20">
         <Shelf title="Other editions" intro="The same book in another format." books={related.editions} />
@@ -326,3 +391,30 @@ export default async function BookPage({ params }: Props) {
     </>
   )
 }
+
+const iconProps = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true, className: 'shrink-0 text-ink-soft' }
+const ClockIcon = () => (
+  <svg {...iconProps}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+)
+const TruckIcon = () => (
+  <svg {...iconProps}>
+    <path d="M3 6.5h11v9H3zM14 9.5h3.5l3 3v3H14" />
+    <circle cx="7" cy="17.5" r="1.8" />
+    <circle cx="17" cy="17.5" r="1.8" />
+  </svg>
+)
+const CashIcon = () => (
+  <svg {...iconProps}>
+    <rect x="3" y="6.5" width="18" height="11" rx="1.5" />
+    <circle cx="12" cy="12" r="2.5" />
+  </svg>
+)
+const SealIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 3.5 14 5l2.5-.3.9 2.3 2.3.9L19.4 10.5 21 12.5l-1.6 2 .3 2.5-2.3.9-.9 2.3-2.5-.3-2 1.6-2-1.6-2.5.3-.9-2.3-2.3-.9.3-2.5L3 12.5l1.6-2-.3-2.6 2.3-.9.9-2.3L10 5z" />
+    <path d="m9 12.5 2 2 4-4.5" />
+  </svg>
+)

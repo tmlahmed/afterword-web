@@ -277,7 +277,7 @@ export const BagView: React.FC<{
                     <li key={l.id} className="grid grid-cols-[4rem_1fr] gap-x-4 gap-y-3 border-b border-rule py-5 sm:grid-cols-[4.5rem_1fr_auto_6.5rem_2.5rem] sm:items-center sm:gap-x-5">
                       <Link href={`/book/${l.slug}`} className="row-span-2 flex justify-center self-start sm:row-span-1 sm:self-center">
                         {l.coverUrl ? (
-                          <Image src={l.coverUrl} alt="" width={72} height={108} sizes="72px" className="h-[6rem] w-auto max-w-full rounded-[2px] object-contain shadow-book sm:h-[6.5rem]" />
+                          <Image src={l.coverUrl} alt="" width={72} height={108} sizes="72px" className="h-[6rem] w-auto max-w-full rounded-[2px] object-contain shadow-cover sm:h-[6.5rem]" />
                         ) : (
                           <span className="block h-[6rem] w-16 rounded-[2px] bg-primary" />
                         )}

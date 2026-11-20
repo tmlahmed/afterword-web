@@ -95,7 +95,9 @@ export const Editions: CollectionConfig = {
       async ({ data, req, originalDoc }) => {
         const cover = typeof data.cover === 'object' && data.cover ? data.cover.id : data.cover
         const before = typeof originalDoc?.cover === 'object' && originalDoc?.cover ? originalDoc.cover.id : originalDoc?.cover
-        if (cover && cover !== before) {
+        // Looked up on every save, not only when a different upload is chosen: the file inside an
+        // upload can be replaced, and the book must follow it.
+        if (cover) {
           const media = await req.payload.findByID({ collection: 'media', id: cover, depth: 0, req, disableErrors: true })
           // Stored as a path, so it works on any address the shop is served from.
           if (media?.filename) data.coverUrl = `/api/media/file/${encodeURIComponent(media.filename)}`
@@ -205,6 +207,27 @@ export const Editions: CollectionConfig = {
               type: 'text',
               access: { read: staffOnly },
               admin: { readOnly: true, description: 'Where the imported cover came from.' },
+            },
+            {
+              name: 'photos',
+              type: 'array',
+              label: 'More photos',
+              labels: { singular: 'Photo', plural: 'Photos' },
+              maxRows: 12,
+              admin: {
+                description:
+                  'Optional. The back cover, the spine, inside pages, the edition in hand. Shown after the cover on the book’s page, in this order (drag to reorder).',
+                initCollapsed: true,
+              },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    { name: 'image', type: 'upload', relationTo: 'media', required: true },
+                    { name: 'caption', type: 'text', admin: { description: 'Optional, e.g. “Back cover” or “First page”.' } },
+                  ],
+                },
+              ],
             },
             { name: 'subjects', type: 'relationship', relationTo: 'subjects', hasMany: true },
             { name: 'work', type: 'relationship', relationTo: 'works' },
