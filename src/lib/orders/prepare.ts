@@ -119,10 +119,12 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
   if (plan === 'advance' && totals.advanceDue === 0) fail('No advance is needed for this order. Choose cash on delivery or pay in full.')
   const { payNow } = splitPayment(totals, plan)
   if (payNow > 0 && !data.payNowVia) fail('Choose how the advance will be paid.')
-  if (data.payNowVia === 'bkash_manual' && fromCheckout && !data.paymentReference?.trim()) fail('Enter the bKash transaction ID.')
   // The number the bKash money came from, so staff can match it in the bKash app.
-  const paymentSender = data.payNowVia === 'bkash_manual' && payNow > 0 ? normalisePhone(String(data.paymentSender ?? '')) : null
-  if (data.payNowVia === 'bkash_manual' && payNow > 0 && fromCheckout && !paymentSender) fail('Enter the bKash number you sent the money from, for example 01712345678.')
+  // A mobile number (bKash, Nagad…) is stored as +880…; a bank account paying by Bangla QR as typed.
+  const senderTyped = String(data.paymentSender ?? '').trim().replace(/\s+/g, ' ').slice(0, 30)
+  const paymentSender =
+    data.payNowVia === 'bkash_manual' && payNow > 0 ? (normalisePhone(senderTyped) ?? (/^[\w\s-]{4,30}$/.test(senderTyped) && !/^(\+?88)?01\d{0,9}$/.test(senderTyped.replace(/[\s-]/g, '')) ? senderTyped : null)) : null
+  if (data.payNowVia === 'bkash_manual' && payNow > 0 && fromCheckout && !paymentSender) fail('Enter the number or account you paid from, for example 01712345678.')
 
   const parcelPlan = planParcels(priced, totals, plan, deliveryPlan)
   for (const line of lines) line.parcel = parcelFor(line.kind as LineKind, parcelPlan)
@@ -168,7 +170,7 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
     paymentSender,
     payments: [],
     status,
-    paymentStatus: payNow > 0 && data.payNowVia === 'bkash_manual' && data.paymentReference ? 'to_verify' : 'unpaid',
+    paymentStatus: payNow > 0 && data.payNowVia === 'bkash_manual' && (paymentSender || data.paymentReference) ? 'to_verify' : 'unpaid',
     channel: fromCheckout ? 'web' : (data.channel ?? 'phone'),
     token: randomBytes(18).toString('hex'),
     timeline,

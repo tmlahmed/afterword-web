@@ -120,7 +120,11 @@ export async function signOut() {
 
 // --- Checkout ----------------------------------------------------------------
 
-export type CheckoutState = { message?: string }
+/** `values`: what the customer typed, given back with an error so the form keeps it. */
+export type CheckoutState = { message?: string; values?: Record<string, string> }
+
+const CHECKOUT_FIELDS = ['name', 'email', 'street', 'deliveryNote', 'paymentSender', 'paymentReference', 'newsletter'] as const
+const kept = (form: FormData): Record<string, string> => Object.fromEntries(CHECKOUT_FIELDS.map((f) => [f, String(form.get(f) ?? '').slice(0, 300)]))
 
 export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<CheckoutState> {
   const customer = await getCustomer()
@@ -128,14 +132,14 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   const bag = await getBag()
   if (bag.lines.length === 0) redirect('/bag')
 
-  if (!(await allowed('order'))) return { message: SLOW_DOWN }
+  if (!(await allowed('order'))) return { message: SLOW_DOWN, values: kept(form) }
   const payload = await getPayload({ config })
   const settings = await payload.findGlobal({ slug: 'site-settings' })
   const plan = text(form, 'paymentPlan', 10) as 'cod' | 'advance' | 'full'
   const methods = payMethods(settings.bkashNumber)
   const asked = text(form, 'payNowVia', 20) as PayMethod
   const payNowVia = plan === 'cod' ? null : methods.includes(asked) ? asked : (methods[0] ?? null)
-  if (plan !== 'cod' && !payNowVia) return { message: 'Online payment is not available yet. Please contact us to arrange the advance.' }
+  if (plan !== 'cod' && !payNowVia) return { message: 'Online payment is not available yet. Please contact us to arrange the advance.', values: kept(form) }
 
   let token: string
   try {
@@ -156,7 +160,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
         paymentPlan: plan,
         payNowVia,
         paymentReference: payNowVia === 'bkash_manual' ? text(form, 'paymentReference', 40) : undefined,
-        paymentSender: payNowVia === 'bkash_manual' ? text(form, 'paymentSender', 20) : undefined,
+        paymentSender: payNowVia === 'bkash_manual' ? text(form, 'paymentSender', 30) : undefined,
         deliveryPlan: text(form, 'deliveryPlan', 10) === 'together' ? 'together' : 'split',
         status: 'placed',
         paymentStatus: 'unpaid',
@@ -170,7 +174,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
     // Messages raised by the order rules are written for customers and safe to show.
     const message = err instanceof Error && (err as { isPublic?: boolean }).isPublic ? err.message : 'Sorry, the order could not be placed. Please try again.'
     if (!(err instanceof Error && (err as { isPublic?: boolean }).isPublic)) payload.logger.error(err)
-    return { message }
+    return { message, values: kept(form) }
   }
 
   const email = text(form, 'email', 254)

@@ -1,6 +1,9 @@
-import type { GlobalConfig } from 'payload'
+import path from 'path'
+import { APIError, type GlobalConfig } from 'payload'
 
 import { allow, anyone } from '../access/roles'
+import { MEDIA_DIR } from '../collections/Media'
+import { checkBanglaQr, readQrPicture } from '../lib/payments/banglaQr'
 
 /** Exchange rates and margin used to turn a publisher's list price into a taka price. */
 export const Pricing: GlobalConfig = {
@@ -52,6 +55,23 @@ export const SiteSettings: GlobalConfig = {
   label: 'Shop settings',
   admin: { group: 'Settings' },
   access: { read: anyone, update: allow('manager') },
+  hooks: {
+    // A new Bangla QR picture: read the code in it, so the shop can draw it in its own style.
+    beforeChange: [
+      async ({ data, originalDoc, req }) => {
+        const idOf = (v: unknown) => (typeof v === 'object' && v !== null ? (v as { id: number }).id : (v as number | null | undefined))
+        const picture = idOf(data.banglaQrImage)
+        if (!picture) return { ...data, banglaQr: null }
+        if (picture === idOf(originalDoc?.banglaQrImage) && data.banglaQr) return data
+        const media = await req.payload.findByID({ collection: 'media', id: picture, depth: 0, req, overrideAccess: true })
+        const text = media.filename ? await readQrPicture(path.join(MEDIA_DIR, media.filename)).catch(() => null) : null
+        if (!text) throw new APIError('No QR code could be found in that picture. Upload a clear, straight picture of your Bangla QR.', 400, undefined, true)
+        const qr = checkBanglaQr(text)
+        if ('problem' in qr) throw new APIError(qr.problem, 400, undefined, true)
+        return { ...data, banglaQr: qr.text }
+      },
+    ],
+  },
   fields: [
     {
       name: 'announcement',
@@ -122,8 +142,29 @@ export const SiteSettings: GlobalConfig = {
           label: 'bKash number for manual payments',
           admin: {
             description:
-              'Until the online gateway is connected, customers send advance payments to this number and enter the transaction ID. Leave empty to hide the option.',
+              'Until the online gateway is connected, customers send advance payments to this number and tell us the number or account they paid from (the transaction ID is optional). Leave empty to hide the option.',
           },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'banglaQrImage',
+              type: 'upload',
+              relationTo: 'media',
+              label: 'Bangla QR picture',
+              admin: {
+                description:
+                  'Optional. A screenshot of your Bangla QR from the bKash app (My QR). Customers can then pay from bKash, Nagad, Rocket or any bank app. The shop redraws it in black and white to match the site.',
+              },
+            },
+            {
+              name: 'banglaQr',
+              type: 'text',
+              label: 'QR code read from the picture',
+              admin: { readOnly: true, description: 'Filled in when you save. This is what payment apps read.' },
+            },
+          ],
         },
       ],
     },

@@ -373,7 +373,7 @@ export const Orders: CollectionConfig = {
                   ],
                   admin: { condition: (data) => data?.paymentPlan !== 'cod' },
                 },
-                { name: 'paymentReference', type: 'text', label: 'bKash transaction ID', admin: { condition: (data) => data?.payNowVia === 'bkash_manual' } },
+                { name: 'paymentReference', type: 'text', label: 'Transaction ID (optional)', admin: { condition: (data) => data?.payNowVia === 'bkash_manual' } },
                 {
                   name: 'paymentSender',
                   type: 'text',

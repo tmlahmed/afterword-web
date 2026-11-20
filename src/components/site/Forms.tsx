@@ -2,11 +2,13 @@
 
 import Image from 'next/image'
 import React, { useActionState, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { addToBag, type AddToBagState, type CheckoutState, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
 import { canSplit, type DeliveryPlan, DISTRICTS, parcelCount, type PaymentPlan, planParcels, type PricedLine, type ShopRules, totalsForParcels, type Totals } from '../../lib/orders/pricing'
 import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
+import { CloseIcon } from './Brand'
 import { BAG_ADDED_EVENT } from './MiniBag'
 
 const field = 'h-12 w-full rounded-ui border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-primary focus:outline-none'
@@ -84,6 +86,114 @@ export type CheckoutItem = {
   kind: 'in_stock' | 'pre_order' | 'on_request'
 }
 
+const fieldError = 'border-[#b42318] bg-[#b42318]/[0.04] focus:border-[#b42318] shadow-[inset_0_0_0_1px_#b42318]'
+
+/** The message under a field the customer still has to fill in. */
+const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) =>
+  message ? (
+    <p id={id} role="alert" className="mt-1.5 flex items-start gap-1.5 text-[0.8125rem] font-medium text-[#b42318]">
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden className="mt-[0.15rem] shrink-0" fill="currentColor">
+        <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm0 3.25a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0V5A.75.75 0 0 1 8 4.25Zm0 7.5a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8Z" />
+      </svg>
+      {message}
+    </p>
+  ) : null
+
+/** What to say when a required checkout field is left empty or filled in wrongly. */
+const CHECKOUT_MISSING: Record<string, string> = {
+  name: 'Enter your full name.',
+  email: 'Enter a valid email address, or leave it empty.',
+  street: 'Enter your house, road and area so the courier can find you.',
+  district: 'Choose your district.',
+  paymentSender: 'Enter the number or account you paid from, so we can find your payment.',
+}
+
+const ExpandIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden className={className} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 4h6v6M20 4l-6.5 6.5M10 20H4v-6M4 20l6.5-6.5" />
+  </svg>
+)
+
+/**
+ * The shop's Bangla QR at checkout. The expand button shows it large, so a customer on a laptop
+ * can scan it with their phone. Close with the button, Escape, or a click anywhere but the code.
+ */
+const QrCard: React.FC<{ qr: { svg: string; png: string; name: string | null }; number?: string | null }> = ({ qr, number }) => {
+  const [open, setOpen] = useState(false)
+  const closeRef = React.useRef<HTMLButtonElement>(null)
+  const openerRef = React.useRef<HTMLButtonElement>(null)
+  React.useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKey)
+    closeRef.current?.focus()
+    const opener = openerRef.current
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = overflow
+      opener?.focus()
+    }
+  }, [open])
+  // Drawn on the server from the shop's own QR code; nothing customer-supplied.
+  const code = (className: string) => <div className={`[&_svg]:block [&_svg]:h-auto [&_svg]:w-full ${className}`} dangerouslySetInnerHTML={{ __html: qr.svg }} />
+
+  return (
+    <figure className="relative mx-auto w-[11.5rem] shrink-0 rounded-ui border border-rule bg-paper p-3 text-center sm:mx-0">
+      <figcaption className="mb-2 text-[0.6875rem] font-semibold tracking-[0.14em] text-accent uppercase">Bangla QR</figcaption>
+      <button
+        ref={openerRef}
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Show the QR code larger"
+        title="Show larger"
+        className="absolute -top-3.5 -left-3.5 z-10 flex size-8 items-center justify-center rounded-full border border-rule bg-paper text-ink-soft shadow-sm hover:border-ink hover:text-ink"
+      >
+        <ExpandIcon />
+      </button>
+      <button type="button" onClick={() => setOpen(true)} aria-label="Show the QR code larger" className="block w-full cursor-zoom-in">
+        {code('mx-auto w-full')}
+      </button>
+      <p className="mt-2 text-[0.8125rem] font-semibold tabular-nums">{number}</p>
+      {qr.name ? <p className="text-[0.75rem] text-ink-soft">{qr.name}</p> : null}
+      <a href={qr.png} download="afterword-bangla-qr.png" className="mt-2 inline-block text-[0.8125rem] font-medium underline underline-offset-2">
+        Save QR to phone
+      </a>
+
+      {open
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Bangla QR code"
+              onClick={() => setOpen(false)}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/70 p-4 backdrop-blur-[2px]"
+            >
+              <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[26rem] rounded-ui bg-paper p-6 text-center shadow-2xl sm:p-8">
+                <button
+                  ref={closeRef}
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-ui text-ink-soft hover:bg-paper-deep hover:text-ink"
+                >
+                  <CloseIcon />
+                </button>
+                <p className="text-[0.75rem] font-semibold tracking-[0.16em] text-accent uppercase">Bangla QR</p>
+                <p className="mt-1 text-[0.9375rem] text-ink-soft">Scan with bKash, Nagad, Rocket, Upay or your bank app</p>
+                {code('mx-auto mt-5 w-full max-w-[20rem]')}
+                <p className="mt-4 text-[1.125rem] font-semibold tabular-nums">{number}</p>
+                {qr.name ? <p className="text-[0.875rem] text-ink-soft">{qr.name}</p> : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </figure>
+  )
+}
+
 /** One step of the checkout: a titled panel. */
 const Step: React.FC<{ title: string; aside?: React.ReactNode; children: React.ReactNode }> = ({ title, aside, children }) => (
   <section className="rounded-ui border border-rule bg-paper p-5 sm:p-6">
@@ -146,11 +256,46 @@ export const CheckoutForm: React.FC<{
   /** Ways to pay now that are switched on, in the order to offer them. */
   methods: PayMethod[]
   bkashNumber?: string | null
+  /** The shop's Bangla QR, drawn on the server, when one is set up. */
+  bkashQr?: { svg: string; png: string; name: string | null } | null
   needsAdvanceBecause: string | null
   /** The books, for the order summary and for working out the parcels as choices change. */
   items: CheckoutItem[]
-}> = ({ customer, rules, totals, plans, withPoints, points, methods, bkashNumber, needsAdvanceBecause, items }) => {
+}> = ({ customer, rules, totals, plans, withPoints, points, methods, bkashNumber, bkashQr, needsAdvanceBecause, items }) => {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, {})
+  // Fields left empty: shown in red with a message, instead of the browser's own bubble.
+  const [missing, setMissing] = useState<Record<string, string>>({})
+  const firstMissing = React.useRef(false)
+  const onInvalid = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const el = e.target as HTMLInputElement
+    if (!el.name) return
+    setMissing((m) => ({ ...m, [el.name]: CHECKOUT_MISSING[el.name] ?? 'Please fill this in.' }))
+    if (!firstMissing.current) {
+      firstMissing.current = true
+      el.focus({ preventScroll: true })
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => (firstMissing.current = false), 0)
+    }
+  }
+  // The server's answer the customer has started correcting, so its message can go.
+  const [answered, setAnswered] = useState<CheckoutState | null>(null)
+  const onFieldInput = (e: React.FormEvent<HTMLFormElement>) => {
+    const name = (e.target as HTMLInputElement).name
+    if (name && missing[name]) setMissing(({ [name]: _, ...rest }) => rest)
+    if (name === 'paymentSender') setAnswered(state)
+  }
+  // A problem the server found with the payer's number is shown at that field too.
+  const serverSender = state.message && /paid from/.test(state.message) && answered !== state ? state.message : undefined
+  const errorFor = (name: string) => missing[name] ?? (name === 'paymentSender' ? serverSender : undefined)
+  React.useEffect(() => {
+    if (!serverSender) return
+    const el = document.getElementById('paymentSender')
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el?.focus({ preventScroll: true })
+  }, [state, serverSender])
+  const fieldClass = (name: string, extra = '') => `${field} ${extra} ${errorFor(name) ? fieldError : ''}`
+  const describe = (name: string) => (errorFor(name) ? { 'aria-invalid': true as const, 'aria-describedby': `${name}-error` } : {})
   const [district, setDistrict] = useState(customer.district ?? 'Dhaka')
   const [usePoints, setUsePoints] = useState(false)
   const zone = district === 'Dhaka' ? 'inside_dhaka' : 'outside_dhaka'
@@ -174,7 +319,7 @@ export const CheckoutForm: React.FC<{
   const days = zone === 'inside_dhaka' ? rules.insideDays : rules.outsideDays
 
   return (
-    <form action={action} className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-10">
+    <form action={action} onInvalidCapture={onInvalid} onInputCapture={onFieldInput} className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-10">
       <div className="space-y-5">
         <Step title="Contact information" aside={<>Signed in as <strong className="font-semibold text-ink tabular-nums">{customer.phone.replace(/^\+88/, '')}</strong></>}>
           <div className="space-y-4">
@@ -182,16 +327,18 @@ export const CheckoutForm: React.FC<{
               <label className={label} htmlFor="name">
                 Full name
               </label>
-              <input id="name" name="name" autoComplete="name" required defaultValue={customer.name ?? ''} className={field} />
+              <input id="name" name="name" autoComplete="name" required defaultValue={state.values?.name ?? customer.name ?? ''} className={fieldClass('name')} {...describe('name')} />
+              <FieldError id="name-error" message={errorFor('name')} />
             </div>
             <div>
               <label className={label} htmlFor="email">
                 Email <span className="font-normal text-ink-soft">(optional)</span>
               </label>
-              <input id="email" name="email" type="email" autoComplete="email" defaultValue={customer.email ?? ''} className={field} />
+              <input id="email" name="email" type="email" autoComplete="email" defaultValue={state.values?.email ?? customer.email ?? ''} className={fieldClass('email')} {...describe('email')} />
+              <FieldError id="email-error" message={errorFor('email')} />
             </div>
             <label className="flex items-start gap-2.5 text-[0.875rem] text-ink-soft">
-              <input type="checkbox" name="newsletter" className="mt-0.5 size-4 accent-[var(--color-primary)]" />
+              <input type="checkbox" name="newsletter" defaultChecked={state.values?.newsletter === 'on'} className="mt-0.5 size-4 accent-[var(--color-primary)]" />
               Send me the AFTERWORD newsletter, about once a month.
             </label>
             <p className="text-[0.8125rem] text-ink-faint">Order updates are sent by text to your mobile number.</p>
@@ -210,10 +357,12 @@ export const CheckoutForm: React.FC<{
                 required
                 rows={2}
                 autoComplete="street-address"
-                defaultValue={customer.street ?? ''}
+                defaultValue={state.values?.street ?? customer.street ?? ''}
                 placeholder="e.g. House 12, Road 5, Dhanmondi, near the mosque"
-                className={`${field} h-auto py-2.5`}
+                className={fieldClass('street', 'h-auto py-2.5')}
+                {...describe('street')}
               />
+              <FieldError id="street-error" message={errorFor('street')} />
             </div>
             <div>
               <label className={label} htmlFor="district">
@@ -236,7 +385,7 @@ export const CheckoutForm: React.FC<{
               <label className={label} htmlFor="deliveryNote">
                 Note for the courier <span className="font-normal text-ink-soft">(optional)</span>
               </label>
-              <input id="deliveryNote" name="deliveryNote" maxLength={160} placeholder="e.g. Call before coming" className={field} />
+              <input id="deliveryNote" name="deliveryNote" maxLength={160} defaultValue={state.values?.deliveryNote} placeholder="e.g. Call before coming" className={field} />
             </div>
           </div>
         </Step>
@@ -318,7 +467,7 @@ export const CheckoutForm: React.FC<{
                     }`}
                   >
                     <input type="radio" name="payNowVia" value={m} checked={via === m} onChange={() => setMethod(m)} className="size-4 accent-[var(--color-primary)]" />
-                    {METHOD_LABEL[m]}
+                    {m === 'bkash_manual' && bkashQr ? 'bKash or Bangla QR' : METHOD_LABEL[m]}
                   </label>
                 ))}
               </div>
@@ -335,41 +484,59 @@ export const CheckoutForm: React.FC<{
           ) : null}
           {chosen !== 'cod' && via === 'bkash_manual' ? (
             <div className="mt-5 rounded-ui border border-rule bg-card p-4 sm:p-5">
-              <ol className="space-y-2 text-[0.9375rem]">
-                <li className="flex gap-3">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.75rem] font-semibold text-paper">1</span>
-                  <span>
-                    Send <strong className="tabular-nums">{formatTaka(payNow)}</strong> by bKash <em className="not-italic font-medium">Send Money</em> to{' '}
-                    <strong className="tabular-nums">{bkashNumber}</strong>
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.75rem] font-semibold text-paper">2</span>
-                  <span>Enter the number you sent from and the transaction ID. We check it before confirming your order.</span>
-                </li>
-              </ol>
+              <div className={bkashQr ? 'flex flex-col gap-5 sm:flex-row sm:items-start' : ''}>
+                {bkashQr ? (
+                  <QrCard qr={bkashQr} number={bkashNumber} />
+                ) : null}
+                <ol className="space-y-3 text-[0.9375rem]">
+                  <li className="flex gap-3">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.75rem] font-semibold text-paper">1</span>
+                    <span>
+                      Pay <strong className="tabular-nums">{formatTaka(payNow)}</strong>
+                      {bkashQr ? (
+                        <>
+                          : scan the QR with bKash, Nagad, Rocket, Upay or your bank app, or use bKash <em className="font-medium not-italic">Send Money</em> to{' '}
+                          <strong className="tabular-nums">{bkashNumber}</strong>.
+                          {bkashQr.name ? <span className="mt-1 block text-[0.8125rem] text-ink-soft">Your app will show the name {bkashQr.name}.</span> : null}
+                          <span className="mt-1 block text-[0.8125rem] text-ink-soft sm:hidden">On this phone? Save the QR, then choose “scan from gallery” in your app.</span>
+                        </>
+                      ) : (
+                        <>
+                          {' '}by bKash <em className="font-medium not-italic">Send Money</em> to <strong className="tabular-nums">{bkashNumber}</strong>.
+                        </>
+                      )}
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.75rem] font-semibold text-paper">2</span>
+                    <span>Tell us the number or account you paid from. We find your payment and confirm your order.</span>
+                  </li>
+                </ol>
+              </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={label} htmlFor="paymentSender">
-                    bKash number you sent from
+                    {bkashQr ? 'Number or account you paid from' : 'bKash number you sent from'}
                   </label>
                   <input
                     id="paymentSender"
                     name="paymentSender"
-                    type="tel"
-                    inputMode="numeric"
+                    type="text"
                     required
-                    maxLength={20}
-                    placeholder="01XXXXXXXXX"
-                    defaultValue={customer.phone.replace(/^\+88/, '')}
-                    className={field}
+                    maxLength={30}
+                    placeholder="e.g. 01712345678"
+                    defaultValue={state.values?.paymentSender}
+                    autoComplete="off"
+                    className={fieldClass('paymentSender')}
+                    {...describe('paymentSender')}
                   />
+                  <FieldError id="paymentSender-error" message={errorFor('paymentSender')} />
                 </div>
                 <div>
                   <label className={label} htmlFor="paymentReference">
-                    Transaction ID
+                    Transaction ID <span className="font-normal text-ink-soft">(optional)</span>
                   </label>
-                  <input id="paymentReference" name="paymentReference" required maxLength={40} placeholder="e.g. 9A7B6C5D4E" className={`${field} uppercase placeholder:normal-case`} />
+                  <input id="paymentReference" name="paymentReference" maxLength={40} defaultValue={state.values?.paymentReference} placeholder="e.g. 9A7B6C5D4E" className={`${field} uppercase placeholder:normal-case`} />
                 </div>
               </div>
             </div>
@@ -418,7 +585,7 @@ export const CheckoutForm: React.FC<{
 
         {/* When the money is paid: now, and to the courier for each parcel. */}
         <dl className="mt-4 space-y-1.5 rounded-ui bg-paper-deep px-4 py-3 text-[0.875rem]">
-          {payNow > 0 ? <Row label={`Pay now${via ? ` by ${via === 'sslcommerz' ? 'card or wallet' : 'bKash'}` : ''}`} value={formatTaka(payNow)} className="font-semibold" /> : null}
+          {payNow > 0 ? <Row label={`Pay now${via === 'sslcommerz' ? ' by card or wallet' : via === 'bkash' || (via === 'bkash_manual' && !bkashQr) ? ' by bKash' : ''}`} value={formatTaka(payNow)} className="font-semibold" /> : null}
           {parcels.map((p, i) =>
             p.collect <= 0 && parcels.length === 1 ? null : (
               <Row
@@ -431,9 +598,14 @@ export const CheckoutForm: React.FC<{
         </dl>
 
         <div className="mt-5 space-y-3">
-          <ErrorNote message={state.message} />
+          {Object.keys(missing).length ? (
+            <p role="alert" className="text-center text-[0.875rem] font-medium text-[#b42318]">
+              Please fill in the {Object.keys(missing).length === 1 ? 'field' : 'fields'} marked in red.
+            </p>
+          ) : null}
+          <ErrorNote message={state.message && /paid from/.test(state.message) ? undefined : state.message} />
           <button type="submit" disabled={pending || offered.length === 0} className="btn btn-primary w-full">
-            {pending ? 'Placing your order…' : chosen === 'cod' ? 'Place order' : 'Place order and pay'}
+            {pending ? 'Placing your order…' : 'Place order'}
           </button>
           <p className="text-center text-[0.75rem] text-ink-faint">Original editions only. Prices include all charges.</p>
         </div>

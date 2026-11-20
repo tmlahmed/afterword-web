@@ -2113,9 +2113,17 @@ export interface SiteSetting {
   advancePercent?: number | null;
   codCeiling?: number | null;
   /**
-   * Until the online gateway is connected, customers send advance payments to this number and enter the transaction ID. Leave empty to hide the option.
+   * Until the online gateway is connected, customers send advance payments to this number and tell us the number or account they paid from (the transaction ID is optional). Leave empty to hide the option.
    */
   bkashNumber?: string | null;
+  /**
+   * Optional. A screenshot of your Bangla QR from the bKash app (My QR). Customers can then pay from bKash, Nagad, Rocket or any bank app. The shop redraws it in black and white to match the site.
+   */
+  banglaQrImage?: (number | null) | Media;
+  /**
+   * Filled in when you save. This is what payment apps read.
+   */
+  banglaQr?: string | null;
   rewardsEnabled?: boolean | null;
   rewardsEarnPerHundred?: number | null;
   rewardsRedeemMinimum?: number | null;
@@ -2226,6 +2234,8 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   advancePercent?: T;
   codCeiling?: T;
   bkashNumber?: T;
+  banglaQrImage?: T;
+  banglaQr?: T;
   rewardsEnabled?: T;
   rewardsEarnPerHundred?: T;
   rewardsRedeemMinimum?: T;

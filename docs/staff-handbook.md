@@ -36,7 +36,8 @@ An order changes only through the buttons at the top of its page. Never type ove
 **Advances.** Only books we order in (On Request and pre-orders) need an advance: your advance percentage of *their* price. Books in stock are always cash on delivery. An order that needs an advance cannot be confirmed until the advance is recorded.
 
 **Recording a payment.** Use **Record payment** with the amount, the method (bKash, Nagad, card, bank transfer, cash) and the transaction ID.
-- For a bKash Send Money advance, the order shows **the bKash number the customer sent from** and the **transaction ID** they gave. Find that payment in your bKash app (same number, same ID, same amount) before recording it.
+- For a bKash Send Money or Bangla QR advance, the order shows **the number or account the customer paid from**, and the **transaction ID** if they gave one (it is optional, because some bank apps make it hard to find). Find that payment in your bKash app by the sender, the amount and the time before recording it. A Bangla QR payment from Nagad, Rocket or a bank app also arrives in your bKash account.
+- **Bangla QR:** in Settings → Shop settings, upload a screenshot of your Bangla QR (bKash app → My QR) under *Bangla QR picture* and save. Checkout then shows it, redrawn in black and white, for customers to scan from any payment app. Remove the picture to stop showing it.
 
 **Orders in two parcels.** When an order has books in stock *and* books to order in, the customer chooses at checkout:
 - *Send the books in stock now:* **Parcel 1** (in stock) is packed straight away. The courier collects the price of those books plus the delivery fee. **Parcel 2** (ordered in) waits; when its books are received it moves to "To pack" by itself and the customer gets a text. The courier collects the rest of those books' price **plus a second delivery fee**: each parcel is its own delivery. When the order qualifies for free delivery, both parcels are free.
@@ -134,7 +135,7 @@ Stock is a ledger: the copies on hand are the total of every movement. **Nobody 
 
 ## 7. Settings (owner and managers)
 
-- **Settings → Shop settings**: the announcement strip; delivery fees and times; free-delivery threshold; gift-wrap price; advance percentage; cash-on-delivery ceiling; the bKash number shown for manual payments; and the wording of every text message to customers.
+- **Settings → Shop settings**: the announcement strip; delivery fees and times; free-delivery threshold; gift-wrap price; advance percentage; cash-on-delivery ceiling; the bKash number and Bangla QR shown for manual payments; and the wording of every text message to customers.
 - **Settings → Pricing rules**: the taka you actually pay for each currency, your margin and the rounding. Changing these does not re-price existing books until each is saved again.
 - **Settings → Staff**: the owner adds accounts and gives each person only the roles they need. When someone leaves, delete their account the same day.
 

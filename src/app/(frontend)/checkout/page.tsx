@@ -8,6 +8,7 @@ import { getBag, plansFor } from '../../../lib/bag'
 import { getSettings } from '../../../lib/catalogue'
 import { pointsToSpend } from '../../../lib/orders/pricing'
 import { payMethods } from '../../../lib/payments'
+import { checkBanglaQr, drawBanglaQr } from '../../../lib/payments/banglaQr'
 import { getCustomer } from '../../../lib/session'
 
 export const metadata: Metadata = { title: 'Checkout', robots: { index: false } }
@@ -21,6 +22,9 @@ export default async function CheckoutPage() {
   const outside = bag.totals('outside_dhaka')
   const hasBackorder = bag.lines.some((l) => l.kind !== 'in_stock')
   const methods = payMethods(settings.bkashNumber)
+  // The shop's Bangla QR, redrawn in the site's style, for paying the advance from any app.
+  const qr = methods.includes('bkash_manual') && settings.banglaQr ? checkBanglaQr(settings.banglaQr) : null
+  const bkashQr = qr && !('problem' in qr) ? { ...(await drawBanglaQr(qr.text)), name: qr.name } : null
 
   // Reward points: books after any promotion are the same in both zones.
   const balance = customer.rewardPoints ?? 0
@@ -60,6 +64,7 @@ export default async function CheckoutPage() {
             kind: l.kind,
           }))}
           bkashNumber={settings.bkashNumber}
+          bkashQr={bkashQr}
           needsAdvanceBecause={
             hasBackorder
               ? 'Books we order in for you need a small advance; books in stock are always cash on delivery.'

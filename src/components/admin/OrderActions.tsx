@@ -162,10 +162,17 @@ export const OrderActions: React.FC = () => {
       {order.status === 'placed' && advanceOwing > 0 ? (
         <p style={{ margin: '0 0 0.75rem' }}>
           Waiting for an advance of <strong>৳{advanceOwing}</strong>
-          {order.payNowVia === 'bkash_manual' && order.paymentReference ? (
+          {order.payNowVia === 'bkash_manual' && (order.paymentSender || order.paymentReference) ? (
             <>
-              . The customer says they sent it from bKash <strong>{order.paymentSender ?? 'number not given'}</strong>, transaction ID{' '}
-              <strong>{order.paymentReference}</strong>. Find it in the bKash app, then record the payment below.
+              . The customer says they paid from <strong>{order.paymentSender ?? 'number not given'}</strong>
+              {order.paymentReference ? (
+                <>
+                  , transaction ID <strong>{order.paymentReference}</strong>
+                </>
+              ) : (
+                ' (no transaction ID given)'
+              )}
+              . Find it in the bKash app by that number and the amount, then record the payment below.
             </>
           ) : (
             '.'

@@ -164,13 +164,15 @@ const mixedBefore = new Map<number, number>()
     mixedBefore.set(b.id, await stock(b.id))
   }
   const books = [{ edition: mixedStock.id, quantity: 1 }, { edition: mixedLater.id, quantity: 1 }]
-  await expectError('a bKash advance needs the number it was sent from', () => place({ lines: books, paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTMIX' }), 'number you sent')
-  let m = await place({ lines: books, paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTMIX', paymentSender: '018 1111 1111', deliveryPlan: 'split' })
+  await expectError('a bKash advance needs the number it was sent from', () => place({ lines: books, paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTMIX' }), 'you paid from')
+  // The transaction ID is optional: a bank app may not show one.
+  let m = await place({ lines: books, paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentSender: '018 1111 1111', deliveryPlan: 'split' })
   created.push(m.id)
   m = await payload.findByID({ collection: 'orders', id: m.id, depth: 0 })
   const adv = Math.ceil((mixedLater.price! * advanceShare) / 10) * 10
   check('the advance is only on the book ordered in', m.payNow === adv, `advance ${m.payNow}, expected ${adv}`)
   check('the bKash number it was sent from is kept', m.paymentSender === '+8801811111111', String(m.paymentSender))
+  check('without a transaction ID the payment still waits to be checked', m.paymentStatus === 'to_verify', String(m.paymentStatus))
   const p = m.parcels ?? []
   check('two parcels: the book in stock now, the other later', p.length === 2 && m.lines![0].parcel === 0 && m.lines![1].parcel === 1)
   const { rules: shop } = await shopRules({ payload })
