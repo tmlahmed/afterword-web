@@ -2,8 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 
-/** The AFTERWORD logo, from public/brand. Its proportions are kept; set the height with className. */
-export const LOGO = { src: '/brand/afterword-logo.png', width: 1013, height: 117 } as const
+/** The AFTERWORD logo (SVG, sharp at any size), from public/brand. Its proportions are kept; set the height with className. */
+export const LOGO = { src: '/brand/afterword-logo.svg', width: 1011, height: 118 } as const
 
 export const Wordmark: React.FC<{ className?: string; as?: 'link' | 'text'; priority?: boolean }> = ({
   className = 'h-[18px]',
@@ -11,7 +11,7 @@ export const Wordmark: React.FC<{ className?: string; as?: 'link' | 'text'; prio
   priority = false,
 }) => {
   const mark = (
-    <Image src={LOGO.src} alt="AFTERWORD" width={LOGO.width} height={LOGO.height} priority={priority} className={`block w-auto ${className}`} />
+    <Image src={LOGO.src} alt="AFTERWORD" width={LOGO.width} height={LOGO.height} priority={priority} unoptimized className={`block w-auto ${className}`} />
   )
   if (as === 'text') return mark
   return (

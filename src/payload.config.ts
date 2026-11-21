@@ -44,11 +44,17 @@ export default buildConfig({
   upload: { limits: { fileSize: 10_000_000 } },
   admin: {
     user: Users.slug,
-    meta: { titleSuffix: ' · AFTERWORD' },
+    meta: {
+      titleSuffix: ' · AFTERWORD',
+      icons: [
+        { rel: 'icon', type: 'image/svg+xml', url: '/brand/afterword-icon.svg' },
+        { rel: 'apple-touch-icon', url: '/brand/afterword-apple-icon.png' },
+      ],
+    },
     components: {
       beforeDashboard: ['/components/admin/Desk#Desk'],
       afterNavLinks: ['/components/admin/Reports#ReportsNavLink'],
-      graphics: { Logo: '/components/admin/Logo#AdminLogo' },
+      graphics: { Logo: '/components/admin/Logo#AdminLogo', Icon: '/components/admin/Logo#AdminIcon' },
       views: {
         reports: { Component: '/components/admin/Reports#Reports', path: '/reports', meta: { title: 'Reports' } },
       },
