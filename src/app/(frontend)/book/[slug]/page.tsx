@@ -6,9 +6,10 @@ import React from 'react'
 import { AvailabilityMark, Cover, Price, Shelf, tintFor } from '../../../../components/site/Books'
 import { BookGallery, Expandable, type GalleryPhoto, StickyBuyBar } from '../../../../components/site/BookParts'
 import { AddToBag } from '../../../../components/site/Forms'
+import { type FormatOption, FormatPicker } from '../../../../components/site/FormatPicker'
 import { ShelfButton } from '../../../../components/site/TheShelf'
 import { availabilityOf } from '../../../../lib/availability'
-import { getBookBySlug, getNoteFor, getRelated, getSettings } from '../../../../lib/catalogue'
+import { getBookBySlug, getEditionsOf, getNoteFor, getRelated, getSettings } from '../../../../lib/catalogue'
 import type { Contributor, Edition, Media, Publisher, Series, Subject } from '../../../../payload-types'
 import { siteUrl } from '../../../../lib/notify'
 import { robotsFor, SHARE_DEFAULTS } from '../../../../lib/seo'
@@ -70,13 +71,14 @@ export default async function BookPage({ params }: Props) {
   if (!book) notFound()
 
   const payload = await getPayload({ config })
-  const [settings, note, related, firstReviews, counts, customer] = await Promise.all([
+  const [settings, note, related, firstReviews, counts, customer, editions] = await Promise.all([
     getSettings(),
     getNoteFor(book.id),
     getRelated(book),
     reviewPage(payload, book.id),
     ratingCounts(payload, book.id),
     getCustomer(),
+    getEditionsOf(book),
   ])
   const reviews = firstReviews.items
   // The average and count straight from the published reviews, so the stars always match the bars.
@@ -113,6 +115,27 @@ export default async function BookPage({ params }: Props) {
       // A path on this site (like the covers), not Payload's full URL, so the image server accepts it.
       .map(({ media, caption }) => ({ src: `/api/media/file/${encodeURIComponent(media.filename!)}`, alt: media.alt || caption || `Photo of ${book.title}`, width: media.width, height: media.height, caption })),
   ]
+  // The format picker: every edition of this book, paperback first. When two share a format,
+  // the publisher and year tell them apart.
+  const FORMAT_ORDER = ['paperback', 'hardback', 'special', 'boxset', 'board']
+  const formatCount = new Map<string, number>()
+  for (const e of editions) formatCount.set(e.format, (formatCount.get(e.format) ?? 0) + 1)
+  const formats: FormatOption[] = [...editions]
+    .sort((a, b) => FORMAT_ORDER.indexOf(a.format) - FORMAT_ORDER.indexOf(b.format) || (a.price ?? 0) - (b.price ?? 0))
+    .map((e) => {
+      const pub = typeof e.publisher === 'object' ? (e.publisher as Publisher | null)?.name : null
+      const shared = (formatCount.get(e.format) ?? 0) > 1
+      return {
+        id: e.id,
+        slug: e.slug,
+        format: FORMAT_LABEL[e.format] ?? e.format,
+        detail: shared ? [pub, yearOf(e.publicationDate)].filter(Boolean).join(', ') || null : null,
+        price: e.price,
+        was: e.compareAtPrice,
+        availability: e.id === book.id ? availability : availabilityOf(e, settings),
+        current: e.id === book.id,
+      }
+    })
   const label = availability.state === 'pre_order' ? 'Pre-order' : availability.state === 'on_request' ? 'Order on request' : 'Add to bag'
 
   const details: [string, string | number | null | undefined][] = [
@@ -273,6 +296,8 @@ export default async function BookPage({ params }: Props) {
               <AvailabilityMark availability={availability} className="text-[0.9375rem] font-semibold" />
             </div>
 
+            <FormatPicker options={formats} />
+
             <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2">
               {availability.orderable && book.price ? (
                 <AddToBag compact edition={book.id} label={label} />
@@ -377,7 +402,6 @@ export default async function BookPage({ params }: Props) {
       <div aria-hidden className="h-20 md:hidden" />
 
       <div className="mt-16 space-y-14 md:mt-24 md:space-y-20">
-        <Shelf title="Other editions" intro="The same book in another format." books={related.editions} />
         <Shelf
           title={authors[0] ? `More by ${authors[0].person.name}` : 'More by this author'}
           books={related.byAuthor}

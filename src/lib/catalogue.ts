@@ -127,6 +127,33 @@ export const getBookBySlug = cache(async (slug: string): Promise<Edition | null>
 /** The note a bookseller chose for the book; failing that, the most recently edited one. */
 export const getNoteFor = async (editionId: number): Promise<Note | null> => (await getNotesFor([editionId])).get(editionId) ?? null
 
+/** Every published edition of this book's work (this one included), for the format picker. */
+export const getEditionsOf = async (book: Edition): Promise<Edition[]> => {
+  const workId = idOf(book.work as number | { id: number } | null)
+  if (!workId) return [book]
+  const payload = await client()
+  const found = await payload.find({
+    collection: 'editions',
+    where: { and: [PUBLISHED, { work: { equals: workId } }] },
+    depth: 1,
+    limit: 12,
+    select: {
+      title: true,
+      slug: true,
+      format: true,
+      price: true,
+      compareAtPrice: true,
+      publisher: true,
+      publicationDate: true,
+      stockOnHand: true,
+      sourcing: true,
+      expectedDate: true,
+      leadTimeWeeks: true,
+    },
+  })
+  return found.docs.some((d) => d.id === book.id) ? (found.docs as Edition[]) : [book, ...(found.docs as Edition[])]
+}
+
 /** Other editions of the same work, books by the same author, and books on the same shelf of the shop. */
 export const getRelated = async (book: Edition) => {
   const workId = idOf(book.work as number | { id: number } | null)
