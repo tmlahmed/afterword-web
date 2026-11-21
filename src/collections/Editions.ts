@@ -38,10 +38,7 @@ export const Editions: CollectionConfig = {
     group: 'Catalogue',
     defaultColumns: ['title', 'authorLine', 'format', 'price', 'stockOnHand', 'status'],
     listSearchableFields: ['title', 'isbn13', 'authorLine'],
-    description: 'Each book is one edition, identified by its ISBN.',
-    components: {
-      beforeListTable: ['/components/admin/ImportIsbn#ImportIsbn', '/components/admin/CatalogueImport#CatalogueImport'],
-    },
+    description: 'Each book is one edition, identified by its ISBN. To add books (by ISBN, from a spreadsheet or by hand), press Create new.',
   },
   access: {
     read: publishedOrStaff,
@@ -149,6 +146,8 @@ export const Editions: CollectionConfig = {
     ],
   },
   fields: [
+    // On a new book's page: add it by ISBN, or import a spreadsheet, before filling the form by hand.
+    { name: 'quickAdd', type: 'ui', admin: { components: { Field: '/components/admin/QuickAdd#QuickAdd' } } },
     {
       type: 'tabs',
       tabs: [

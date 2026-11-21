@@ -192,7 +192,7 @@ export interface UserAuthOperations {
   };
 }
 /**
- * Each book is one edition, identified by its ISBN.
+ * Each book is one edition, identified by its ISBN. To add books (by ISBN, from a spreadsheet or by hand), press Create new.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "editions".

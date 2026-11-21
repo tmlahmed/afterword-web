@@ -1,6 +1,5 @@
+import { QuickAdd as QuickAdd_20e47cc1098a51f9b5113fdec1bace28 } from '../../../components/admin/QuickAdd'
 import { PricePreview as PricePreview_1460c48b201553b2b3a44b18eb8bd40c } from '../../../components/admin/PricePreview'
-import { ImportIsbn as ImportIsbn_5b8e4b9ed7e21d5260df7bfe903c0a44 } from '../../../components/admin/ImportIsbn'
-import { CatalogueImport as CatalogueImport_8aec08aee3b4c03adc7f208cb948aa61 } from '../../../components/admin/CatalogueImport'
 import { ImportProgressField as ImportProgressField_8aec08aee3b4c03adc7f208cb948aa61 } from '../../../components/admin/CatalogueImport'
 import { RscEntryLexicalCell as RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
 import { RscEntryLexicalField as RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
@@ -36,9 +35,8 @@ import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } f
 
 /** @type import('payload').ImportMap */
 export const importMap = {
+  "/components/admin/QuickAdd#QuickAdd": QuickAdd_20e47cc1098a51f9b5113fdec1bace28,
   "/components/admin/PricePreview#PricePreview": PricePreview_1460c48b201553b2b3a44b18eb8bd40c,
-  "/components/admin/ImportIsbn#ImportIsbn": ImportIsbn_5b8e4b9ed7e21d5260df7bfe903c0a44,
-  "/components/admin/CatalogueImport#CatalogueImport": CatalogueImport_8aec08aee3b4c03adc7f208cb948aa61,
   "/components/admin/CatalogueImport#ImportProgressField": ImportProgressField_8aec08aee3b4c03adc7f208cb948aa61,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalField": RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e,

@@ -74,14 +74,14 @@ Either way the customer gets the tracking number by text.
 
 ## 3. Catalogue (catalogue editors)
 
-**Adding one book.** In Catalogue → Books, type or scan the ISBN into **Add a book by ISBN**. The title, author, publisher, description and cover are filled in from the book databases, and the cover is copied into our own store. The book is saved as a **draft**. Check it, then:
+**Adding one book.** In Catalogue → Books, press **Create new**, then type or scan the ISBN into **Add a book by ISBN** at the top (Enter works, so a barcode scanner does it in one go). The title, author, publisher, description and cover are filled in from the book databases, and the cover is copied into our own store. The book is saved as a **draft**. Check it, then:
 - set the **list price and currency**, the price printed on the book (for example 599 INR). The **original price** in taka is worked out from Settings → Pricing rules (599 × 2 = ৳1,198, rounded to ৳1,200);
 - optionally type a **selling price** in taka. If it is lower than the original, customers see the original struck through and the discount, for example ~~৳1,200~~ ৳1,020 · 15% off, with a red "−15%" tag on the cover. Leave it empty to sell at the original price. The **Customers see** box under the fields shows the result as you type;
 - choose its **subjects**;
 - set **Sourcing**: *Standard* (shows "In stock" when we have copies, otherwise "On Request"), *Pre-order* (add the date it reaches Dhaka), or *Out of print*;
 - change the status to **Published**.
 
-**Adding many books at once.** In Catalogue → Books, use **Import books from a spreadsheet**.
+**Adding many books at once.** In Catalogue → Books, press **Create new** and use **Import books from a spreadsheet** at the top.
 - Press **Download a template** to see the columns. Only `isbn` is required.
 - Save your sheet as **CSV** and choose it.
 - The import runs in the background at about one book a second, and you can close the page. Rows that need attention (ISBN not found, no price, unknown subject) are listed by row number under Catalogue → Catalogue imports.
