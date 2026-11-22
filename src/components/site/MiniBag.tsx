@@ -75,11 +75,27 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
   const panel = useRef<HTMLDivElement>(null)
   const closeBtn = useRef<HTMLButtonElement>(null)
 
-  // Closed by the shopper (×, Escape, the page behind, Continue shopping): focus goes back to the bag icon.
+  // How the shopper last acted: with the keyboard, or with a mouse or finger.
+  const usedKeyboard = useRef(false)
+  useEffect(() => {
+    const key = () => (usedKeyboard.current = true)
+    const pointer = () => (usedKeyboard.current = false)
+    window.addEventListener('keydown', key, true)
+    window.addEventListener('pointerdown', pointer, true)
+    return () => {
+      window.removeEventListener('keydown', key, true)
+      window.removeEventListener('pointerdown', pointer, true)
+    }
+  }, [])
+
+  // Closed by the shopper (×, Escape, the page behind, Continue shopping). Keyboard users get
+  // focus back on the bag icon, outlined so they can see where they are; after a click or tap
+  // nothing is focused, so no outline is left on the icon.
   const close = useCallback(() => {
     setOpen(false)
     setAdded(null)
-    trigger.current?.focus({ preventScroll: true })
+    if (usedKeyboard.current) trigger.current?.focus({ preventScroll: true })
+    else if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   }, [])
   // Closed by following a link to another page: let go of focus, so no browser hands it to a
   // field on the next page (the bag page's promotion code box, for one).
@@ -291,6 +307,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
         onClick={(e) => {
           // Opens the bag beside the page; the full bag page is one click away inside it.
           e.preventDefault()
+          if (!usedKeyboard.current) e.currentTarget.blur()
           setAdded(null)
           setOpen(true)
         }}
