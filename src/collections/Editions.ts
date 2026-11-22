@@ -5,6 +5,7 @@ import { importIsbnEndpoint } from '../endpoints/importIsbn'
 import { normaliseIsbn } from '../lib/isbn/isbn'
 import { computePrice, derivePrices } from '../lib/pricing'
 import { removeBook, syncBook } from '../lib/search'
+import { ITEM_TYPES } from '../lib/itemTypes'
 import { slugify } from '../lib/slug'
 
 export const CONTRIBUTOR_ROLES = [
@@ -23,6 +24,14 @@ export const FORMATS = [
   { label: 'Board book', value: 'board' },
 ] as const
 
+export { ITEM_TYPES }
+
+type KindData = { kind?: string | null } | undefined
+/** Shown only for books (hidden for gifts and stationery). */
+const forBooks = (data: KindData) => data?.kind !== 'item'
+/** Shown only for gifts and stationery. */
+const forItems = (data: KindData) => data?.kind === 'item'
+
 /** What a book costs us and where it comes from is for staff only. */
 const staffOnly: FieldAccess = ({ req }) => Boolean(req.user)
 
@@ -32,13 +41,13 @@ const staffOnly: FieldAccess = ({ req }) => Boolean(req.user)
  */
 export const Editions: CollectionConfig = {
   slug: 'editions',
-  labels: { singular: 'Book', plural: 'Books' },
+  labels: { singular: 'Book or item', plural: 'Books' },
   admin: {
     useAsTitle: 'title',
     group: 'Catalogue',
     defaultColumns: ['title', 'authorLine', 'format', 'price', 'stockOnHand', 'status'],
     listSearchableFields: ['title', 'isbn13', 'authorLine'],
-    description: 'Each book is one edition, identified by its ISBN. To add books (by ISBN, from a spreadsheet or by hand), press Create new.',
+    description: 'Books (one edition each, identified by its ISBN) and gifts and stationery. To add books by ISBN, from a spreadsheet or by hand, or to add a gift or stationery item, press Create new.',
   },
   access: {
     read: publishedOrStaff,
@@ -83,6 +92,11 @@ export const Editions: CollectionConfig = {
         if (data.isbn13) data.isbn13 = normaliseIsbn(String(data.isbn13)) ?? data.isbn13
         if (!data.slug && data.title && data.isbn13) {
           data.slug = `${slugify(String(data.title))}-${data.isbn13}`
+        }
+        // Gifts and stationery have no ISBN: their stock code, or a short random tail, keeps the address unique.
+        if (!data.slug && data.title && data.kind === 'item') {
+          const tail = data.sku ? slugify(String(data.sku)) : Math.random().toString(36).slice(2, 7)
+          data.slug = `${slugify(String(data.title))}-${tail}`
         }
         return data
       },
@@ -149,10 +163,26 @@ export const Editions: CollectionConfig = {
     // On a new book's page: add it by ISBN, or import a spreadsheet, before filling the form by hand.
     { name: 'quickAdd', type: 'ui', admin: { components: { Field: '/components/admin/QuickAdd#QuickAdd' } } },
     {
+      name: 'kind',
+      type: 'radio',
+      required: true,
+      defaultValue: 'book',
+      index: true,
+      label: 'This is a',
+      options: [
+        { label: 'Book', value: 'book' },
+        { label: 'Gift or stationery', value: 'item' },
+      ],
+      admin: {
+        layout: 'horizontal',
+        description: 'Gifts and stationery (bookmarks, notebooks, tote bags…) need no ISBN or author; the book-only fields are hidden.',
+      },
+    },
+    {
       type: 'tabs',
       tabs: [
         {
-          label: 'The book',
+          label: 'Details',
           fields: [
             { name: 'title', type: 'text', required: true, index: true },
             { name: 'subtitle', type: 'text' },
@@ -160,7 +190,7 @@ export const Editions: CollectionConfig = {
               name: 'contributors',
               type: 'array',
               labels: { singular: 'Contributor', plural: 'Contributors' },
-              admin: { description: 'Authors first, then translators, illustrators and editors.' },
+              admin: { description: 'Authors first, then translators, illustrators and editors.', condition: forBooks },
               fields: [
                 {
                   type: 'row',
@@ -185,13 +215,15 @@ export const Editions: CollectionConfig = {
             {
               name: 'synopsis',
               type: 'textarea',
-              admin: { description: 'The publisher’s description. Plain paragraphs.' },
+              label: 'Description',
+              admin: { description: 'For a book, the publisher’s description; for an item, what it is, its size and material. Plain paragraphs.' },
             },
             {
               name: 'cover',
               type: 'upload',
               relationTo: 'media',
-              admin: { description: 'Upload a cover to replace the imported one.' },
+              label: 'Cover or main photo',
+              admin: { description: 'For a book, upload a cover to replace the imported one. For an item, its main photo.' },
             },
             {
               name: 'coverUrl',
@@ -229,9 +261,10 @@ export const Editions: CollectionConfig = {
               ],
             },
             { name: 'subjects', type: 'relationship', relationTo: 'subjects', hasMany: true },
-            { name: 'work', type: 'relationship', relationTo: 'works' },
+            { name: 'work', type: 'relationship', relationTo: 'works', admin: { condition: forBooks } },
             {
               type: 'row',
+              admin: { condition: forBooks },
               fields: [
                 { name: 'series', type: 'relationship', relationTo: 'series' },
                 { name: 'seriesNumber', type: 'number', min: 0 },
@@ -248,15 +281,33 @@ export const Editions: CollectionConfig = {
                 {
                   name: 'format',
                   type: 'select',
-                  required: true,
                   defaultValue: 'paperback',
                   options: [...FORMATS],
+                  // Required for books only.
+                  validate: (value: unknown, { siblingData, data }: { siblingData?: KindData; data?: KindData }) =>
+                    (data ?? siblingData)?.kind === 'item' || value ? true : 'Choose the format.',
+                  admin: { condition: forBooks },
                 },
-                { name: 'publisher', type: 'relationship', relationTo: 'publishers' },
+                { name: 'publisher', type: 'relationship', relationTo: 'publishers', admin: { condition: forBooks } },
+                {
+                  name: 'itemType',
+                  type: 'select',
+                  label: 'Type of item',
+                  options: [...ITEM_TYPES],
+                  validate: (value: unknown, { data }: { data?: KindData }) => (data?.kind !== 'item' || value ? true : 'Choose what kind of item this is.'),
+                  admin: { condition: forItems },
+                },
+                {
+                  name: 'sku',
+                  type: 'text',
+                  label: 'Stock code (optional)',
+                  admin: { condition: forItems, description: 'Your own code for it, e.g. BM-RED-01.' },
+                },
               ],
             },
             {
               type: 'row',
+              admin: { condition: forBooks },
               fields: [
                 {
                   name: 'publicationDate',
@@ -272,7 +323,7 @@ export const Editions: CollectionConfig = {
               fields: [
                 { name: 'heightMm', type: 'number', min: 0, label: 'Height (mm)' },
                 { name: 'widthMm', type: 'number', min: 0, label: 'Width (mm)' },
-                { name: 'spineMm', type: 'number', min: 0, label: 'Spine (mm)' },
+                { name: 'spineMm', type: 'number', min: 0, label: 'Spine or depth (mm)' },
                 { name: 'weightG', type: 'number', min: 0, label: 'Weight (g)' },
               ],
             },
@@ -386,10 +437,11 @@ export const Editions: CollectionConfig = {
       name: 'isbn13',
       type: 'text',
       label: 'ISBN',
-      required: true,
       unique: true,
       index: true,
-      admin: { position: 'sidebar' },
+      // Every book has one; gifts and stationery do not.
+      validate: (value: unknown, { data }: { data?: KindData }) => (data?.kind === 'item' || value ? true : 'Enter the ISBN.'),
+      admin: { position: 'sidebar', condition: forBooks },
     },
     {
       name: 'status',

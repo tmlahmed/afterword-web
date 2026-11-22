@@ -6,6 +6,7 @@ import type { Edition, List, Note, Subject } from '../payload-types'
 
 /** The fields a book card needs — kept small so shelves stay fast. */
 export const CARD_FIELDS = {
+  kind: true,
   title: true,
   slug: true,
   authorLine: true,

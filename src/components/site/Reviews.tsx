@@ -24,14 +24,15 @@ type Eligibility = { canReview: true } | { canReview: false; reason: 'signed_out
  */
 export const ReaderReviews: React.FC<{
   editionId: number
-  slug: string
+  /** This page's address, for the sign-in link. */
+  href: string
   first: { items: ReviewItem[]; hasMore: boolean }
   counts: Record<1 | 2 | 3 | 4 | 5, number>
   average?: number | null
   eligibility: Eligibility
   /** The book, shown at the top of the review form. */
   book: { title: string; authorLine?: string | null; coverUrl?: string | null }
-}> = ({ editionId, slug, first, counts, average, eligibility, book }) => {
+}> = ({ editionId, href, first, counts, average, eligibility, book }) => {
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
   return (
     <section id="reviews" aria-labelledby="reviews-title" className="scroll-mt-32">
@@ -86,7 +87,7 @@ export const ReaderReviews: React.FC<{
               ) : eligibility.reason === 'signed_out' ? (
                 <p className="mt-4 border-t border-rule pt-4 text-[0.875rem] text-ink-soft">
                   Bought it from us?{' '}
-                  <Link href={`/account/sign-in?next=${encodeURIComponent(`/book/${slug}#review`)}`} className="font-medium text-ink underline underline-offset-4">
+                  <Link href={`/account/sign-in?next=${encodeURIComponent(`${href}#review`)}`} className="font-medium text-ink underline underline-offset-4">
                     Sign in
                   </Link>{' '}
                   to review it.

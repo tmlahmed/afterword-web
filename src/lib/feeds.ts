@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import type { Edition, Publisher, Subject } from '../payload-types'
 import { availabilityOf } from './availability'
 import { siteUrl } from './notify'
+import { productHref } from './links'
 
 /**
  * Product feeds: the catalogue in the formats Google Merchant Center and Meta (Facebook and
@@ -38,7 +39,7 @@ export const buildFeed = async (payload: Payload, format: FeedFormat, now = new 
       select: {
         title: true, subtitle: true, slug: true, isbn13: true, authorLine: true, synopsis: true, coverUrl: true, price: true,
         compareAtPrice: true, sourcing: true, stockOnHand: true, expectedDate: true, leadTimeWeeks: true, publisher: true,
-        subjects: true, format: true, pages: true, language: true,
+        subjects: true, format: true, pages: true, language: true, kind: true, itemType: true, sku: true,
       },
       depth: 1,
       pagination: false,
@@ -52,10 +53,16 @@ export const buildFeed = async (payload: Payload, format: FeedFormat, now = new 
     const state = availabilityOf(book, settings).state
     const publisher = typeof book.publisher === 'object' ? (book.publisher as Publisher | null)?.name : undefined
     const subject = (book.subjects ?? []).find((s): s is Subject => typeof s === 'object')?.name
-    const link = `${site}/book/${book.slug}`
-    const image = `${site}/feeds/cover/${book.isbn13}.jpg`
-    const title = [book.title, book.authorLine ? `by ${book.authorLine}` : '', book.format === 'hardback' ? '(Hardback)' : ''].filter(Boolean).join(' ').slice(0, 150)
-    const description = (book.synopsis || `${book.title}${book.authorLine ? ` by ${book.authorLine}` : ''}. Original publisher’s edition from AFTERWORD.`).slice(0, 4900)
+    const link = `${site}${productHref(book)}`
+    // Gifts and stationery have no ISBN: they go in as AFTERWORD products, with no barcode.
+    const isItem = book.kind === 'item' || !book.isbn13
+    const feedId = isItem ? (book.sku || `item-${book.id}`) : book.isbn13!
+    const image = `${site}/feeds/cover/${isItem ? `item-${book.id}` : book.isbn13}.jpg`
+    const title = (isItem ? book.title : [book.title, book.authorLine ? `by ${book.authorLine}` : '', book.format === 'hardback' ? '(Hardback)' : ''].filter(Boolean).join(' ')).slice(0, 150)
+    const description = (
+      book.synopsis ||
+      (isItem ? `${book.title} from AFTERWORD.` : `${book.title}${book.authorLine ? ` by ${book.authorLine}` : ''}. Original publisher’s edition from AFTERWORD.`)
+    ).slice(0, 4900)
     // When a pre-order or ordered-in book is expected, which both services ask for.
     const weeks = book.leadTimeWeeks || settings.defaultLeadTimeWeeks || 4
     const arrives =
@@ -69,7 +76,7 @@ export const buildFeed = async (payload: Payload, format: FeedFormat, now = new 
     items.push(
       [
         '<item>',
-        tag('g:id', book.isbn13),
+        tag('g:id', feedId),
         tag('g:title', title),
         tag('g:description', description),
         tag('g:link', link),
@@ -79,11 +86,12 @@ export const buildFeed = async (payload: Payload, format: FeedFormat, now = new 
         tag('g:price', `${(onSale ? book.compareAtPrice! : book.price!).toFixed(2)} BDT`),
         onSale ? tag('g:sale_price', `${book.price!.toFixed(2)} BDT`) : '',
         tag('g:condition', 'new'),
-        tag('g:brand', publisher || book.authorLine || 'AFTERWORD'),
-        tag('g:gtin', book.isbn13),
-        tag('g:identifier_exists', 'yes'),
-        tag('g:google_product_category', '784'), // Media > Books
-        tag('g:product_type', subject ? `Books > ${subject}` : 'Books'),
+        tag('g:brand', isItem ? 'AFTERWORD' : publisher || book.authorLine || 'AFTERWORD'),
+        isItem ? '' : tag('g:gtin', book.isbn13!),
+        tag('g:identifier_exists', isItem ? 'no' : 'yes'),
+        // Media > Books, or Office Supplies > General Office Supplies for stationery and gifts.
+        tag('g:google_product_category', isItem ? '932' : '784'),
+        tag('g:product_type', isItem ? `Gifts & Stationery${subject ? ` > ${subject}` : ''}` : subject ? `Books > ${subject}` : 'Books'),
         tag('g:custom_label_0', state),
         '</item>',
       ].join(''),

@@ -25,6 +25,7 @@ export default async function SubjectAllPage({ params, searchParams }: Props) {
     <>
       <PageHeading eyebrow={data.parent?.name ?? 'Browse'} title={`All ${data.subject.name}`} />
       <Browse
+        noun={[data.subject.slug, data.parent?.slug].includes('gifts-stationery') ? { one: 'item', many: 'items' } : undefined}
         result={result}
         query={query}
         basePath={`/subjects/${slug}/all`}

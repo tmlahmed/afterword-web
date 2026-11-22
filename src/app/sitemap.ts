@@ -3,6 +3,7 @@ import type { MetadataRoute } from 'next'
 import { getPayload } from 'payload'
 
 import { siteUrl } from '../lib/notify'
+import { productHref } from '../lib/links'
 
 /**
  * Sitemaps for search engines: /sitemap/0.xml has every page except books;
@@ -33,13 +34,13 @@ export default async function sitemap(props: { id: Promise<string> }): Promise<M
     const books = await payload.find({
       collection: 'editions',
       where: published,
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, kind: true, updatedAt: true },
       sort: 'id',
       depth: 0,
       limit: BOOKS_PER_SITEMAP,
       page: id,
     })
-    return books.docs.map((b) => ({ url: `${base}/book/${b.slug}`, lastModified: b.updatedAt, changeFrequency: 'weekly', priority: 0.8 }))
+    return books.docs.map((b) => ({ url: `${base}${productHref(b)}`, lastModified: b.updatedAt, changeFrequency: 'weekly', priority: 0.8 }))
   }
 
   // Authors, series and publishers only appear when they have a book in the shop.

@@ -24,6 +24,9 @@ export default async function SubjectPage({ params }: Props) {
   if (!data) notFound()
   const { subject, parent, children, shelves, feature, featureNote, total } = data
   const all = `/subjects/${subject.slug}/all`
+  // Gifts & Stationery and its sections hold items, not books.
+  const items = [subject.slug, parent?.slug].includes('gifts-stationery')
+  const noun = items ? (total === 1 ? 'item' : 'items') : total === 1 ? 'book' : 'books'
 
   return (
     <>
@@ -45,7 +48,7 @@ export default async function SubjectPage({ params }: Props) {
           ))}
           <li>
             <Link href={all} className="inline-flex items-center gap-1.5 border rounded-ui border-ink px-3.5 py-1.5 text-[0.875rem] font-semibold">
-              All {total} books <ArrowIcon />
+              All {total} {noun} <ArrowIcon />
             </Link>
           </li>
         </ul>
@@ -62,7 +65,7 @@ export default async function SubjectPage({ params }: Props) {
         ))}
         <div className="mx-auto max-w-6xl px-4 text-center">
           <Link href={all} className="btn btn-quiet">
-            Browse all {total} books in {subject.name} <ArrowIcon />
+            Browse all {total} {noun} in {subject.name} <ArrowIcon />
           </Link>
         </div>
       </div>

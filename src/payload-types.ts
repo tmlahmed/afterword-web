@@ -192,13 +192,17 @@ export interface UserAuthOperations {
   };
 }
 /**
- * Each book is one edition, identified by its ISBN. To add books (by ISBN, from a spreadsheet or by hand), press Create new.
+ * Books (one edition each, identified by its ISBN) and gifts and stationery. To add books by ISBN, from a spreadsheet or by hand, or to add a gift or stationery item, press Create new.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "editions".
  */
 export interface Edition {
   id: number;
+  /**
+   * Gifts and stationery (bookmarks, notebooks, tote bags…) need no ISBN or author; the book-only fields are hidden.
+   */
+  kind: 'book' | 'item';
   title: string;
   subtitle?: string | null;
   /**
@@ -212,11 +216,11 @@ export interface Edition {
       }[]
     | null;
   /**
-   * The publisher’s description. Plain paragraphs.
+   * For a book, the publisher’s description; for an item, what it is, its size and material. Plain paragraphs.
    */
   synopsis?: string | null;
   /**
-   * Upload a cover to replace the imported one.
+   * For a book, upload a cover to replace the imported one. For an item, its main photo.
    */
   cover?: (number | null) | Media;
   /**
@@ -244,8 +248,13 @@ export interface Edition {
   work?: (number | null) | Work;
   series?: (number | null) | Series;
   seriesNumber?: number | null;
-  format: 'paperback' | 'hardback' | 'special' | 'boxset' | 'board';
+  format?: ('paperback' | 'hardback' | 'special' | 'boxset' | 'board') | null;
   publisher?: (number | null) | Publisher;
+  itemType?: ('bookmark' | 'notebook' | 'tote' | 'pen' | 'card' | 'gift_set' | 'accessory' | 'other') | null;
+  /**
+   * Your own code for it, e.g. BM-RED-01.
+   */
+  sku?: string | null;
   publicationDate?: string | null;
   language?: string | null;
   pages?: number | null;
@@ -275,7 +284,7 @@ export interface Edition {
    */
   leadTimeWeeks?: number | null;
   supplier?: (number | null) | Supplier;
-  isbn13: string;
+  isbn13?: string | null;
   status: 'draft' | 'published' | 'archived';
   /**
    * Copies in Dhaka. Changes only through stock movements.
@@ -1415,6 +1424,7 @@ export interface PayloadMigration {
  * via the `definition` "editions_select".
  */
 export interface EditionsSelect<T extends boolean = true> {
+  kind?: T;
   title?: T;
   subtitle?: T;
   contributors?:
@@ -1441,6 +1451,8 @@ export interface EditionsSelect<T extends boolean = true> {
   seriesNumber?: T;
   format?: T;
   publisher?: T;
+  itemType?: T;
+  sku?: T;
   publicationDate?: T;
   language?: T;
   pages?: T;

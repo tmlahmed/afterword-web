@@ -88,6 +88,15 @@ Either way the customer gets the tracking number by text.
 - Running the same file again is safe: books already in the shop are updated, not duplicated. Put `yes` in the `publish` column for books that are ready to sell.
 - The `stock` column sets the copies on hand. Leave it empty if you do not want to change stock.
 
+**Gifts and stationery** (bookmarks, notebooks, tote bags…). In Catalogue → Books, press **Create new** and choose **This is a: Gift or stationery** at the top. The book-only fields (ISBN, authors, publisher) disappear. Fill in:
+- the **title** and **description** (what it is, its size and material), and the **main photo** under *Cover or main photo*, plus any **More photos**;
+- **Type of item** (Bookmark, Notebook or journal, Tote bag…) and, if you like, your own **stock code**;
+- the **subject**: one of the sections under *Gifts & Stationery* (Bookmarks, Notebooks & Journals, Tote Bags, Pens & Pencils, Cards & Wrapping, Gift Sets);
+- the **selling price** in taka (leave the list price empty), the size and weight;
+- **Published**, then receive the stock like any book.
+
+Items are only sold from your own shelves: with none left they show **Sold out** and cannot be ordered (never "On Request").
+
 **Covers.** To replace a cover, upload a new image in the book's **Cover** field. The shop uses it at once.
 
 **Bookseller notes ("The Afterword").** Content → Bookseller notes: two to four sentences on why this book, signed with your name. They appear on the book's page. If a book has more than one note, choose the one to show: either in the book's own page under **The Afterword shown for this book** (it lists only that book's notes), or by ticking **Show this one as The Afterword** on the note. Both stay in step, and the book's other notes are unticked for you. With none ticked, the most recently edited note is shown.

@@ -6,6 +6,7 @@ import { availabilityOf } from '../../lib/availability'
 import type { Article, Edition, Media, Note } from '../../payload-types'
 import { AvailabilityMark, Cover, Price, tintFor } from './Books'
 import { ArrowIcon } from './Brand'
+import { productHref } from '../../lib/links'
 
 type RichTextData = Parameters<typeof LexicalRichText>[0]['data']
 
@@ -62,13 +63,13 @@ export const FeaturedBook: React.FC<{
   flip?: boolean
 }> = ({ book, note, eyebrow, flip }) => (
   <div className="grid overflow-hidden border rounded-ui border-rule md:grid-cols-[4fr_8fr]">
-    <Link href={`/book/${book.slug}`} className={`flex items-center justify-center px-8 py-9 ${tintFor(book.id)} ${flip ? 'md:order-2' : ''}`}>
+    <Link href={`${productHref(book)}`} className={`flex items-center justify-center px-8 py-9 ${tintFor(book.id)} ${flip ? 'md:order-2' : ''}`}>
       <Cover title={book.title} author={book.authorLine} src={book.coverUrl} className="h-[14rem] md:h-[17rem]" />
     </Link>
     <div className="flex flex-col justify-center px-5 py-7 md:px-10">
       {eyebrow ? <p className="eyebrow !text-accent">{eyebrow}</p> : null}
       <h3 className="display mt-2 text-[1.875rem] md:text-[2.375rem]">
-        <Link href={`/book/${book.slug}`}>{book.title}</Link>
+        <Link href={`${productHref(book)}`}>{book.title}</Link>
       </h3>
       {book.authorLine ? <p className="mt-1 font-display text-[1.125rem] text-ink-soft">{book.authorLine}</p> : null}
       {note ? (
@@ -78,7 +79,7 @@ export const FeaturedBook: React.FC<{
         </figure>
       ) : null}
       <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 text-[0.9375rem]">
-        <Link href={`/book/${book.slug}`} className="btn btn-primary">
+        <Link href={`${productHref(book)}`} className="btn btn-primary">
           View the book <ArrowIcon />
         </Link>
         <Price price={book.price} was={book.compareAtPrice} showSaving className="text-[1.0625rem]" />

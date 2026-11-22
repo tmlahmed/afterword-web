@@ -16,8 +16,10 @@ export type BagLine = {
   kind: LineKind
   /** Shown beside the line: what will happen with this book. */
   note: string
-  /** Set when the bag asks for more copies than are left. */
+  /** Set when the bag asks for more copies than are left, or the item is sold out. */
   problem?: string
+  /** A gift or stationery item with none left: it must come out of the bag. */
+  soldOut?: boolean
 }
 
 export type Bag = {
@@ -61,7 +63,12 @@ export const getBag = cache(async (): Promise<Bag> => {
       quantity: item.quantity,
       kind,
       note: availability.detail,
-      problem: kind === 'in_stock' && item.quantity > onHand ? `Only ${onHand} left — please reduce the quantity.` : undefined,
+      soldOut: !availability.orderable,
+      problem: !availability.orderable
+        ? 'Sold out — please remove it from your bag.'
+        : kind === 'in_stock' && item.quantity > onHand
+          ? `Only ${onHand} left — please reduce the quantity.`
+          : undefined,
     })
   }
 

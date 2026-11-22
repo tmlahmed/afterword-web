@@ -5,12 +5,13 @@ import { hrefWith, type RawParams, toggled } from '../../lib/browse'
 import type { BookCardData } from '../../lib/catalogue'
 import { type BrowseQuery, type BrowseResult, PRICE_BANDS, SORTS, type SortKey } from '../../lib/search'
 import { BookGrid, Pager } from './Books'
+import { ITEM_TYPE_LABEL } from '../../lib/itemTypes'
 
 const STATE_LABEL: Record<string, string> = {
   in_stock: 'In stock',
   pre_order: 'Pre-order',
   on_request: 'On Request',
-  unavailable: 'Out of print',
+  unavailable: 'Unavailable',
 }
 const FORMAT_LABEL: Record<string, string> = {
   paperback: 'Paperback',
@@ -18,6 +19,8 @@ const FORMAT_LABEL: Record<string, string> = {
   special: 'Special edition',
   boxset: 'Box set',
   board: 'Board book',
+  // Gifts and stationery, filtered by type.
+  ...ITEM_TYPE_LABEL,
 }
 
 type Option = { value: string; label: string; count?: number }
@@ -81,7 +84,9 @@ export const Browse: React.FC<{
   /** Subjects offered as a filter (omit on a page already inside one subject). */
   subjectOptions?: { slug: string; name: string }[]
   emptyMessage?: string
-}> = ({ result, query, basePath, params, subjectOptions, emptyMessage }) => {
+  /** What the results are called: books, or items for Gifts & Stationery. */
+  noun?: { one: string; many: string }
+}> = ({ result, query, basePath, params, subjectOptions, emptyMessage, noun = { one: 'book', many: 'books' } }) => {
   const active = [query.format, query.state, query.language, query.subject, query.price].reduce((n, a) => n + (a?.length ?? 0), 0)
   const sortKey: SortKey = query.sort ?? (query.q ? 'relevance' : 'title')
   const sorts = (Object.keys(SORTS) as SortKey[]).filter((k) => k !== 'relevance' || query.q)
@@ -137,7 +142,7 @@ export const Browse: React.FC<{
       <div className={filters ? '' : 'md:col-span-2'}>
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 py-3 md:border-t md:border-ink">
           <p className="text-[0.8125rem] text-ink-soft">
-            {result.total} {result.total === 1 ? 'book' : 'books'}
+            {result.total} {result.total === 1 ? noun.one : noun.many}
             {active ? (
               <Link href={clear} rel="nofollow" className="link ml-3 md:hidden">
                 Clear filters

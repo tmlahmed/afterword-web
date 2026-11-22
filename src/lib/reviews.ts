@@ -83,7 +83,7 @@ export const reviewEligibility = async (
   return { canReview: true, orderId: orders.docs[0].id }
 }
 
-export type BookToReview = { id: number; title: string; slug: string; authorLine?: string | null; coverUrl?: string | null; deliveredAt: string }
+export type BookToReview = { id: number; title: string; slug: string; kind?: 'book' | 'item' | null; authorLine?: string | null; coverUrl?: string | null; deliveredAt: string }
 
 /**
  * Books from a customer's delivered orders that they have not reviewed yet, the most recently
@@ -114,13 +114,13 @@ export const booksToReview = async (payload: Payload, customerId: number): Promi
   const books = await payload.find({
     collection: 'editions',
     where: { and: [{ id: { in: [...deliveredAt.keys()] } }, { status: { equals: 'published' } }] },
-    select: { title: true, slug: true, authorLine: true, coverUrl: true },
+    select: { title: true, slug: true, kind: true, authorLine: true, coverUrl: true },
     depth: 0,
     pagination: false,
     overrideAccess: true,
   })
   return books.docs
-    .map((b) => ({ id: b.id, title: b.title, slug: b.slug, authorLine: b.authorLine, coverUrl: b.coverUrl, deliveredAt: deliveredAt.get(b.id)! }))
+    .map((b) => ({ id: b.id, title: b.title, slug: b.slug, kind: b.kind, authorLine: b.authorLine, coverUrl: b.coverUrl, deliveredAt: deliveredAt.get(b.id)! }))
     .sort((a, b) => b.deliveredAt.localeCompare(a.deliveredAt))
 }
 
@@ -134,7 +134,7 @@ export type MyReview = {
   reply?: string | null
   createdAt: string
   updatedAt: string
-  book: { id: number; title: string; slug: string; authorLine?: string | null; coverUrl?: string | null } | null
+  book: { id: number; title: string; slug: string; kind?: 'book' | 'item' | null; authorLine?: string | null; coverUrl?: string | null } | null
 }
 
 /** Every review a customer has written, newest first, with its book and where it stands. */
@@ -159,7 +159,7 @@ export const customerReviews = async (payload: Payload, customerId: number): Pro
       reply: r.reply,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
-      book: b ? { id: b.id, title: b.title, slug: b.slug, authorLine: b.authorLine, coverUrl: b.coverUrl } : null,
+      book: b ? { id: b.id, title: b.title, slug: b.slug, kind: b.kind, authorLine: b.authorLine, coverUrl: b.coverUrl } : null,
     }
   })
 }

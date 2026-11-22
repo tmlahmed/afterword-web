@@ -6,6 +6,7 @@ import { type Availability, availabilityOf } from '../../lib/availability'
 import type { BookCardData } from '../../lib/catalogue'
 import { discountPercent, formatTaka } from '../../lib/pricing'
 import { ArrowIcon } from './Brand'
+import { productHref } from '../../lib/links'
 
 const TINTS = ['bg-tint-sage', 'bg-tint-clay', 'bg-tint-slate', 'bg-tint-straw'] as const
 export const tintFor = (id: number): string => TINTS[id % TINTS.length]
@@ -95,7 +96,7 @@ export const DiscountTag: React.FC<{ price?: number | null; was?: number | null;
 export const BookCard: React.FC<{ book: BookCardData; className?: string }> = ({ book, className = '' }) => {
   const availability = availabilityOf(book)
   return (
-    <Link href={`/book/${book.slug}`} className={`group block ${className}`}>
+    <Link href={`${productHref(book)}`} className={`group block ${className}`}>
       <div className={`relative flex h-[13.5rem] items-end justify-center px-4 pb-0 pt-5 md:h-[15.5rem] ${tintFor(book.id)}`}>
         <DiscountTag price={book.price} was={book.compareAtPrice} className="absolute left-2 top-2 z-10" />
         <Cover

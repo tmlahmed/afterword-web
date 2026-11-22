@@ -8,6 +8,7 @@ import { Cover } from './Books'
 import { MiniBag, type MiniBagData } from './MiniBag'
 import { SearchBox } from './SearchBox'
 import { ShelfLink } from './TheShelf'
+import { productHref } from '../../lib/links'
 
 /**
  * Site header. The menu is arranged in the admin (Content → Main menu).
@@ -27,6 +28,7 @@ export const Header: React.FC = async () => {
       id: l.edition.id,
       title: l.edition.title,
       slug: l.edition.slug,
+      href: productHref(l.edition),
       authorLine: l.edition.authorLine,
       coverUrl: l.edition.coverUrl,
       unitPrice: l.edition.price ?? 0,
@@ -194,7 +196,7 @@ export const Header: React.FC = async () => {
                           <div />
                         )}
                         {item.featured ? (
-                          <Link href={`/book/${item.featured.slug}`} className="flex w-[15rem] items-center gap-4 bg-paper-deep p-4">
+                          <Link href={`${productHref(item.featured)}`} className="flex w-[15rem] items-center gap-4 bg-paper-deep p-4">
                             <Cover title={item.featured.title} src={item.featured.coverUrl} sizes="5rem" className="h-[7.5rem] shrink-0" />
                             <span>
                               <span className="eyebrow block">We recommend</span>

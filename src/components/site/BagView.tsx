@@ -14,6 +14,8 @@ export type BagViewLine = {
   id: number
   title: string
   slug: string
+  /** The book's or item's page. */
+  href: string
   authorLine?: string | null
   coverUrl?: string | null
   unitPrice: number
@@ -22,6 +24,8 @@ export type BagViewLine = {
   max: number
   kind: 'in_stock' | 'pre_order' | 'on_request'
   note: string
+  /** None left (gifts and stationery): it has to be removed before checkout. */
+  soldOut?: boolean
 }
 
 const KIND: Record<BagViewLine['kind'], string> = { in_stock: 'In stock', pre_order: 'Pre-order', on_request: 'On Request' }
@@ -306,7 +310,7 @@ export const BagView: React.FC<{
                   const over = l.kind === 'in_stock' && l.quantity > l.max
                   return (
                     <li key={l.id} className="grid grid-cols-[4rem_1fr] gap-x-4 gap-y-3 border-b border-rule py-5 sm:grid-cols-[4.5rem_1fr_auto_6.5rem_2.5rem] sm:items-center sm:gap-x-5">
-                      <Link href={`/book/${l.slug}`} className="row-span-2 flex justify-center self-start sm:row-span-1 sm:self-center">
+                      <Link href={l.href} className="row-span-2 flex justify-center self-start sm:row-span-1 sm:self-center">
                         {l.coverUrl ? (
                           <Image src={l.coverUrl} alt="" width={72} height={108} sizes="72px" className="h-[6rem] w-auto max-w-full rounded-[2px] object-contain shadow-cover sm:h-[6.5rem]" />
                         ) : (
@@ -314,13 +318,17 @@ export const BagView: React.FC<{
                         )}
                       </Link>
                       <div className="min-w-0">
-                        <Link href={`/book/${l.slug}`} className="font-display text-[1.125rem] leading-snug hover:underline">
+                        <Link href={l.href} className="font-display text-[1.125rem] leading-snug hover:underline">
                           {l.title}
                         </Link>
                         {l.authorLine ? <p className="text-[0.875rem] text-ink-soft">{l.authorLine}</p> : null}
-                        <p className="mt-1 text-[0.8125rem]">
-                          <span className="font-semibold">{KIND[l.kind]}.</span> <span className="text-ink-soft">{l.note}</span>
-                        </p>
+                        {l.soldOut ? (
+                          <p className="mt-1 text-[0.8125rem] font-semibold text-[#9b2c1f]">Sold out. Please remove it to continue.</p>
+                        ) : (
+                          <p className="mt-1 text-[0.8125rem]">
+                            <span className="font-semibold">{KIND[l.kind]}.</span> <span className="text-ink-soft">{l.note}</span>
+                          </p>
+                        )}
                         {over ? (
                           <p className="mt-1 text-[0.8125rem] font-semibold text-[#9b2c1f]">
                             Only {l.max} {l.max === 1 ? 'copy is' : 'copies are'} left. Please reduce the quantity.
@@ -412,7 +420,9 @@ export const BagView: React.FC<{
 
               {promo}
 
-              {tooMany.length ? (
+              {lines.some((l) => l.soldOut) ? (
+                <p className="mt-5 text-[0.875rem] font-semibold text-[#9b2c1f]">Remove the sold-out items marked in red to continue.</p>
+              ) : tooMany.length ? (
                 <p className="mt-5 text-[0.875rem] font-semibold text-[#9b2c1f]">Reduce the quantities marked in red to continue.</p>
               ) : (
                 <Link href="/checkout" className="btn btn-primary mt-5 w-full">

@@ -34,6 +34,7 @@ import { booksToReview, customerReviews } from '../../../lib/reviews'
 import { getCustomer } from '../../../lib/session'
 import type { Edition, Order } from '../../../payload-types'
 import { signOut } from '../actions'
+import { productHref } from '../../../lib/links'
 
 export const metadata: Metadata = { title: 'Your account', robots: { index: false } }
 
@@ -104,7 +105,7 @@ export default async function AccountPage({ searchParams }: Props) {
       backorder: lines.some((l) => l.kind && l.kind !== 'in_stock'),
       books: lines.map((l) => ({ title: l.title ?? '', coverUrl: bookById.get(idOf(l.edition))?.coverUrl })),
       note,
-      reviewHref: unreviewed ? `/book/${unreviewed.slug}#review` : null,
+      reviewHref: unreviewed ? `${productHref(unreviewed)}#review` : null,
       reviewTitle: unreviewed?.title ?? null,
     }
   }
@@ -124,7 +125,7 @@ export default async function AccountPage({ searchParams }: Props) {
       .map((o) => ({ key: `pay-${o.id}`, text: <>Order {o.number} is waiting for an advance of <strong>{formatTaka((o.payNow ?? 0) - (o.paid ?? 0))}</strong>.</>, href: `/order/${o.token}`, cta: 'See how to pay', urgent: true, Icon: AlertIcon })),
     ...quoted.map((r) => {
       const book = typeof r.edition === 'object' ? (r.edition as Edition | null) : null
-      return { key: `req-${r.id}`, text: <>We found <strong>{r.wanted}</strong>{book?.price ? ` for ${formatTaka(book.price)}` : ''}.</>, href: book ? `/book/${book.slug}` : viewHref('requests'), cta: 'Order it', Icon: SearchBookIcon }
+      return { key: `req-${r.id}`, text: <>We found <strong>{r.wanted}</strong>{book?.price ? ` for ${formatTaka(book.price)}` : ''}.</>, href: book ? `${productHref(book)}` : viewHref('requests'), cta: 'Order it', Icon: SearchBookIcon }
     }),
     ...(!customer.name || !customer.address?.street
       ? [{ key: 'details', text: <>Add your name and delivery address to check out faster.</>, href: viewHref('details'), cta: 'Add details', Icon: PersonIcon }]
@@ -272,7 +273,7 @@ export default async function AccountPage({ searchParams }: Props) {
                             <span className="block h-[4.25rem] w-[2.85rem] shrink-0 rounded-[2px] bg-paper-deep" />
                           )}
                           <div className="min-w-0 flex-1">
-                            <Link href={`/book/${b.slug}`} className="line-clamp-2 leading-snug font-medium hover:underline">
+                            <Link href={`${productHref(b)}`} className="line-clamp-2 leading-snug font-medium hover:underline">
                               {b.title}
                             </Link>
                             {b.authorLine ? <p className="truncate text-[0.8125rem] text-ink-soft">{b.authorLine}</p> : null}
@@ -309,7 +310,7 @@ export default async function AccountPage({ searchParams }: Props) {
                           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
                             <div className="min-w-0">
                               {r.book ? (
-                                <Link href={`/book/${r.book.slug}`} className="font-medium hover:underline">
+                                <Link href={`${productHref(r.book)}`} className="font-medium hover:underline">
                                   {r.book.title}
                                 </Link>
                               ) : (
@@ -350,7 +351,7 @@ export default async function AccountPage({ searchParams }: Props) {
                               />
                             ) : null}
                             {r.status === 'published' && r.book ? (
-                              <Link href={`/book/${r.book.slug}#reviews`} className="font-medium underline underline-offset-4">
+                              <Link href={`${productHref(r.book)}#reviews`} className="font-medium underline underline-offset-4">
                                 See it on the book page
                               </Link>
                             ) : null}
@@ -464,7 +465,7 @@ export default async function AccountPage({ searchParams }: Props) {
                         </div>
                         {r.reply ? <p className="mt-3 rounded-ui bg-paper-deep px-3 py-2.5 text-[0.875rem]">“{r.reply}” <span className="text-ink-soft">— AFTERWORD</span></p> : null}
                         {r.status === 'quoted' && book ? (
-                          <Link href={`/book/${book.slug}`} className="btn btn-primary mt-3 !min-h-10 !px-5 text-[0.875rem]">
+                          <Link href={`${productHref(book)}`} className="btn btn-primary mt-3 !min-h-10 !px-5 text-[0.875rem]">
                             {book.price ? `Order for ${formatTaka(book.price)}` : 'See the book'}
                           </Link>
                         ) : null}

@@ -5,8 +5,9 @@ import React, { useEffect, useId, useRef, useState } from 'react'
 
 import { formatTaka } from '../../lib/pricing'
 import { SearchIcon } from './Brand'
+import { productHref } from '../../lib/links'
 
-type Hit = { id: number; title: string; slug: string; authorLine?: string | null; coverUrl?: string | null; price?: number | null; state: string }
+type Hit = { id: number; title: string; slug: string; kind?: string | null; authorLine?: string | null; coverUrl?: string | null; price?: number | null; state: string }
 
 const STATE: Record<string, string> = { in_stock: 'In stock', pre_order: 'Pre-order', on_request: 'On Request', unavailable: 'Out of print' }
 
@@ -159,7 +160,7 @@ export const SearchBox: React.FC<{ variant?: 'line' | 'box'; autoFocus?: boolean
             <ul className={loading ? 'opacity-60' : ''}>
               {hits.map((h) => (
                 <li key={h.id} className="border-b border-rule last:border-b-0">
-                  <Link href={`/book/${h.slug}`} onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-paper-deep">
+                  <Link href={`${productHref(h)}`} onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-paper-deep">
                     <span className="flex h-14 w-10 shrink-0 items-center justify-center">
                       {h.coverUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element

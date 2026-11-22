@@ -6,6 +6,7 @@ import { BookGrid } from '../../../../components/site/Books'
 import { FeaturedBook } from '../../../../components/site/Editorial'
 import { PageHeading } from '../../../../components/site/PageHeading'
 import { getListPage, getNotesFor } from '../../../../lib/catalogue'
+import { productHref } from '../../../../lib/links'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -34,7 +35,7 @@ export default async function CollectionPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: list.title,
-    itemListElement: books.slice(0, 50).map((b, i) => ({ '@type': 'ListItem', position: i + 1, url: `/book/${b.slug}`, name: b.title })),
+    itemListElement: books.slice(0, 50).map((b, i) => ({ '@type': 'ListItem', position: i + 1, url: `${productHref(b)}`, name: b.title })),
   }
 
   return (

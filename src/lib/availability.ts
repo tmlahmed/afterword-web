@@ -11,6 +11,8 @@ export type Availability = {
 }
 
 type BookStock = {
+  /** 'item' for gifts and stationery, which are never ordered in from abroad. */
+  kind?: 'book' | 'item' | null
   sourcing?: 'standard' | 'pre_order' | 'out_of_print' | null
   stockOnHand?: number | null
   expectedDate?: string | null
@@ -50,6 +52,10 @@ export const availabilityOf = (book: BookStock, shop: ShopDefaults = {}): Availa
       detail: onHand <= 2 ? `${promise}. Only ${onHand} left.` : `${promise}.`,
       orderable: true,
     }
+  }
+  // Gifts and stationery come only from our own shelves: none left means sold out.
+  if (book.kind === 'item') {
+    return { state: 'unavailable', label: 'Sold out', detail: 'Sold out for now. We will have more soon.', orderable: false }
   }
   const weeks = book.leadTimeWeeks || shop.defaultLeadTimeWeeks || 4
   return {

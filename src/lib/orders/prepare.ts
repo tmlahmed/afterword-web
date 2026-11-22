@@ -85,12 +85,17 @@ export const prepareOrder = async (data: Partial<Order>, req: PayloadRequest, co
     if (book!.sourcing === 'out_of_print') fail(`“${book!.title}” is out of print and cannot be ordered.`)
     if (!book!.price || book!.price <= 0) fail(`“${book!.title}” has no price yet.`)
 
+    if (book!.kind === 'item' && (book!.stockOnHand ?? 0) <= 0 && book!.sourcing !== 'pre_order') fail(`“${book!.title}” is sold out.`)
     let kind: LineKind = book!.sourcing === 'pre_order' ? 'pre_order' : 'on_request'
     let allocated = false
     const onHand = book!.stockOnHand ?? 0
     if (book!.sourcing === 'standard' && onHand > 0) {
       if (onHand < quantity || !(await takeCopies(payload, editionId, quantity, req))) {
-        fail(`Only ${onHand} ${onHand === 1 ? 'copy' : 'copies'} of “${book!.title}” ${onHand === 1 ? 'is' : 'are'} left. Please reduce the quantity.`)
+        fail(
+          book!.kind === 'item'
+            ? `Only ${onHand} of “${book!.title}” left. Please reduce the quantity.`
+            : `Only ${onHand} ${onHand === 1 ? 'copy' : 'copies'} of “${book!.title}” ${onHand === 1 ? 'is' : 'are'} left. Please reduce the quantity.`,
+        )
       }
       kind = 'in_stock'
       allocated = true

@@ -15,6 +15,8 @@ export type MiniBagLine = {
   id: number
   title: string
   slug: string
+  /** The book's or item's page. */
+  href: string
   authorLine?: string | null
   coverUrl?: string | null
   unitPrice: number
@@ -210,7 +212,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
             <ul className="min-h-0 flex-1 overflow-y-auto px-5">
               {shown.map((l) => (
                 <li key={l.id} className={`flex gap-3.5 border-b border-rule py-4 last:border-b-0 ${l.id === added ? 'animate-[fadeIn_.4s_ease-out]' : ''}`}>
-                  <Link href={`/book/${l.slug}`} onClick={leave} className="shrink-0">
+                  <Link href={l.href} onClick={leave} className="shrink-0">
                     {l.coverUrl ? (
                       <Image src={l.coverUrl} alt="" width={56} height={84} sizes="56px" className="h-[5.25rem] w-auto max-w-[3.5rem] rounded-[2px] object-contain shadow-cover" />
                     ) : (
@@ -218,7 +220,7 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
                     )}
                   </Link>
                   <div className="min-w-0 flex-1">
-                    <Link href={`/book/${l.slug}`} onClick={leave} className="line-clamp-2 font-display text-[1.0625rem] leading-snug hover:underline">
+                    <Link href={l.href} onClick={leave} className="line-clamp-2 font-display text-[1.0625rem] leading-snug hover:underline">
                       {l.title}
                     </Link>
                     {l.authorLine ? <p className="truncate text-[0.8125rem] text-ink-soft">{l.authorLine}</p> : null}

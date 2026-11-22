@@ -8,6 +8,7 @@ import { ArticleCard } from '../../components/site/Editorial'
 import { JsonLd } from '../../components/site/JsonLd'
 import { getArticles, getHome, getSettings } from '../../lib/catalogue'
 import { siteUrl } from '../../lib/notify'
+import { productHref } from '../../lib/links'
 
 const PROMISES = [
   { title: 'Original, always', body: 'Every book is a genuine publisher’s edition.' },
@@ -46,7 +47,7 @@ export default async function HomePage() {
         <section className="mx-auto max-w-6xl px-4 pt-6 md:pt-10">
           <div className="grid overflow-hidden border rounded-ui border-rule md:grid-cols-[3fr_5fr]">
             <Link
-              href={`/book/${feature.slug}`}
+              href={`${productHref(feature)}`}
               className={`flex items-center justify-center px-8 py-10 md:px-6 md:py-12 lg:px-10 lg:py-14 ${tintFor(feature.id)}`}
             >
               <Cover
@@ -61,7 +62,7 @@ export default async function HomePage() {
             <div className="flex flex-col justify-center border-t border-rule px-5 py-8 md:border-l md:border-t-0 md:px-8 md:py-12 lg:px-12 lg:py-14">
               <p className="eyebrow !text-accent">{home.eyebrow || 'Book of the Month'}</p>
               <h1 className="display mt-3 text-[2.25rem] md:text-[2.625rem] lg:text-[3.25rem]">
-                <Link href={`/book/${feature.slug}`}>{feature.title}</Link>
+                <Link href={`${productHref(feature)}`}>{feature.title}</Link>
               </h1>
               {feature.authorLine ? <p className="mt-2 font-display text-[1.1875rem] text-ink-soft">{feature.authorLine}</p> : null}
 
@@ -73,7 +74,7 @@ export default async function HomePage() {
               ) : null}
 
               <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
-                <Link href={`/book/${feature.slug}`} className="btn btn-primary">
+                <Link href={`${productHref(feature)}`} className="btn btn-primary">
                   View the book <ArrowIcon />
                 </Link>
                 <p className="flex items-baseline gap-4 text-[0.9375rem]">
@@ -107,7 +108,7 @@ export default async function HomePage() {
             {quote && i === quoteAfter ? (
               <section className="bg-ink text-paper">
                 <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 md:grid-cols-[auto_1fr] md:gap-16 md:py-20">
-                  <Link href={`/book/${quote.book.slug}`} className="justify-self-start">
+                  <Link href={`${productHref(quote.book)}`} className="justify-self-start">
                     <Cover
                       title={quote.book.title}
                       author={quote.book.authorLine}
@@ -122,7 +123,7 @@ export default async function HomePage() {
                     </blockquote>
                     <figcaption className="mt-6 text-[0.9375rem] text-paper/75">
                       {quote.note.signedBy}, on{' '}
-                      <Link href={`/book/${quote.book.slug}`} className="link text-paper">
+                      <Link href={`${productHref(quote.book)}`} className="link text-paper">
                         {quote.book.title}
                       </Link>
                       {quote.book.authorLine ? ` by ${quote.book.authorLine}` : ''}

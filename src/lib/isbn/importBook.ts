@@ -119,6 +119,7 @@ export const importBook = async (payload: Payload, rawIsbn: string, options: Opt
   const edition = await payload.create({
     collection: 'editions',
     data: {
+      kind: 'book',
       title: record.title,
       subtitle: record.subtitle,
       isbn13,

@@ -6,18 +6,20 @@ import { getPayload } from 'payload'
 import sharp from 'sharp'
 
 /**
- * GET /feeds/cover/<isbn>.jpg — a book's cover as a JPEG, for the shopping feeds.
+ * GET /feeds/cover/<isbn>.jpg (a book) or /feeds/cover/item-<id>.jpg (a gift or stationery item):
+ * the main picture as a JPEG, for the shopping feeds.
  * Covers are stored as WebP, which Meta's catalogue does not reliably accept.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ file: string }> }) {
   const { file } = await params
   const isbn = /^(\d{13})\.jpg$/.exec(file)?.[1]
-  if (!isbn) return new Response('Not found', { status: 404 })
+  const itemId = Number(/^item-(\d+)\.jpg$/.exec(file)?.[1])
+  if (!isbn && !itemId) return new Response('Not found', { status: 404 })
   const payload = await getPayload({ config })
   const book = (
     await payload.find({
       collection: 'editions',
-      where: { and: [{ isbn13: { equals: isbn } }, { status: { equals: 'published' } }] },
+      where: { and: [isbn ? { isbn13: { equals: isbn } } : { id: { equals: itemId } }, { status: { equals: 'published' } }] },
       select: { coverUrl: true },
       limit: 1,
       depth: 0,

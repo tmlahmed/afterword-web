@@ -34,6 +34,8 @@ export type BookDocument = {
   title: string
   subtitle?: string | null
   slug: string
+  /** 'item' for gifts and stationery (their pages are at /item/…). */
+  kind: 'book' | 'item'
   authorLine?: string | null
   contributors: string[]
   isbn13: string
@@ -74,11 +76,12 @@ export const toDocument = (book: Edition, parents: Map<number, Subject>, lists: 
     title: book.title,
     subtitle: book.subtitle,
     slug: book.slug,
+    kind: book.kind === 'item' ? 'item' : 'book',
     authorLine: book.authorLine,
     contributors: (book.contributors ?? [])
       .map((c) => obj<Contributor>(c.contributor)?.name)
       .filter((n): n is string => Boolean(n)),
-    isbn13: book.isbn13,
+    isbn13: book.isbn13 ?? '',
     publisher: publisher?.name,
     publisherSlug: publisher?.slug,
     series: series?.name,
@@ -86,7 +89,8 @@ export const toDocument = (book: Edition, parents: Map<number, Subject>, lists: 
     subjects: [...new Set(withParents.map((s) => s.slug))],
     subjectNames: [...new Set(withParents.map((s) => s.name))],
     lists,
-    format: book.format,
+    // Gifts and stationery are filtered by their type (Bookmark, Notebook…), books by format.
+    format: book.kind === 'item' ? (book.itemType ?? 'other') : (book.format ?? 'paperback'),
     language: book.language,
     price: book.price,
     compareAtPrice: book.compareAtPrice,
@@ -275,7 +279,7 @@ export const searchIndex = async (query: BrowseQuery): Promise<BrowseResult> => 
 }
 
 /** Up to six quick matches for the search box. */
-export const suggest = async (q: string): Promise<Pick<BookDocument, 'id' | 'title' | 'slug' | 'authorLine' | 'coverUrl' | 'price' | 'state'>[]> => {
+export const suggest = async (q: string): Promise<Pick<BookDocument, 'id' | 'title' | 'slug' | 'kind' | 'authorLine' | 'coverUrl' | 'price' | 'state'>[]> => {
   const res = await call<{ hits: BookDocument[] }>(
     `/indexes/${INDEX}/search`,
     {
@@ -283,7 +287,7 @@ export const suggest = async (q: string): Promise<Pick<BookDocument, 'id' | 'tit
       body: JSON.stringify({
         q,
         limit: 6,
-        attributesToRetrieve: ['id', 'title', 'slug', 'authorLine', 'coverUrl', 'price', 'state'],
+        attributesToRetrieve: ['id', 'title', 'slug', 'kind', 'authorLine', 'coverUrl', 'price', 'state'],
       }),
     },
     1500,
