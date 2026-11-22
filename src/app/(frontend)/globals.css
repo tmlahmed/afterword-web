@@ -64,6 +64,17 @@
 
 @layer components {
   /* Small-caps label used above titles and in tables. */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   /* A book cover's shadow, drawn around the picture itself rather than its box. */
   .shadow-cover {
     filter: drop-shadow(0 1px 1px rgb(17 17 17 / 0.16)) drop-shadow(0 10px 11px rgb(17 17 17 / 0.22));

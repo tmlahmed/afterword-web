@@ -775,11 +775,11 @@ export const AddToBag: React.FC<{ edition: number; label: string; compact?: bool
     if (pending || !flash) return
     if (announced.current !== flash) {
       announced.current = flash
-      window.dispatchEvent(new CustomEvent(BAG_ADDED_EVENT))
+      window.dispatchEvent(new CustomEvent(BAG_ADDED_EVENT, { detail: { edition } }))
     }
     const t = setTimeout(() => setFlash(0), 2200)
     return () => clearTimeout(t)
-  }, [pending, flash])
+  }, [pending, flash, edition])
 
   return (
     <div className={compact ? '' : 'mt-5'}>

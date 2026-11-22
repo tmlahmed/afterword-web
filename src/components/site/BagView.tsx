@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import React, { useActionState, useOptimistic, useState, useTransition } from 'react'
+import React, { useActionState, useEffect, useOptimistic, useRef, useState, useTransition } from 'react'
 
 import { applyPromo, type PromoState, removePromo, setGift, setQuantity } from '../../app/(frontend)/actions'
 import { priceOrder, type Promotion, type ShopRules } from '../../lib/orders/pricing'
@@ -50,6 +50,34 @@ export const BagView: React.FC<{
   const [note, setNote] = useState(savedNote)
   const [noteSaved, setNoteSaved] = useState(false)
   const [promoState, promoAction, promoPending] = useActionState<PromoState, FormData>(applyPromo, {})
+
+  // Safari (and others) put the cursor in the promotion code box by themselves as the page opens
+  // or comes back. The box takes the cursor only once the shopper has clicked, tapped or used the
+  // keyboard; anything earlier is turned away as it happens, before the cursor is drawn.
+  const shopperActed = useRef(false)
+  useEffect(() => {
+    const mark = () => (shopperActed.current = true)
+    // Capture phase: these run before the box receives the focus they cause.
+    window.addEventListener('pointerdown', mark, { capture: true, once: true })
+    window.addEventListener('keydown', mark, { capture: true, once: true })
+    window.addEventListener('touchstart', mark, { capture: true, once: true, passive: true })
+    // A page restored by Back starts again: the shopper has not acted on it yet.
+    const restored = (e: PageTransitionEvent) => {
+      if (!e.persisted) return
+      shopperActed.current = false
+      window.addEventListener('pointerdown', mark, { capture: true, once: true })
+      window.addEventListener('keydown', mark, { capture: true, once: true })
+      const el = document.activeElement
+      if (el instanceof HTMLInputElement && el.id === 'promoCode') el.blur()
+    }
+    window.addEventListener('pageshow', restored)
+    return () => {
+      window.removeEventListener('pointerdown', mark, { capture: true })
+      window.removeEventListener('keydown', mark, { capture: true })
+      window.removeEventListener('touchstart', mark, { capture: true })
+      window.removeEventListener('pageshow', restored)
+    }
+  }, [])
 
   const save = (line: BagViewLine, quantity: number) => {
     if (quantity <= 0) setRemoved(line)
@@ -181,6 +209,9 @@ export const BagView: React.FC<{
               defaultValue={promoState.tried}
               id="promoCode"
               name="promoCode"
+              onFocus={(e) => {
+                if (!shopperActed.current) e.currentTarget.blur()
+              }}
               autoComplete="off"
               autoCapitalize="characters"
               placeholder="Enter code"
