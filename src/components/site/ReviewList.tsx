@@ -8,6 +8,7 @@ import type { ReviewItem, ReviewSort } from '../../lib/reviews'
 import { Expandable } from './BookParts'
 import { CloseIcon } from './Brand'
 import { ReviewForm } from './Forms'
+import { lockScroll } from '../../lib/scrollLock'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dhaka' })
 
@@ -131,12 +132,11 @@ export const WriteReview: React.FC<{ edition: number }> = ({ edition }) => {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockScroll()
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
+      unlock()
     }
   })
   return (

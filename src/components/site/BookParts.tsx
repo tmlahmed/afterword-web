@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { CloseIcon } from './Brand'
+import { lockScroll } from '../../lib/scrollLock'
 
 /** Interactive parts of the book page: the photo gallery, "Read more", and the phone buy bar. */
 
@@ -127,13 +128,12 @@ const Lightbox: React.FC<{ photos: GalleryPhoto[]; at: number; setAt: React.Disp
       if (e.key === 'ArrowLeft') go(-1)
       if (e.key === 'ArrowRight') go(1)
     }
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockScroll()
     document.addEventListener('keydown', onKey)
     closeRef.current?.focus()
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
+      unlock()
     }
   }, [go, onClose])
 

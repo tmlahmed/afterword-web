@@ -10,6 +10,7 @@ import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
 import { CloseIcon } from './Brand'
 import { BAG_ADDED_EVENT } from './MiniBag'
+import { lockScroll } from '../../lib/scrollLock'
 
 const field = 'h-12 w-full rounded-ui border border-ink/60 bg-card px-3 text-base placeholder:text-ink-faint focus:border-primary focus:outline-none'
 const label = 'mb-1.5 block text-[0.8125rem] font-semibold'
@@ -125,14 +126,13 @@ const QrCard: React.FC<{ qr: { svg: string; png: string; name: string | null }; 
   React.useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockScroll()
     document.addEventListener('keydown', onKey)
     closeRef.current?.focus()
     const opener = openerRef.current
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
+      unlock()
       opener?.focus()
     }
   }, [open])

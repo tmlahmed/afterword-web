@@ -9,6 +9,7 @@ import { setQuantity } from '../../app/(frontend)/actions'
 import { formatTaka } from '../../lib/pricing'
 import { BagIcon, CloseIcon } from './Brand'
 import { QtyStepper } from './QtyStepper'
+import { lockScroll } from '../../lib/scrollLock'
 
 export type MiniBagLine = {
   id: number
@@ -118,12 +119,11 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
         first.focus()
       }
     }
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockScroll()
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
+      unlock()
     }
   }, [open, close])
 
@@ -156,8 +156,10 @@ export const MiniBag: React.FC<{ data: MiniBagData }> = ({ data }) => {
         role="dialog"
         aria-modal="true"
         aria-label="Your bag"
-        className={`absolute inset-y-0 right-0 flex w-[min(26.5rem,92vw)] flex-col bg-paper shadow-[-24px_0_48px_-24px_rgb(17_17_17/0.45)] transition-transform duration-300 ease-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        // The shadow only while open: closed, the panel waits just off screen and its shadow
+        // would otherwise fall along the right edge of every page.
+        className={`absolute inset-y-0 right-0 flex w-[min(26.5rem,92vw)] flex-col bg-paper transition-[transform,box-shadow,visibility] duration-300 ease-out ${
+          open ? 'visible translate-x-0 shadow-[-24px_0_48px_-24px_rgb(17_17_17/0.45)]' : 'invisible translate-x-full shadow-none'
         }`}
       >
         <div className="flex items-center justify-between border-b border-rule px-5 py-4">
