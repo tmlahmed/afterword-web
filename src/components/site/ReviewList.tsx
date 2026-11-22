@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState, useSyncExternalStore, useTransition } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 
 import { loadReviews } from '../../app/(frontend)/actions'
 import type { ReviewItem, ReviewSort } from '../../lib/reviews'
 import { Expandable } from './BookParts'
 import { CloseIcon } from './Brand'
-import { ReviewForm } from './Forms'
+import { type ExistingReview, ReviewForm, type ReviewBook } from './Forms'
 import { lockScroll } from '../../lib/scrollLock'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dhaka' })
@@ -118,16 +119,30 @@ const subscribeHash = (cb: () => void) => {
   return () => window.removeEventListener('hashchange', cb)
 }
 
-/** "Write a review": the form opens in a window over the page (also when arriving at #review). */
-export const WriteReview: React.FC<{ edition: number }> = ({ edition }) => {
+/**
+ * The review form in a window over the page, opened by its own button: to write a review, or
+ * (with `existing`) to change one. `openOnHash` also opens it when the page is reached at
+ * #review, as the account page links do.
+ */
+export const ReviewDialog: React.FC<{
+  edition: number
+  book: ReviewBook
+  existing?: ExistingReview
+  label: React.ReactNode
+  buttonClassName: string
+  openOnHash?: boolean
+}> = ({ edition, book, existing, label, buttonClassName, openOnHash = false }) => {
+  const router = useRouter()
   const [clicked, setClicked] = useState(false)
   const [closedHash, setClosedHash] = useState(false)
   const hash = useSyncExternalStore(subscribeHash, () => window.location.hash, () => '')
-  const open = clicked || (hash === '#review' && !closedHash)
+  const open = clicked || (openOnHash && hash === '#review' && !closedHash)
   const close = () => {
     setClicked(false)
     setClosedHash(true)
     if (window.location.hash === '#review') history.replaceState(null, '', window.location.pathname + window.location.search)
+    // A review written or changed shows up in the lists behind the window.
+    router.refresh()
   }
   useEffect(() => {
     if (!open) return
@@ -141,12 +156,18 @@ export const WriteReview: React.FC<{ edition: number }> = ({ edition }) => {
   })
   return (
     <>
-      <button type="button" onClick={() => setClicked(true)} className="btn btn-primary mt-4 w-full">
-        Write a review
+      <button type="button" onClick={() => setClicked(true)} className={buttonClassName}>
+        {label}
       </button>
       {open
         ? createPortal(
-            <div role="dialog" aria-modal="true" aria-label="Write a review" onClick={close} className="fixed inset-0 z-[100] flex items-end justify-center bg-ink/60 sm:items-center sm:p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={existing ? 'Edit your review' : 'Write a review'}
+              onClick={close}
+              className="fixed inset-0 z-[100] flex items-end justify-center bg-ink/60 sm:items-center sm:p-4"
+            >
               <div onClick={(e) => e.stopPropagation()} className="relative max-h-[92vh] w-full max-w-[36rem] overflow-y-auto rounded-t-[12px] bg-paper sm:rounded-ui">
                 <button
                   type="button"
@@ -156,12 +177,35 @@ export const WriteReview: React.FC<{ edition: number }> = ({ edition }) => {
                 >
                   <CloseIcon />
                 </button>
-                <ReviewForm edition={edition} />
+                <ReviewForm edition={edition} book={book} existing={existing} />
               </div>
             </div>,
             document.body,
           )
         : null}
+    </>
+  )
+}
+
+/** "Write a review" on a book page. */
+export const WriteReview: React.FC<{ edition: number; book: ReviewBook }> = ({ edition, book }) => (
+  <ReviewDialog edition={edition} book={book} label="Write a review" buttonClassName="btn btn-primary mt-4 w-full" openOnHash />
+)
+
+/** The first few items, then a button that shows the rest in place. */
+export const ShowFirst: React.FC<{ count: number; noun: string; children: React.ReactNode[] }> = ({ count, noun, children }) => {
+  const [all, setAll] = useState(false)
+  const shown = all ? children : children.slice(0, count)
+  return (
+    <>
+      {shown}
+      {!all && children.length > count ? (
+        <li className="list-none sm:col-span-2">
+          <button type="button" onClick={() => setAll(true)} className="btn btn-quiet w-full">
+            Show all {children.length} {noun}
+          </button>
+        </li>
+      ) : null}
     </>
   )
 }

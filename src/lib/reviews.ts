@@ -83,18 +83,85 @@ export const reviewEligibility = async (
   return { canReview: true, orderId: orders.docs[0].id }
 }
 
-/** Books from a customer's delivered orders that they have not reviewed yet. */
-export const booksToReview = async (payload: Payload, customerId: number) => {
+export type BookToReview = { id: number; title: string; slug: string; authorLine?: string | null; coverUrl?: string | null; deliveredAt: string }
+
+/**
+ * Books from a customer's delivered orders that they have not reviewed yet, the most recently
+ * delivered first (when the book is freshest in the reader's mind).
+ */
+export const booksToReview = async (payload: Payload, customerId: number): Promise<BookToReview[]> => {
   const [orders, reviewed] = await Promise.all([
-    payload.find({ collection: 'orders', where: { and: [{ customer: { equals: customerId } }, { status: { equals: 'delivered' } }] }, depth: 0, pagination: false, overrideAccess: true }),
+    payload.find({
+      collection: 'orders',
+      where: { and: [{ customer: { equals: customerId } }, { status: { equals: 'delivered' } }] },
+      sort: '-updatedAt',
+      depth: 0,
+      pagination: false,
+      overrideAccess: true,
+    }),
     payload.find({ collection: 'reviews', where: { customer: { equals: customerId } }, select: { edition: true }, depth: 0, pagination: false, overrideAccess: true }),
   ])
   const done = new Set(reviewed.docs.map((r) => (typeof r.edition === 'object' ? r.edition.id : r.edition)))
-  const ids = [...new Set(orders.docs.flatMap((o) => (o.lines ?? []).map((l) => (typeof l.edition === 'object' ? l.edition.id : l.edition))))].filter((id) => !done.has(id))
-  if (!ids.length) return []
-  return (
-    await payload.find({ collection: 'editions', where: { and: [{ id: { in: ids } }, { status: { equals: 'published' } }] }, select: { title: true, slug: true, authorLine: true }, depth: 0, pagination: false, overrideAccess: true })
-  ).docs
+  // Each book with the date of the latest delivered order it came in.
+  const deliveredAt = new Map<number, string>()
+  for (const o of orders.docs) {
+    for (const l of o.lines ?? []) {
+      const id = typeof l.edition === 'object' ? l.edition.id : l.edition
+      if (!done.has(id) && !deliveredAt.has(id)) deliveredAt.set(id, o.updatedAt)
+    }
+  }
+  if (!deliveredAt.size) return []
+  const books = await payload.find({
+    collection: 'editions',
+    where: { and: [{ id: { in: [...deliveredAt.keys()] } }, { status: { equals: 'published' } }] },
+    select: { title: true, slug: true, authorLine: true, coverUrl: true },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+  })
+  return books.docs
+    .map((b) => ({ id: b.id, title: b.title, slug: b.slug, authorLine: b.authorLine, coverUrl: b.coverUrl, deliveredAt: deliveredAt.get(b.id)! }))
+    .sort((a, b) => b.deliveredAt.localeCompare(a.deliveredAt))
+}
+
+export type MyReview = {
+  id: number
+  rating: number
+  title: string
+  body: string
+  displayName: string
+  status: 'pending' | 'published' | 'rejected'
+  reply?: string | null
+  createdAt: string
+  updatedAt: string
+  book: { id: number; title: string; slug: string; authorLine?: string | null; coverUrl?: string | null } | null
+}
+
+/** Every review a customer has written, newest first, with its book and where it stands. */
+export const customerReviews = async (payload: Payload, customerId: number): Promise<MyReview[]> => {
+  const found = await payload.find({
+    collection: 'reviews',
+    where: { customer: { equals: customerId } },
+    sort: '-updatedAt',
+    depth: 1,
+    pagination: false,
+    overrideAccess: true,
+  })
+  return found.docs.map((r) => {
+    const b = typeof r.edition === 'object' ? r.edition : null
+    return {
+      id: r.id,
+      rating: r.rating,
+      title: r.title,
+      body: r.body,
+      displayName: r.displayName,
+      status: r.status,
+      reply: r.reply,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      book: b ? { id: b.id, title: b.title, slug: b.slug, authorLine: b.authorLine, coverUrl: b.coverUrl } : null,
+    }
+  })
 }
 
 /** "Tamal Ahmed" → "Tamal A." */

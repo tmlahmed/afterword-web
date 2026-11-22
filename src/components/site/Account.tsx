@@ -6,7 +6,7 @@ import { formatTaka } from '../../lib/pricing'
 
 /** Pieces of the account pages. Server components; nothing here runs in the browser. */
 
-export type AccountView = 'overview' | 'orders' | 'rewards' | 'requests' | 'details'
+export type AccountView = 'overview' | 'orders' | 'reviews' | 'rewards' | 'requests' | 'details'
 
 type IconProps = { className?: string }
 const icon = (d: React.ReactNode) => {
@@ -51,6 +51,7 @@ export const AlertIcon = icon(
 export const NAV: { view: AccountView; label: string; Icon: React.FC<IconProps> }[] = [
   { view: 'overview', label: 'Overview', Icon: HomeIcon },
   { view: 'orders', label: 'Orders', Icon: BoxIcon },
+  { view: 'reviews', label: 'Reviews', Icon: PenIcon },
   { view: 'rewards', label: 'Reward points', Icon: StarIcon },
   { view: 'requests', label: 'Book requests', Icon: SearchBookIcon },
   { view: 'details', label: 'Your details', Icon: PersonIcon },
@@ -204,6 +205,8 @@ export type OrderCardData = {
   /** Something the customer should know or do, shown under the books. */
   note?: string | null
   reviewHref?: string | null
+  /** The book that link reviews, named on the button. */
+  reviewTitle?: string | null
 }
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' })
@@ -258,7 +261,7 @@ export const OrderCard: React.FC<{ order: OrderCardData }> = ({ order: o }) => {
           {o.note ? <span className="text-ink-soft">{o.note}</span> : <span />}
           {o.reviewHref ? (
             <Link href={o.reviewHref} className="inline-flex items-center gap-1.5 font-medium hover:underline">
-              <PenIcon className="size-4" /> Write a review
+              <PenIcon className="size-4" /> {o.reviewTitle ? `Review ${o.reviewTitle}` : 'Write a review'}
             </Link>
           ) : null}
         </div>

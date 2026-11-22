@@ -287,6 +287,33 @@ export async function submitReview(_prev: ReviewState, form: FormData): Promise<
   return { done: true }
 }
 
+/**
+ * A customer changes their own review. It goes back to "Waiting to be checked", so staff read
+ * every change before it is public again.
+ */
+export async function updateReview(_prev: ReviewState, form: FormData): Promise<ReviewState> {
+  const customer = await getCustomer()
+  if (!customer) return { message: 'Please sign in to change your review.' }
+  const id = Number(form.get('reviewId'))
+  const rating = Number(form.get('rating'))
+  const title = text(form, 'title', 90)
+  const body = text(form, 'body', 2000)
+  const displayName = text(form, 'displayName', 40) || shortName(customer.name)
+  if (!Number.isInteger(id) || id <= 0) return { message: 'Something went wrong. Please reload the page.' }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { message: 'Choose a rating from one to five.' }
+  if (title.length < 3) return { message: 'Give your review a short title.' }
+  if (body.length < 20) return { message: 'Tell other readers a little more — a sentence or two at least.' }
+  if (!(await allowed('request'))) return { message: SLOW_DOWN }
+
+  const payload = await getPayload({ config })
+  const review = await payload.findByID({ collection: 'reviews', id, depth: 0, overrideAccess: true, disableErrors: true })
+  const owner = review ? (typeof review.customer === 'object' ? review.customer.id : review.customer) : null
+  if (!review || owner !== customer.id) return { message: 'That review could not be found.' }
+  await payload.update({ collection: 'reviews', id, data: { rating, title, body, displayName, status: 'pending' }, overrideAccess: true, depth: 0 })
+  revalidatePath('/account')
+  return { done: true }
+}
+
 // --- Newsletter ----------------------------------------------------------------
 
 export type NewsletterState = { message?: string; done?: boolean }

@@ -4,7 +4,7 @@ import Image from 'next/image'
 import React, { useActionState, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { addToBag, type AddToBagState, type CheckoutState, type DetailsState, saveDetails, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview } from '../../app/(frontend)/actions'
+import { addToBag, type AddToBagState, type CheckoutState, type DetailsState, saveDetails, joinNewsletter, type NewsletterState, placeOrder, type RequestState, type ReviewState, signIn, type SignInState, submitRequest, submitReview, updateReview } from '../../app/(frontend)/actions'
 import { canSplit, type DeliveryPlan, DISTRICTS, parcelCount, type PaymentPlan, planParcels, type PricedLine, type ShopRules, totalsForParcels, type Totals } from '../../lib/orders/pricing'
 import type { PayMethod } from '../../lib/payments'
 import { formatTaka } from '../../lib/pricing'
@@ -674,26 +674,50 @@ export const RequestForm: React.FC<{ signedIn: boolean; name?: string | null; pr
 
 // --- Reviews -------------------------------------------------------------------
 
-export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
-  const [state, action, pending] = useActionState<ReviewState, FormData>(submitReview, {})
-  const [rating, setRating] = useState(0)
+export type ReviewBook = { title: string; authorLine?: string | null; coverUrl?: string | null }
+
+/** A review already written, to change. */
+export type ExistingReview = { id: number; rating: number; title: string; body: string; displayName: string }
+
+export const ReviewForm: React.FC<{ edition: number; book?: ReviewBook; existing?: ExistingReview }> = ({ edition, book, existing }) => {
+  const [state, action, pending] = useActionState<ReviewState, FormData>(existing ? updateReview : submitReview, {})
+  const [rating, setRating] = useState(existing?.rating ?? 0)
   if (state.done)
     return (
       <div className="px-7 py-10 text-center">
-        <p className="font-display text-[1.25rem]">Thank you for your review.</p>
-        <p className="mt-1.5 text-ink-soft">A bookseller reads every review before it appears, usually within a day or two.</p>
+        <p className="font-display text-[1.25rem]">{existing ? 'Your changes are saved.' : 'Thank you for your review.'}</p>
+        <p className="mt-1.5 text-ink-soft">
+          {existing
+            ? 'A bookseller reads them before they appear, usually within a day or two.'
+            : 'A bookseller reads every review before it appears, usually within a day or two.'}
+        </p>
       </div>
     )
   return (
     <form action={action} className="space-y-4 bg-paper px-5 py-6 sm:px-7 sm:py-7">
-      <p className="font-display text-[1.25rem]">You bought this book. What did you think?</p>
+      {book ? (
+        // Which book this review is for, so it is never in doubt.
+        <div className="flex items-center gap-4 border-b border-rule pr-10 pb-4">
+          {book.coverUrl ? (
+            <Image src={book.coverUrl} alt="" width={48} height={72} sizes="48px" className="h-[4.5rem] w-auto max-w-[3rem] shrink-0 rounded-[2px] object-contain shadow-cover" />
+          ) : null}
+          <div className="min-w-0">
+            <p className="text-[0.75rem] font-semibold tracking-[0.12em] text-ink-soft uppercase">{existing ? 'Edit your review of' : 'Your review of'}</p>
+            <p className="font-display text-[1.25rem] leading-tight">{book.title}</p>
+            {book.authorLine ? <p className="text-[0.875rem] text-ink-soft">{book.authorLine}</p> : null}
+          </div>
+        </div>
+      ) : (
+        <p className="font-display text-[1.25rem]">You bought this book. What did you think?</p>
+      )}
       <input type="hidden" name="edition" value={edition} />
+      {existing ? <input type="hidden" name="reviewId" value={existing.id} /> : null}
       <fieldset>
         <legend className={label}>Your rating</legend>
         <div className="flex gap-1" role="radiogroup">
           {[1, 2, 3, 4, 5].map((n) => (
             <label key={n} className="cursor-pointer p-1" title={`${n} out of 5`}>
-              <input type="radio" name="rating" value={n} required className="sr-only" onChange={() => setRating(n)} />
+              <input type="radio" name="rating" value={n} required defaultChecked={existing?.rating === n} className="sr-only" onChange={() => setRating(n)} />
               <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden fill={n <= rating ? 'var(--color-ink)' : 'none'} stroke="var(--color-ink)" strokeWidth="1.5">
                 <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" strokeLinejoin="round" />
               </svg>
@@ -706,23 +730,24 @@ export const ReviewForm: React.FC<{ edition: number }> = ({ edition }) => {
         <label className={label} htmlFor="rtitle">
           Title
         </label>
-        <input id="rtitle" name="title" required maxLength={90} placeholder="In a few words" className={field} />
+        <input id="rtitle" name="title" required maxLength={90} defaultValue={existing?.title} placeholder="In a few words" className={field} />
       </div>
       <div>
         <label className={label} htmlFor="rbody">
           Your review
         </label>
-        <textarea id="rbody" name="body" required minLength={20} maxLength={2000} rows={5} className={`${field} h-auto py-2.5`} placeholder="What should another reader know? Please keep the ending a secret." />
+        <textarea id="rbody" name="body" required minLength={20} maxLength={2000} rows={5} defaultValue={existing?.body} className={`${field} h-auto py-2.5`} placeholder="What should another reader know? Please keep the ending a secret." />
       </div>
       <div>
         <label className={label} htmlFor="rname">
           Show my name as <span className="font-normal text-ink-soft">(optional)</span>
         </label>
-        <input id="rname" name="displayName" maxLength={40} placeholder="e.g. Nusrat K." className={field} />
+        <input id="rname" name="displayName" maxLength={40} defaultValue={existing?.displayName} placeholder="e.g. Nusrat K." className={field} />
       </div>
+      {existing ? <p className="text-[0.8125rem] text-ink-soft">Changes are read by a bookseller before they appear.</p> : null}
       <ErrorNote message={state.message} />
       <button type="submit" disabled={pending} className="btn btn-primary">
-        {pending ? 'Sending…' : 'Send review'}
+        {pending ? 'Sending…' : existing ? 'Save changes' : 'Send review'}
       </button>
     </form>
   )

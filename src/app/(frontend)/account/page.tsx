@@ -25,10 +25,12 @@ import {
   viewHref,
 } from '../../../components/site/Account'
 import { DetailsForm } from '../../../components/site/Forms'
+import { Stars } from '../../../components/site/Reviews'
+import { ReviewDialog, ShowFirst } from '../../../components/site/ReviewList'
 import { getSettings } from '../../../lib/catalogue'
 import { parcelsOf } from '../../../lib/orders/parcels'
 import { formatTaka } from '../../../lib/pricing'
-import { booksToReview } from '../../../lib/reviews'
+import { booksToReview, customerReviews } from '../../../lib/reviews'
 import { getCustomer } from '../../../lib/session'
 import type { Edition, Order } from '../../../payload-types'
 import { signOut } from '../actions'
@@ -61,12 +63,13 @@ export default async function AccountPage({ searchParams }: Props) {
   if (!customer) redirect('/account/sign-in')
   const { view: asked } = await searchParams
   const payload = await getPayload({ config })
-  const [orders, requests, toReview, points, settings] = await Promise.all([
+  const [orders, requests, toReview, points, settings, myReviews] = await Promise.all([
     payload.find({ collection: 'orders', where: { customer: { equals: customer.id } }, sort: '-createdAt', depth: 0, limit: 50, overrideAccess: true }),
     payload.find({ collection: 'requests', where: { or: [{ customer: { equals: customer.id } }, { contactPhone: { equals: customer.phone } }] }, sort: '-createdAt', depth: 1, limit: 20, overrideAccess: true }),
     booksToReview(payload, customer.id),
     payload.find({ collection: 'reward-entries', where: { customer: { equals: customer.id } }, sort: '-createdAt', depth: 0, limit: 30, overrideAccess: true }),
     getSettings(),
+    customerReviews(payload, customer.id),
   ])
   const rewardsOn = settings.rewardsEnabled !== false
   const views = NAV.map((n) => n.view).filter((v) => v !== 'rewards' || rewardsOn)
@@ -102,6 +105,7 @@ export default async function AccountPage({ searchParams }: Props) {
       books: lines.map((l) => ({ title: l.title ?? '', coverUrl: bookById.get(idOf(l.edition))?.coverUrl })),
       note,
       reviewHref: unreviewed ? `/book/${unreviewed.slug}#review` : null,
+      reviewTitle: unreviewed?.title ?? null,
     }
   }
 
@@ -126,7 +130,7 @@ export default async function AccountPage({ searchParams }: Props) {
       ? [{ key: 'details', text: <>Add your name and delivery address to check out faster.</>, href: viewHref('details'), cta: 'Add details', Icon: PersonIcon }]
       : []),
     ...(toReview.length
-      ? [{ key: 'review', text: <>{toReview.length === 1 ? <>What did you think of <strong>{toReview[0].title}</strong>?</> : <>You have <strong>{toReview.length} books</strong> to review.</>}</>, href: toReview.length === 1 ? `/book/${toReview[0].slug}#review` : viewHref('orders'), cta: 'Write a review', Icon: PenIcon }]
+      ? [{ key: 'review', text: <>{toReview.length === 1 ? <>What did you think of <strong>{toReview[0].title}</strong>?</> : <>You have <strong>{toReview.length} books</strong> to review.</>}</>, href: viewHref('reviews'), cta: toReview.length === 1 ? 'Write a review' : 'Choose a book', Icon: PenIcon }]
       : []),
   ]
 
@@ -167,7 +171,7 @@ export default async function AccountPage({ searchParams }: Props) {
         <aside className="min-w-0 lg:sticky lg:top-32 lg:self-start">
           <AccountNav
             active={view}
-            counts={{ orders: open.length, requests: openRequests.length }}
+            counts={{ orders: open.length, reviews: toReview.length, requests: openRequests.length }}
             hide={rewardsOn ? [] : ['rewards']}
             signOut={signOutButton('flex h-11 w-full items-center gap-3 rounded-ui px-3 text-left text-[0.9375rem] text-ink-soft hover:bg-paper-deep hover:text-ink')}
           />
@@ -247,6 +251,119 @@ export default async function AccountPage({ searchParams }: Props) {
                 <NoOrders />
               </Panel>
             )
+          ) : null}
+
+          {view === 'reviews' ? (
+            <>
+              <p className="text-[0.9375rem] text-ink-soft">
+                Every review helps another reader choose.
+                {myReviews.length ? ` You’ve reviewed ${myReviews.length} ${myReviews.length === 1 ? 'book' : 'books'}.` : ''}
+              </p>
+
+              <Panel title="Waiting for your review">
+                {toReview.length ? (
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    <ShowFirst count={4} noun="books">
+                      {toReview.map((b) => (
+                        <li key={b.id} className="flex items-center gap-3.5 rounded-ui border border-rule p-3">
+                          {b.coverUrl ? (
+                            <Image src={b.coverUrl} alt="" width={44} height={66} sizes="44px" className="h-[4.25rem] w-auto max-w-[2.85rem] shrink-0 rounded-[2px] object-contain shadow-cover" />
+                          ) : (
+                            <span className="block h-[4.25rem] w-[2.85rem] shrink-0 rounded-[2px] bg-paper-deep" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <Link href={`/book/${b.slug}`} className="line-clamp-2 leading-snug font-medium hover:underline">
+                              {b.title}
+                            </Link>
+                            {b.authorLine ? <p className="truncate text-[0.8125rem] text-ink-soft">{b.authorLine}</p> : null}
+                            <p className="text-[0.75rem] text-ink-faint">Delivered {day(b.deliveredAt)}</p>
+                          </div>
+                          <ReviewDialog
+                            edition={b.id}
+                            book={{ title: b.title, authorLine: b.authorLine, coverUrl: b.coverUrl }}
+                            label="Write a review"
+                            buttonClassName="btn btn-primary shrink-0 !min-h-9 !px-3 text-[0.8125rem]"
+                          />
+                        </li>
+                      ))}
+                    </ShowFirst>
+                  </ul>
+                ) : (
+                  <p className="text-[0.9375rem] text-ink-soft">
+                    {myReviews.length ? 'You’ve reviewed everything — thank you.' : 'Books appear here once they have been delivered.'}
+                  </p>
+                )}
+              </Panel>
+
+              <Panel title="Your reviews">
+                {myReviews.length ? (
+                  <ul className="divide-y divide-rule">
+                    {myReviews.map((r) => (
+                      <li key={r.id} className="flex gap-4 py-5 first:pt-0 last:pb-0">
+                        {r.book?.coverUrl ? (
+                          <Image src={r.book.coverUrl} alt="" width={48} height={72} sizes="48px" className="h-[4.5rem] w-auto max-w-[3rem] shrink-0 rounded-[2px] object-contain shadow-cover" />
+                        ) : (
+                          <span className="block h-[4.5rem] w-[3rem] shrink-0 rounded-[2px] bg-paper-deep" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                            <div className="min-w-0">
+                              {r.book ? (
+                                <Link href={`/book/${r.book.slug}`} className="font-medium hover:underline">
+                                  {r.book.title}
+                                </Link>
+                              ) : (
+                                <p className="font-medium">A book no longer listed</p>
+                              )}
+                              {r.book?.authorLine ? <p className="text-[0.8125rem] text-ink-soft">{r.book.authorLine}</p> : null}
+                            </div>
+                            <ReviewStatus status={r.status} />
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <Stars rating={r.rating} />
+                            <span className="text-[0.75rem] text-ink-faint">{day(r.updatedAt)}</span>
+                          </div>
+                          <p className="mt-1.5 font-medium">{r.title}</p>
+                          <p className="mt-1 line-clamp-4 text-[0.9375rem] whitespace-pre-line text-ink-soft">{r.body}</p>
+                          {r.status === 'pending' ? (
+                            <p className="mt-2 text-[0.8125rem] text-ink-soft">A bookseller reads every review before it appears, usually within a day or two.</p>
+                          ) : null}
+                          {r.status === 'rejected' ? (
+                            <p className="mt-2 text-[0.8125rem] text-ink-soft">
+                              This review wasn’t published. Reviews need to be about the book, with no personal details or spoilers in the title. You can edit it and we’ll read it again.
+                            </p>
+                          ) : null}
+                          {r.reply ? (
+                            <div className="mt-3 rounded-ui bg-paper-deep px-4 py-3 text-[0.875rem]">
+                              <p className="text-[0.75rem] font-semibold tracking-[0.12em] text-accent uppercase">AFTERWORD replied</p>
+                              <p className="mt-1">{r.reply}</p>
+                            </div>
+                          ) : null}
+                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.875rem]">
+                            {r.book ? (
+                              <ReviewDialog
+                                edition={r.book.id}
+                                book={{ title: r.book.title, authorLine: r.book.authorLine, coverUrl: r.book.coverUrl }}
+                                existing={{ id: r.id, rating: r.rating, title: r.title, body: r.body, displayName: r.displayName }}
+                                label="Edit"
+                                buttonClassName="font-medium underline underline-offset-4"
+                              />
+                            ) : null}
+                            {r.status === 'published' && r.book ? (
+                              <Link href={`/book/${r.book.slug}#reviews`} className="font-medium underline underline-offset-4">
+                                See it on the book page
+                              </Link>
+                            ) : null}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty icon={<PenIcon />} title="No reviews yet" body="Your reviews will appear here, with what other readers can see." />
+                )}
+              </Panel>
+            </>
           ) : null}
 
           {view === 'rewards' && rewardsOn ? (
@@ -429,3 +546,14 @@ const NoOrders = () => (
   />
 )
 
+
+const REVIEW_STATUS: Record<string, { text: string; className: string }> = {
+  published: { text: 'Published', className: 'border-rule bg-paper-deep text-ink' },
+  pending: { text: 'Waiting to be checked', className: 'border-ink bg-ink text-paper' },
+  rejected: { text: 'Not published', className: 'border-rule bg-paper text-ink-soft' },
+}
+
+const ReviewStatus: React.FC<{ status: string }> = ({ status }) => {
+  const s = REVIEW_STATUS[status] ?? REVIEW_STATUS.pending
+  return <span className={`inline-flex h-6 shrink-0 items-center rounded-full border px-2.5 text-[0.75rem] font-semibold whitespace-nowrap ${s.className}`}>{s.text}</span>
+}

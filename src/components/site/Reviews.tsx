@@ -29,7 +29,9 @@ export const ReaderReviews: React.FC<{
   counts: Record<1 | 2 | 3 | 4 | 5, number>
   average?: number | null
   eligibility: Eligibility
-}> = ({ editionId, slug, first, counts, average, eligibility }) => {
+  /** The book, shown at the top of the review form. */
+  book: { title: string; authorLine?: string | null; coverUrl?: string | null }
+}> = ({ editionId, slug, first, counts, average, eligibility, book }) => {
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
   return (
     <section id="reviews" aria-labelledby="reviews-title" className="scroll-mt-32">
@@ -72,11 +74,15 @@ export const ReaderReviews: React.FC<{
               </>
             )}
 
-            <div id="review" className="scroll-mt-32">
+            <div>
               {eligibility.canReview ? (
-                <WriteReview edition={editionId} />
+                <WriteReview edition={editionId} book={book} />
               ) : eligibility.reason === 'already' ? (
-                <p className="mt-4 border-t border-rule pt-4 text-[0.875rem] text-ink-soft">Thank you for your review. It appears once we have read it.</p>
+                <p className="mt-4 border-t border-rule pt-4 text-[0.875rem] text-ink-soft">Thank you for your review. It appears once we have read it.{' '}
+                  <Link href="/account?view=reviews" className="font-medium text-ink underline underline-offset-4">
+                    Your reviews
+                  </Link>
+                </p>
               ) : eligibility.reason === 'signed_out' ? (
                 <p className="mt-4 border-t border-rule pt-4 text-[0.875rem] text-ink-soft">
                   Bought it from us?{' '}

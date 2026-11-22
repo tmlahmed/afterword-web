@@ -381,7 +381,7 @@ export default async function BookPage({ params }: Props) {
       </div>
 
       <div className="mx-auto mt-14 max-w-6xl border-t border-rule px-4 pt-12 md:mt-20 md:pt-16">
-        <ReaderReviews editionId={book.id} slug={book.slug} first={firstReviews} counts={counts} average={reviewAverage} eligibility={eligibility} />
+        <ReaderReviews editionId={book.id} slug={book.slug} first={firstReviews} counts={counts} average={reviewAverage} eligibility={eligibility} book={{ title: book.title, authorLine: book.authorLine, coverUrl: book.coverUrl }} />
       </div>
 
       {/* Phones: price and button stay at hand once the buy box has scrolled away */}
