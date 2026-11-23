@@ -29,9 +29,8 @@ const STATUS: Record<Progress['status'], string> = {
 const box: React.CSSProperties = {
   border: '1px solid var(--theme-elevation-150)',
   borderRadius: 4,
-  padding: '1rem 1.25rem',
+  padding: '1.25rem',
   marginBottom: '1.5rem',
-  maxWidth: '52rem',
 }
 
 /** Live progress for one import, polled every few seconds while it runs. */
@@ -132,6 +131,17 @@ export const CatalogueImport: React.FC = () => {
   const [busy, setBusy] = useState(false)
   const [jobId, setJobId] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
+  const [over, setOver] = useState(false)
+
+  /** Takes a chosen or dropped file; anything but a CSV is refused with a message. */
+  const pick = (f: File | null) => {
+    if (f && !/\.csv$/i.test(f.name) && f.type !== 'text/csv') {
+      toast.error('That is not a CSV file. In Excel or Google Sheets, save or download the sheet as CSV.')
+      return
+    }
+    setFile(f)
+    if (!f && input.current) input.current.value = ''
+  }
 
   const downloadTemplate = () => {
     const url = URL.createObjectURL(new Blob([templateCsv()], { type: 'text/csv' }))
@@ -160,8 +170,7 @@ export const CatalogueImport: React.FC = () => {
       toast.success(`Importing ${body.total} books.${body.skipped ? ` ${body.skipped} rows could not be read.` : ''}`)
       if (body.unknownColumns?.length) toast.warning(`Ignored columns: ${body.unknownColumns.join(', ')}`)
       setJobId(body.id)
-      setFile(null)
-      if (input.current) input.current.value = ''
+      pick(null)
     } catch {
       toast.error('Could not reach the server. Try again.')
     } finally {
@@ -187,16 +196,87 @@ export const CatalogueImport: React.FC = () => {
           <li>Books already in the catalogue are updated, not duplicated. You can run the same file again safely.</li>
         </ul>
       ) : null}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-        <input ref={input} type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <Button buttonStyle="primary" size="small" disabled={!file || busy} onClick={start}>
-          {busy ? 'Reading the file…' : 'Start import'}
-        </Button>
-        <Button buttonStyle="secondary" size="small" onClick={downloadTemplate}>
-          Download a template
-        </Button>
+      {/* The file on the left (click or drop), the two buttons on the right, all 40px tall like "Add book". */}
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'stretch', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+        <label
+          onDragOver={(e) => {
+            e.preventDefault()
+            setOver(true)
+          }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setOver(false)
+            const dropped = e.dataTransfer.files?.[0]
+            if (dropped) pick(dropped)
+          }}
+          style={{
+            position: 'relative',
+            flex: '1 1 18rem',
+            minWidth: 0,
+            height: 40,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            padding: '0 0.75rem',
+            border: `1px ${file ? 'solid' : 'dashed'} ${over ? 'var(--theme-elevation-800)' : 'var(--theme-elevation-250)'}`,
+            borderRadius: 'var(--style-radius-s, 3px)',
+            background: over ? 'var(--theme-elevation-50)' : 'var(--theme-input-bg)',
+            cursor: 'pointer',
+            fontSize: 14,
+            color: 'var(--theme-elevation-800)',
+          }}
+        >
+          <input ref={input} type="file" accept=".csv,text/csv" onChange={(e) => pick(e.target.files?.[0] ?? null)} style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, opacity: 0.7 }}>
+            {file ? (
+              <>
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                <path d="M8 13h8M8 17h8" />
+              </>
+            ) : (
+              <>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <path d="m17 8-5-5-5 5" />
+                <path d="M12 3v12" />
+              </>
+            )}
+          </svg>
+          {file ? (
+            <>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{file.name}</span>
+              <span style={{ fontSize: 12, color: 'var(--theme-elevation-500)', whiteSpace: 'nowrap' }}>{Math.max(1, Math.round(file.size / 1024))} KB</span>
+              <button
+                type="button"
+                aria-label="Remove the file"
+                onClick={(e) => {
+                  e.preventDefault()
+                  pick(null)
+                }}
+                style={{ display: 'inline-flex', padding: 4, margin: '0 -4px 0 0', background: 'none', border: 0, color: 'var(--theme-elevation-500)', cursor: 'pointer' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <span style={{ color: 'var(--theme-elevation-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'var(--theme-elevation-800)', fontWeight: 500 }}>Choose a CSV file</span> or drop it here
+            </span>
+          )}
+        </label>
+        <div style={{ display: 'flex', gap: '0.75rem', marginLeft: 'auto' }}>
+          <Button buttonStyle="secondary" size="medium" margin={false} onClick={downloadTemplate}>
+            Download template
+          </Button>
+          <Button buttonStyle="primary" size="medium" margin={false} disabled={!file || busy} onClick={start}>
+            {busy ? 'Reading the file…' : 'Start import'}
+          </Button>
+        </div>
       </div>
-      <p style={{ margin: '0.5rem 0 0', fontSize: 13, color: 'var(--theme-elevation-600)' }}>
+      <p style={{ margin: '0.6rem 0 0', fontSize: 13, color: 'var(--theme-elevation-600)' }}>
         Save the sheet as CSV first. You can close this page while it runs.
       </p>
       {jobId ? (
@@ -213,7 +293,7 @@ export const ImportProgressField: React.FC = () => {
   const { id } = useDocumentInfo()
   if (!id) return null
   return (
-    <div style={{ ...box, maxWidth: 'none' }}>
+    <div style={box}>
       <ProgressPanel id={Number(id)} />
     </div>
   )

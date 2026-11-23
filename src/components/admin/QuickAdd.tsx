@@ -15,7 +15,8 @@ export const QuickAdd: React.FC = () => {
   const { id } = useDocumentInfo()
   if (id) return null
   return (
-    <div style={{ marginBottom: '2rem' }}>
+    // Same width as the form's fields below (custom.scss: .aw-inset).
+    <div className="aw-inset" style={{ marginBottom: '2rem' }}>
       <div
         style={{
           border: '1px solid var(--theme-elevation-150)',
@@ -23,7 +24,6 @@ export const QuickAdd: React.FC = () => {
           borderRadius: 4,
           padding: '1.25rem 1.25rem 0.25rem',
           marginBottom: '1rem',
-          maxWidth: '52rem',
         }}
       >
         <p style={{ margin: '0 0 0.25rem', fontWeight: 600 }}>The quick way: start from the ISBN</p>

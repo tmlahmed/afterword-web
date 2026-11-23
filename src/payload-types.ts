@@ -200,7 +200,7 @@ export interface UserAuthOperations {
 export interface Edition {
   id: number;
   /**
-   * Gifts and stationery (bookmarks, notebooks, tote bags…) need no ISBN or author; the book-only fields are hidden.
+   * Gifts and stationery need no ISBN or author, so the book-only fields are hidden for them.
    */
   kind: 'book' | 'item';
   title: string;

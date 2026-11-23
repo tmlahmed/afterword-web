@@ -175,7 +175,9 @@ export const Editions: CollectionConfig = {
       ],
       admin: {
         layout: 'horizontal',
-        description: 'Gifts and stationery (bookmarks, notebooks, tote bags…) need no ISBN or author; the book-only fields are hidden.',
+        // Drawn as two large choice cards (custom.scss): it decides which fields the page shows.
+        className: 'aw-kind',
+        description: 'Gifts and stationery need no ISBN or author, so the book-only fields are hidden for them.',
       },
     },
     {

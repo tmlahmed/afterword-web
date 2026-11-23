@@ -162,6 +162,100 @@
   padding-left: 8px;
 }
 
+/* ---------- New book page: boxes line up with the fields ---------- */
+
+// Fields inside the tabs sit in from the right by the tabs' own padding; the boxes above the
+// tabs (quick add, import, book or item) take the same inset, so every edge lines up.
+.aw-inset,
+.aw-kind.radio-group {
+  margin-right: calc(var(--gutter-h) - var(--main-gutter-h-right));
+}
+
+/* ---------- Book or item choice (Books & items) ---------- */
+
+.aw-kind.radio-group {
+  padding: 20px 20px 16px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 4px;
+  background: var(--theme-elevation-50);
+
+  > .field-label,
+  .field-label {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .radio-group--group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 640px;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  li {
+    padding: 0 !important;
+  }
+
+  .radio-input {
+    margin: 0;
+    height: 100%;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: 4px;
+    background: var(--theme-bg);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+
+    &:hover {
+      border-color: var(--theme-elevation-400);
+    }
+
+    &--is-selected {
+      border-color: var(--theme-text);
+      box-shadow: inset 0 0 0 1px var(--theme-text);
+    }
+  }
+
+  .radio-input__styled-radio {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .radio-input__label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+
+    &::after {
+      font-size: 12.5px;
+      font-weight: 400;
+      color: var(--theme-elevation-500);
+    }
+  }
+
+  li:nth-child(1) .radio-input__label::after {
+    content: 'Has an ISBN, author and format';
+  }
+
+  li:nth-child(2) .radio-input__label::after {
+    content: 'Bookmarks, notebooks, tote bags…';
+  }
+
+  .field-description {
+    margin-top: 10px;
+  }
+}
+
 /* ---------- Dashboard ---------- */
 
 .aw-dash {
