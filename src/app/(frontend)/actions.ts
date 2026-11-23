@@ -121,12 +121,12 @@ export async function signOut() {
 // --- Reviews on a book page --------------------------------------------------------
 
 /** More of a book's published reviews, in the order the reader chose. Public data only. */
-export async function loadReviews(editionId: number, page: number, sort: ReviewSort): Promise<{ items: ReviewItem[]; hasMore: boolean }> {
+export async function loadReviews(editionId: number, page: number, sort: ReviewSort, perPage?: number): Promise<{ items: ReviewItem[]; hasMore: boolean }> {
   const id = Number(editionId)
   if (!Number.isInteger(id) || id <= 0) return { items: [], hasMore: false }
   const order: ReviewSort = ['newest', 'highest', 'lowest'].includes(sort) ? sort : 'newest'
   const payload = await getPayload({ config })
-  return reviewPage(payload, id, Math.min(500, Math.max(1, Math.floor(Number(page) || 1))), order)
+  return reviewPage(payload, id, Math.min(500, Math.max(1, Math.floor(Number(page) || 1))), order, Number(perPage) || undefined)
 }
 
 // --- Your details ------------------------------------------------------------

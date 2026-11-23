@@ -8,13 +8,13 @@ import { BookGallery, Expandable, type GalleryPhoto, StickyBuyBar } from './Book
 import { AddToBag } from './Forms'
 import { type FormatOption, FormatPicker } from './FormatPicker'
 import { ShelfButton } from './TheShelf'
-import { availabilityOf } from '../../lib/availability'
+import { type Availability, availabilityOf } from '../../lib/availability'
 import { getBookBySlug, getEditionsOf, getNoteFor, getRelated, getSettings } from '../../lib/catalogue'
 import type { Contributor, Edition, Media, Publisher, Series, Subject } from '../../payload-types'
 import { siteUrl } from '../../lib/notify'
 import { robotsFor, SHARE_DEFAULTS } from '../../lib/seo'
 import { JsonLd } from './JsonLd'
-import { ReaderReviews } from './Reviews'
+import { ReaderReviews, REVIEWS_ON_BOOK_PAGE, reviewTotals } from './Reviews'
 import { ratingCounts, reviewEligibility, reviewPage } from '../../lib/reviews'
 import { ITEM_TYPE_LABEL } from '../../lib/itemTypes'
 import { productHref } from '../../lib/links'
@@ -46,6 +46,39 @@ const contributorsOf = (book: Edition) =>
     .filter((c): c is { role: typeof c.role; person: Contributor } => c.person !== null)
 
 const yearOf = (iso?: string | null) => (iso ? new Date(iso).getUTCFullYear() : null)
+
+const FORMAT_ORDER = ['paperback', 'hardback', 'special', 'boxset', 'board']
+
+/**
+ * The format picker's tiles: every edition of this book, paperback first. When two share a
+ * format, the publisher and year tell them apart.
+ */
+export const formatOptionsFor = (
+  book: Edition,
+  editions: Edition[],
+  settings: Parameters<typeof availabilityOf>[1],
+  availability: Availability,
+): Array<FormatOption & { availability: Availability; coverUrl?: string | null }> => {
+  const formatCount = new Map<string, number>()
+  for (const e of editions) formatCount.set(e.format ?? '', (formatCount.get(e.format ?? '') ?? 0) + 1)
+  return [...editions]
+    .sort((a, b) => FORMAT_ORDER.indexOf(a.format ?? '') - FORMAT_ORDER.indexOf(b.format ?? '') || (a.price ?? 0) - (b.price ?? 0))
+    .map((e) => {
+      const pub = typeof e.publisher === 'object' ? (e.publisher as Publisher | null)?.name : null
+      const shared = (formatCount.get(e.format ?? '') ?? 0) > 1
+      return {
+        id: e.id,
+        slug: e.slug,
+        format: FORMAT_LABEL[e.format ?? 'paperback'] ?? e.format ?? '',
+        detail: shared ? [pub, yearOf(e.publicationDate)].filter(Boolean).join(', ') || null : null,
+        price: e.price,
+        was: e.compareAtPrice,
+        availability: e.id === book.id ? availability : availabilityOf(e, settings),
+        current: e.id === book.id,
+        coverUrl: e.coverUrl,
+      }
+    })
+}
 
 /** The page's title, description and sharing details, for a book or an item. */
 export async function productMetadata(slug: string): Promise<Metadata> {
@@ -82,15 +115,14 @@ export async function ProductPage({ slug, route }: { slug: string; route: Produc
     getSettings(),
     getNoteFor(book.id),
     getRelated(book),
-    reviewPage(payload, book.id),
+    reviewPage(payload, book.id, 1, 'newest', REVIEWS_ON_BOOK_PAGE),
     ratingCounts(payload, book.id),
     getCustomer(),
     getEditionsOf(book),
   ])
   const reviews = firstReviews.items
   // The average and count straight from the published reviews, so the stars always match the bars.
-  const reviewCount = Object.values(counts).reduce((a, b) => a + b, 0)
-  const reviewAverage = reviewCount ? Object.entries(counts).reduce((sum, [stars, n]) => sum + Number(stars) * n, 0) / reviewCount : null
+  const { total: reviewCount, average: reviewAverage } = reviewTotals(counts)
   const eligibility = await reviewEligibility(payload, customer, book.id)
   const availability = availabilityOf(book, settings)
   const people = contributorsOf(book)
@@ -122,27 +154,7 @@ export async function ProductPage({ slug, route }: { slug: string; route: Produc
       // A path on this site (like the covers), not Payload's full URL, so the image server accepts it.
       .map(({ media, caption }) => ({ src: `/api/media/file/${encodeURIComponent(media.filename!)}`, alt: media.alt || caption || `Photo of ${book.title}`, width: media.width, height: media.height, caption })),
   ]
-  // The format picker: every edition of this book, paperback first. When two share a format,
-  // the publisher and year tell them apart.
-  const FORMAT_ORDER = ['paperback', 'hardback', 'special', 'boxset', 'board']
-  const formatCount = new Map<string, number>()
-  for (const e of editions) formatCount.set(e.format ?? '', (formatCount.get(e.format ?? '') ?? 0) + 1)
-  const formats: FormatOption[] = [...editions]
-    .sort((a, b) => FORMAT_ORDER.indexOf(a.format ?? '') - FORMAT_ORDER.indexOf(b.format ?? '') || (a.price ?? 0) - (b.price ?? 0))
-    .map((e) => {
-      const pub = typeof e.publisher === 'object' ? (e.publisher as Publisher | null)?.name : null
-      const shared = (formatCount.get(e.format ?? '') ?? 0) > 1
-      return {
-        id: e.id,
-        slug: e.slug,
-        format: FORMAT_LABEL[e.format ?? 'paperback'] ?? e.format ?? '',
-        detail: shared ? [pub, yearOf(e.publicationDate)].filter(Boolean).join(', ') || null : null,
-        price: e.price,
-        was: e.compareAtPrice,
-        availability: e.id === book.id ? availability : availabilityOf(e, settings),
-        current: e.id === book.id,
-      }
-    })
+  const formats = formatOptionsFor(book, editions, settings, availability)
   const label = availability.state === 'pre_order' ? 'Pre-order' : availability.state === 'on_request' ? 'Order on request' : 'Add to bag'
 
   // Gifts and stationery show what they are, not a book format, and only the details that apply.
@@ -397,7 +409,13 @@ export async function ProductPage({ slug, route }: { slug: string; route: Produc
       </div>
 
       <div className="mx-auto mt-14 max-w-6xl border-t border-rule px-4 pt-12 md:mt-20 md:pt-16">
-        <ReaderReviews editionId={book.id} href={productHref(book)} first={firstReviews} counts={counts} average={reviewAverage} eligibility={eligibility} book={{ title: book.title, authorLine: book.authorLine, coverUrl: book.coverUrl }} />
+        <ReaderReviews
+          editionId={book.id}
+          href={productHref(book)}
+          allHref={`${productHref(book)}/reviews`}
+          first={reviews}
+          counts={counts}
+          eligibility={eligibility} book={{ title: book.title, authorLine: book.authorLine, coverUrl: book.coverUrl }} />
       </div>
 
       {/* Phones: price and button stay at hand once the buy box has scrolled away */}

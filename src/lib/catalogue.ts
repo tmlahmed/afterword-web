@@ -146,6 +146,7 @@ export const getEditionsOf = async (book: Edition): Promise<Edition[]> => {
       compareAtPrice: true,
       publisher: true,
       publicationDate: true,
+      coverUrl: true,
       stockOnHand: true,
       sourcing: true,
       expectedDate: true,

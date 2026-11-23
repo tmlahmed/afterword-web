@@ -23,11 +23,47 @@ const SmallStars: React.FC<{ rating: number }> = ({ rating }) => (
   </span>
 )
 
+/** One published review: stars, date, title, the text (shortened when long), who wrote it, and our reply. */
+export const ReviewEntry: React.FC<{ review: ReviewItem }> = ({ review }) => (
+  <li className="py-5">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+      <SmallStars rating={review.rating} />
+      <span className="text-[0.8125rem] text-ink-faint">{day(review.createdAt)}</span>
+    </div>
+    <p className="mt-2 font-medium">{review.title}</p>
+    <Expandable lines={5} className="mt-1.5">
+      <p className="whitespace-pre-line leading-relaxed text-ink-soft">{review.body}</p>
+    </Expandable>
+    <p className="mt-2.5 flex items-center gap-1.5 text-[0.8125rem] text-ink-soft">
+      <span className="font-medium text-ink">{review.displayName}</span>
+      <span aria-hidden>·</span>
+      <span className="inline-flex items-center gap-1">
+        <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m3 8.5 3 3 7-7" />
+        </svg>
+        Bought from us
+      </span>
+    </p>
+    {review.reply ? (
+      <div className="mt-3 rounded-ui bg-paper-deep px-4 py-3 text-[0.9375rem]">
+        <p className="text-[0.75rem] font-semibold tracking-[0.12em] text-accent uppercase">AFTERWORD replies</p>
+        <p className="mt-1">{review.reply}</p>
+      </div>
+    ) : null}
+  </li>
+)
+
 /**
  * A book's reviews a few at a time: the first page comes with the page, "Show more" fetches the
  * next, and the order can be changed. Long reviews are shortened with "Read more".
  */
-export const ReviewList: React.FC<{ editionId: number; initial: ReviewItem[]; initialHasMore: boolean; total: number }> = ({ editionId, initial, initialHasMore, total }) => {
+export const ReviewList: React.FC<{ editionId: number; initial: ReviewItem[]; initialHasMore: boolean; total: number; perPage?: number }> = ({
+  editionId,
+  initial,
+  initialHasMore,
+  total,
+  perPage,
+}) => {
   const [items, setItems] = useState(initial)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [page, setPage] = useState(1)
@@ -36,7 +72,7 @@ export const ReviewList: React.FC<{ editionId: number; initial: ReviewItem[]; in
 
   const more = () =>
     start(async () => {
-      const next = await loadReviews(editionId, page + 1, sort)
+      const next = await loadReviews(editionId, page + 1, sort, perPage)
       setItems((x) => [...x, ...next.items.filter((n) => !x.some((o) => o.id === n.id))])
       setHasMore(next.hasMore)
       setPage((p) => p + 1)
@@ -44,7 +80,7 @@ export const ReviewList: React.FC<{ editionId: number; initial: ReviewItem[]; in
   const reorder = (to: ReviewSort) => {
     setSort(to)
     start(async () => {
-      const first = await loadReviews(editionId, 1, to)
+      const first = await loadReviews(editionId, 1, to, perPage)
       setItems(first.items)
       setHasMore(first.hasMore)
       setPage(1)
@@ -76,32 +112,7 @@ export const ReviewList: React.FC<{ editionId: number; initial: ReviewItem[]; in
 
       <ul className={`divide-y divide-rule transition-opacity ${pending ? 'opacity-60' : ''}`} aria-busy={pending}>
         {items.map((r) => (
-          <li key={r.id} className="py-5">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <SmallStars rating={r.rating} />
-              <span className="text-[0.8125rem] text-ink-faint">{day(r.createdAt)}</span>
-            </div>
-            <p className="mt-2 font-medium">{r.title}</p>
-            <Expandable lines={5} className="mt-1.5">
-              <p className="whitespace-pre-line leading-relaxed text-ink-soft">{r.body}</p>
-            </Expandable>
-            <p className="mt-2.5 flex items-center gap-1.5 text-[0.8125rem] text-ink-soft">
-              <span className="font-medium text-ink">{r.displayName}</span>
-              <span aria-hidden>·</span>
-              <span className="inline-flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m3 8.5 3 3 7-7" />
-                </svg>
-                Bought from us
-              </span>
-            </p>
-            {r.reply ? (
-              <div className="mt-3 rounded-ui bg-paper-deep px-4 py-3 text-[0.9375rem]">
-                <p className="text-[0.75rem] font-semibold tracking-[0.12em] text-accent uppercase">AFTERWORD replies</p>
-                <p className="mt-1">{r.reply}</p>
-              </div>
-            ) : null}
-          </li>
+          <ReviewEntry key={r.id} review={r} />
         ))}
       </ul>
 

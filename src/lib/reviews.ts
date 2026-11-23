@@ -23,12 +23,18 @@ export const REVIEWS_PER_PAGE = 5
 const SORTS: Record<ReviewSort, string[]> = { newest: ['-createdAt'], highest: ['-rating', '-createdAt'], lowest: ['rating', '-createdAt'] }
 
 /** One page of a book's published reviews, and whether there are more. */
-export const reviewPage = async (payload: Payload, editionId: number, page = 1, sort: ReviewSort = 'newest'): Promise<{ items: ReviewItem[]; hasMore: boolean }> => {
+export const reviewPage = async (
+  payload: Payload,
+  editionId: number,
+  page = 1,
+  sort: ReviewSort = 'newest',
+  perPage = REVIEWS_PER_PAGE,
+): Promise<{ items: ReviewItem[]; hasMore: boolean }> => {
   const found = await payload.find({
     collection: 'reviews',
     where: { and: [{ edition: { equals: editionId } }, { status: { equals: 'published' } }] },
     sort: SORTS[sort] ?? SORTS.newest,
-    limit: REVIEWS_PER_PAGE,
+    limit: Math.min(20, Math.max(1, Math.floor(perPage))),
     page: Math.max(1, Math.floor(page)),
     depth: 0,
     overrideAccess: false, // as the public sees them: no customer or order fields

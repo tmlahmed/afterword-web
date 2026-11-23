@@ -26,9 +26,10 @@ const DOT: Record<Availability['state'], string> = {
 /**
  * The book's formats as tiles in the buy box: each shows its price and whether it is in stock.
  * The one being viewed is outlined; the others open their own page. Shown only when there is
- * more than one edition.
+ * more than one edition. With `onPick` the tiles choose in place instead (the reviews page), and
+ * `selected` says which is chosen.
  */
-export const FormatPicker: React.FC<{ options: FormatOption[] }> = ({ options }) => {
+export const FormatPicker: React.FC<{ options: FormatOption[]; onPick?: (id: number) => void; selected?: number }> = ({ options, onPick, selected }) => {
   if (options.length < 2) return null
   return (
     <fieldset className="mt-5">
@@ -55,10 +56,14 @@ export const FormatPicker: React.FC<{ options: FormatOption[] }> = ({ options })
           const base = 'block h-full rounded-ui border px-3.5 py-3 text-left transition-colors'
           return (
             <li key={o.id}>
-              {o.current ? (
+              {(selected === undefined ? o.current : o.id === selected) ? (
                 <div aria-current="true" className={`${base} border-ink bg-card shadow-[inset_0_0_0_1px_var(--color-ink)]`}>
                   {body}
                 </div>
+              ) : onPick ? (
+                <button type="button" onClick={() => onPick(o.id)} className={`${base} w-full cursor-pointer border-rule hover:border-ink/50`}>
+                  {body}
+                </button>
               ) : (
                 <Link href={`/book/${o.slug}`} className={`${base} border-rule hover:border-ink/50`} aria-label={`${o.format}${o.detail ? `, ${o.detail}` : ''}${o.price ? `, ${formatTaka(o.price)}` : ''}, ${o.availability.label}`}>
                   {body}
