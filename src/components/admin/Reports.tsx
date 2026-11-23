@@ -330,11 +330,3 @@ export const Reports = async ({ initPageResult, params, searchParams }: AdminVie
     </DefaultTemplate>
   )
 }
-
-/** "Reports" link in the admin side menu, for managers. */
-export const ReportsNavLink: React.FC<{ user?: unknown }> = ({ user }) =>
-  userHasRole(user, 'manager') ? (
-    <Link href="/admin/reports" style={{ display: 'block', padding: '0.4rem 0', fontWeight: 600, textDecoration: 'none', color: 'inherit' }}>
-      Reports
-    </Link>
-  ) : null

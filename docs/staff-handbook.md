@@ -15,17 +15,24 @@ Five wrong passwords lock your account for 15 minutes.
 
 ---
 
-## 1. The morning: Today's desk
+## 1. The morning: the Dashboard
 
-The first admin screen shows what needs doing. Click any tile to see the list behind it.
+The first admin screen. Reach it from any page with **Dashboard** at the top of the side menu.
 
-- **Orders to confirm**: new website orders. Each one needs a person to look at it (below).
-- **Orders to pack**: confirmed, books set aside, ready for a parcel.
+**Finding your way.** The side menu is grouped by how often things are used: **Sell** (orders, requests, customers, promotions), **Catalogue**, **Stock**, **Website** and **Settings**. Rarely needed screens come last in their group. Click a group's name to fold it away; the menu also keeps its place when you scroll it and open another page. A red number beside **Orders**, **Book requests** or **Reviews** is how many are waiting. On laptops the menu stays open; the button at its top left hides it, and it stays hidden until you open it again. **View the shop** at the bottom opens the website.
+
+**Needs attention** lists only what is waiting; click one to see the list behind it. When nothing is, it says *All clear*.
+
+- **Orders to confirm**: new website orders. Each one needs a person to look at it (section 2).
+- **Payments to check**: advances customers say they have sent by bKash, Bangla QR or bank.
+- **To pack**: confirmed, books set aside, ready for a parcel.
+- **Book requests**: customers asking for books we do not list.
+- **Reviews to read**: customers' reviews waiting to be published (section 5).
 - **With couriers**: out for delivery. Mark them delivered or returned.
 - **Waiting for stock**: paid an advance; the book is on its way to us. These move to "To pack" on their own when the delivery is received.
-- **Book requests to quote**: customers asking for books we do not list.
-- **Reviews to check**: customers' reviews waiting to be published (section 5).
-- **Books down to the last copy**: consider reordering.
+- **Books on their last copy**: consider reordering.
+
+Below that, owners and managers see **Sales** (today, the last 7 and 30 days against the period before, a chart of each day, cash with couriers and advances to check), then **Latest orders**, **Best sellers** and **Running low, reorder**. The full tables and spreadsheets are under **Reports**. Other roles see the parts their work covers.
 
 ## 2. Orders (order desk)
 

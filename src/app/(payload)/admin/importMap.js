@@ -27,10 +27,10 @@ import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0
 import { SubscribersExport as SubscribersExport_538b66d0a66e6d2e072ffb1223f7b7df } from '../../../components/admin/SubscribersExport'
 import { OrderActions as OrderActions_42735e497e40d1f2d21d56bf07558f53 } from '../../../components/admin/OrderActions'
 import { ReceiveStock as ReceiveStock_e94c31740ad8366096b8060c6559749e } from '../../../components/admin/ReceiveStock'
+import { AdminNav as AdminNav_965175d01b56876a09418037afb35340 } from '../../../components/admin/Nav'
 import { AdminIcon as AdminIcon_91a09b539d3c86b0aebf520e7564ce08 } from '../../../components/admin/Logo'
 import { AdminLogo as AdminLogo_91a09b539d3c86b0aebf520e7564ce08 } from '../../../components/admin/Logo'
-import { ReportsNavLink as ReportsNavLink_7a5433900ac8875d5f0ae5dc5755dde6 } from '../../../components/admin/Reports'
-import { Desk as Desk_4bb3b32775f32dcbc2b46f2490828f75 } from '../../../components/admin/Desk'
+import { Dashboard as Dashboard_16b88e9b8c48e393fa86591406efd08f } from '../../../components/admin/Dashboard'
 import { Reports as Reports_7a5433900ac8875d5f0ae5dc5755dde6 } from '../../../components/admin/Reports'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -65,10 +65,10 @@ export const importMap = {
   "/components/admin/SubscribersExport#SubscribersExport": SubscribersExport_538b66d0a66e6d2e072ffb1223f7b7df,
   "/components/admin/OrderActions#OrderActions": OrderActions_42735e497e40d1f2d21d56bf07558f53,
   "/components/admin/ReceiveStock#ReceiveStock": ReceiveStock_e94c31740ad8366096b8060c6559749e,
+  "/components/admin/Nav#AdminNav": AdminNav_965175d01b56876a09418037afb35340,
   "/components/admin/Logo#AdminIcon": AdminIcon_91a09b539d3c86b0aebf520e7564ce08,
   "/components/admin/Logo#AdminLogo": AdminLogo_91a09b539d3c86b0aebf520e7564ce08,
-  "/components/admin/Reports#ReportsNavLink": ReportsNavLink_7a5433900ac8875d5f0ae5dc5755dde6,
-  "/components/admin/Desk#Desk": Desk_4bb3b32775f32dcbc2b46f2490828f75,
+  "/components/admin/Dashboard#Dashboard": Dashboard_16b88e9b8c48e393fa86591406efd08f,
   "/components/admin/Reports#Reports": Reports_7a5433900ac8875d5f0ae5dc5755dde6,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

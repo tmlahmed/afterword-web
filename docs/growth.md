@@ -17,7 +17,7 @@ What each feature does, where it lives in the admin, and what has to happen befo
 - **Who can review:** only a customer whose order with that book has been **delivered**, and only once per book. Every review is marked "bought from us". There are no anonymous reviews, so fake ones cannot be posted.
 - **Where customers write them:** on the book page (under *Readers' reviews*), and from **Review your books** on their account page.
 - **Moderation:** nothing appears until a person publishes it.
-  - New reviews show on **Today's desk** as *reviews to check*, and under **Content → Reviews**.
+  - New reviews show on the admin Dashboard as *reviews to read*, with a count beside **Website → Reviews** in the menu.
   - Set **Published** or **Not published**; you can add a **Reply from the shop**.
   - Publish honest bad reviews too. Readers trust a shop whose reviews are not all five stars.
 - **What changes when a review is published:** the book shows its average rating and count beside the author's name. The rating is also given to Google in the page's structured data, so it can appear in search results.

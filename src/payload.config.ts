@@ -52,10 +52,11 @@ export default buildConfig({
       ],
     },
     components: {
-      beforeDashboard: ['/components/admin/Desk#Desk'],
-      afterNavLinks: ['/components/admin/Reports#ReportsNavLink'],
+      // Our own side menu (Dashboard and Reports first, icons, counts) and first screen.
+      Nav: '/components/admin/Nav#AdminNav',
       graphics: { Logo: '/components/admin/Logo#AdminLogo', Icon: '/components/admin/Logo#AdminIcon' },
       views: {
+        dashboard: { Component: '/components/admin/Dashboard#Dashboard' },
         reports: { Component: '/components/admin/Reports#Reports', path: '/reports', meta: { title: 'Reports' } },
       },
     },

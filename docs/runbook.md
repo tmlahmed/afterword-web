@@ -6,10 +6,10 @@ How to keep the shop running and what to do when something goes wrong. For setti
 
 | When | What | How |
 |---|---|---|
-| Every morning | Look at **Today's desk** (the first admin screen) | Orders to confirm, payments to check, parcels with couriers |
+| Every morning | Look at **Needs attention** on the admin Dashboard | Orders to confirm, payments to check, parcels with couriers |
 | Daily, automatic | Backup at 03:15 | `scripts/backup.sh` from cron; check `backups/backup.log` now and then |
 | Weekly | Read **Reports → Money still to come in** | Match cash the couriers say they hold against their payout statements |
-| Daily | Check **reviews to check** on Today's desk | Publish or decline new reviews |
+| Daily | Check **reviews to read** on the Dashboard | Publish or decline new reviews |
 | Before each newsletter | Download a fresh subscriber list | Content → Newsletter subscribers → Download (unsubscribes are left out) |
 | Weekly | Clear **Searches with no results** you have dealt with | Catalogue → Searches with no results |
 | Monthly | **Test a restore** (below) | 15 minutes; a backup that has never been restored is a hope, not a backup |
