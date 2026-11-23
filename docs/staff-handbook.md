@@ -82,8 +82,10 @@ Either way the customer gets the tracking number by text.
 ## 3. Catalogue (catalogue editors)
 
 **Adding one book.** In Catalogue → Books, press **Create new**, then type or scan the ISBN into **Add a book by ISBN** at the top (Enter works, so a barcode scanner does it in one go). The title, author, publisher, description and cover are filled in from the book databases, and the cover is copied into our own store. The book is saved as a **draft**. Check it, then:
-- set the **list price and currency**, the price printed on the book (for example 599 INR). The **original price** in taka is worked out from Settings → Pricing rules (599 × 2 = ৳1,198, rounded to ৳1,200);
-- optionally type a **selling price** in taka. If it is lower than the original, customers see the original struck through and the discount, for example ~~৳1,200~~ ৳1,020 · 15% off, with a red "−15%" tag on the cover. Leave it empty to sell at the original price. The **Customers see** box under the fields shows the result as you type;
+- set the **printed price and currency**, as printed on the book (for example 599 INR). The **listed price** in taka is worked out from Settings → Pricing rules: 599 × 2 = ৳1,198, rounded to ৳1,200;
+- customers pay the listed price less the **discount**. Leave *Discount (%)* empty for the shop discount (15%), type another percentage for this book, or **0** to sell at the listed price. With a discount, customers see ~~৳1,200~~ ৳1,020 · 15% off, with a red "−15%" tag on the cover;
+- for a particular figure instead, type a **Fixed price**, e.g. ৳899;
+- the box under the fields shows what **customers see** and what **you make** on the next copy (its cost from the delivery it came in, and the margin). It turns red below your minimum margin (Pricing rules). It also lists the deliveries on the shelf, oldest first;
 - choose its **subjects**;
 - set **Sourcing**: *Standard* (shows "In stock" when we have copies, otherwise "On Request"), *Pre-order* (add the date it reaches Dhaka), or *Out of print*;
 - change the status to **Published**.
@@ -99,7 +101,7 @@ Either way the customer gets the tracking number by text.
 - the **title** and **description** (what it is, its size and material), and the **main photo** under *Cover or main photo*, plus any **More photos**;
 - **Type of item** (Bookmark, Notebook or journal, Tote bag…) and, if you like, your own **stock code**;
 - the **subject**: one of the sections under *Gifts & Stationery* (Bookmarks, Notebooks & Journals, Tote Bags, Pens & Pencils, Cards & Wrapping, Gift Sets);
-- the **selling price** in taka (leave the list price empty), the size and weight;
+- the **printed price** in **BDT** (your own price for it), the size and weight. Gifts get no shop discount; type one in *Discount (%)* if you want it;
 - **Published**, then receive the stock like any book.
 
 Items are only sold from your own shelves: with none left they show **Sold out** and cannot be ordered (never "On Request").
@@ -114,13 +116,18 @@ Items are only sold from your own shelves: with none left they show **Sold out**
 
 **Reward points.** Customers earn points on delivered orders and spend them at checkout (1 point = ৳1). On a phone order, tick **Use the customer's reward points** to spend them. To give or take points by hand, add an entry under **Orders → Reward points** with a note saying why. The rules are in Settings → Shop settings → Reward points.
 
-**Promotions.** Orders → Promotions: codes for a percentage off, a fixed amount off, or free delivery, with an optional minimum spend. Customers type the code in their bag.
+**Promo codes.** Sell → Promo codes: codes for a percentage off, a fixed amount off, or free delivery, with an optional minimum spend. Customers type the code in their bag.
+
+**Group discounts.** Sell → Group discounts: a percentage off every book in chosen subjects (including their sub-subjects), publishers or collections, or picked one by one, for example "20% off Penguin Classics this week". Set a start and end, or leave them empty and untick **Active** to stop it. A book gets the bigger of its own discount and the group's; books with a fixed price are left alone. Prices change within a minute of saving, and within a quarter of an hour of the start and end times.
 
 ## 4. Stock (warehouse)
 
 Stock is a ledger: the copies on hand are the total of every movement. **Nobody types a stock number directly**, and movements cannot be edited or deleted. To fix a mistake, add another movement.
 
-- **Receiving a supplier delivery.** Open the purchase order under Stock and purchasing → Purchase orders and press **Receive this delivery into stock**. Copies are added, orders waiting for those books move to **To pack**, and those customers get a message.
+- **Recording a purchase.** Stock → Purchase orders → Create new, one per shipment. Choose the supplier and the **currency** of their prices, and enter the **exchange rate you paid** (what one rupee or pound really cost, e.g. 1.42). For each book: the quantity, the **printed price** and the supplier's **discount %**; *Cost each* is worked out for you. Under **Shipment costs**, add everything else in taka: freight, customs duty and VAT, clearing agent, transport to Dhaka, bank charges. Save. Each line then shows its **landed cost**: what one copy really cost here, with its share of the shipment costs (shared by value, so dearer books carry more).
+- **Receiving it.** When the books arrive, correct any quantities, save, and press **Receive this delivery into stock**. Each book becomes a **stock lot** (Stock → Stock lots, coded like *L-14*) at its landed cost. Copies are added, orders waiting for those books move to **To pack**, and those customers get a message.
+- **Labelling.** Copies are sold oldest delivery first. If older copies of the same book with a **different printed price** are still on the shelf, the purchase order shows a **Labelling** note: write the lot code (e.g. *L-14*) in pencil inside the back cover of the new copies, and pack the unmarked ones first. Otherwise there is nothing to label: the ISBN barcode on the book is all you need.
+- **Prices follow the shelf.** The shop's price is based on the printed price of the copies that go out next. When the older copies run out, the book is re-priced from the next delivery by itself (₹599 copies at ~~৳1,200~~ ৳1,020, then ₹699 copies at ~~৳1,400~~ ৳1,190).
 - **Counting stock.** If the shelf and the shop disagree, add a stock movement with the reason **Stock count correction**, the difference (for example `-1` or `2`), and a note.
 - **Damaged copies.** Add a movement with the reason **Damaged or lost** and a negative number.
 - Sales, cancellations and returns record their own movements; you never enter those.
@@ -145,14 +152,16 @@ Stock is a ledger: the copies on hand are the total of every movement. **Nobody 
 - **Sales**: orders, books sold, average order, delivery charged, day by day.
 - **Money still to come in**: cash with each courier, advances to check, and advances held for books not yet sent. Use it to check courier payouts every week.
 - **Best sellers**, **By subject** and **By district**.
-- **Stock**: copies, value at selling price, and estimated cost (from list prices and your exchange rates).
+- **Profit**: what customers paid for the books (after discounts, without delivery) less what those exact copies cost you, overall and by title.
+- **Deliveries**: each purchase order with copies in, sold and left, their cost, and the profit on the copies sold so far.
+- **Stock**: copies, value at selling price, and what they cost you (from each delivery's landed cost; copies from before costs were recorded are estimated, and a manager can correct a lot's cost under Stock → Stock lots).
 - **Selling fast — consider reordering** and **Not selling** (no sale in 90 days).
 - **What customers asked for**: book requests, and words people searched for that found nothing. This is the best guide to what to bring in next.
 
 ## 7. Settings (owner and managers)
 
 - **Settings → Shop settings**: the announcement strip; delivery fees and times; free-delivery threshold; gift-wrap price; advance percentage; cash-on-delivery ceiling; the bKash number and Bangla QR shown for manual payments; and the wording of every text message to customers.
-- **Settings → Pricing rules**: the taka you actually pay for each currency, your margin and the rounding. Changing these does not re-price existing books until each is saved again.
+- **Settings → Pricing rules**: for each currency, the **taka per unit** that turns a printed price into the listed price (2 for rupees, the market convention) and the **exchange rate you pay** (for costs); the **shop discount** (15%); the margin and rounding; your **usual supplier discount** (only for estimating old stock); and the **minimum margin** a book page warns below. Saving re-prices every book within a minute.
 - **Settings → Staff**: the owner adds accounts and gives each person only the roles they need. When someone leaves, delete their account the same day.
 
 ## Good habits

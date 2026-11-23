@@ -11,14 +11,16 @@ export const ReceiveStock: React.FC = () => {
   if (!id || status === 'received') return null
 
   const receive = async () => {
-    if (!window.confirm('Add every book on this purchase order to stock? Save any changes to quantities first.')) return
+    if (!window.confirm('Add every book on this purchase order to stock, at the landed costs shown? Save any changes to quantities, prices or costs first.')) return
     setBusy(true)
     try {
       const res = await fetch(`/api/purchase-orders/${id}/receive`, { method: 'POST', credentials: 'include' })
-      const data = (await res.json()) as { message?: string }
+      const data = (await res.json()) as { message?: string; marks?: string[] }
       if (!res.ok) toast.error(data.message ?? 'That did not work.')
       else {
         toast.success(data.message ?? 'Stock received.')
+        // Copies to label stay on the page under "Labelling" after it reloads.
+        if (data.marks?.length) toast.warning('Some copies need a lot code written in them. See Labelling.')
         window.location.reload()
       }
     } finally {

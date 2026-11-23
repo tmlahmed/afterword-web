@@ -20,7 +20,8 @@ const GROUPS: { label: string; entries: Entry[] }[] = [
       { collection: 'orders', label: 'Orders', icon: 'orders' },
       { collection: 'requests', label: 'Book requests', icon: 'requests' },
       { collection: 'customers', label: 'Customers', icon: 'customers' },
-      { collection: 'promotions', label: 'Promotions', icon: 'promotions' },
+      { collection: 'promotions', label: 'Promo codes', icon: 'promotions' },
+      { collection: 'group-discounts', label: 'Group discounts', icon: 'pricing' },
       { collection: 'reward-entries', label: 'Reward points', icon: 'rewards' },
       { collection: 'messages', label: 'Messages sent', icon: 'messages' },
     ],
@@ -42,6 +43,7 @@ const GROUPS: { label: string; entries: Entry[] }[] = [
     label: 'Stock',
     entries: [
       { collection: 'purchase-orders', label: 'Purchase orders', icon: 'purchases' },
+      { collection: 'stock-lots', label: 'Stock lots', icon: 'series' },
       { collection: 'stock-movements', label: 'Stock movements', icon: 'movements' },
       { collection: 'suppliers', label: 'Suppliers', icon: 'suppliers' },
     ],

@@ -4,48 +4,107 @@ import { APIError, type GlobalConfig } from 'payload'
 import { allow, anyone } from '../access/roles'
 import { MEDIA_DIR } from '../collections/Media'
 import { checkBanglaQr, readQrPicture } from '../lib/payments/banglaQr'
+import { scheduleReprice } from '../lib/repricing'
 
-/** Exchange rates and margin used to turn a publisher's list price into a taka price. */
+/**
+ * How prices are worked out. The listed price (what the book "costs" in the shop, shown struck
+ * through when there is a discount) is the printed price × a taka-per-unit figure: 2 for rupee
+ * books, by the usual Bangladesh convention. Customers then pay the listed price less the
+ * discount. The exchange rates you really pay are separate: they work out what books cost you.
+ */
 export const Pricing: GlobalConfig = {
   slug: 'pricing',
   label: 'Pricing rules',
   admin: {
     group: 'Settings',
     description:
-      'Selling price = list price × your rate for that currency × margin, rounded up. Saving here does not change existing prices; books are re-priced when they are next saved.',
+      'Listed price = printed price × taka per unit × margin, rounded up. Customers pay the listed price less the discount. Saving here re-prices every book within a minute.',
   },
   access: { read: allow('manager', 'catalogue'), update: allow('manager') },
+  hooks: {
+    // Every book follows the new rules, worked out after this save has finished.
+    afterChange: [
+      ({ doc, req }) => {
+        scheduleReprice(req.payload, 'pricing rules changed')
+        return doc
+      },
+    ],
+  },
   fields: [
     {
       name: 'rates',
       type: 'array',
-      labels: { singular: 'Currency rate', plural: 'Currency rates' },
-      admin: { description: 'The taka you actually pay for one unit of each currency.' },
+      labels: { singular: 'Currency', plural: 'Currencies' },
+      admin: {
+        description:
+          'Taka per unit turns a printed price into your listed price (2 for rupees, the market convention). The exchange rate is what you really pay; it estimates what books cost you and fills in new purchase orders.',
+      },
       fields: [
         {
           type: 'row',
           fields: [
             { name: 'currency', type: 'select', required: true, options: ['GBP', 'USD', 'INR', 'EUR'] },
-            { name: 'rate', type: 'number', required: true, min: 0, label: 'Taka per unit' },
+            { name: 'rate', type: 'number', required: true, min: 0, label: 'Listed price: taka per unit' },
+            { name: 'exchangeRate', type: 'number', min: 0, label: 'Exchange rate you pay (৳)' },
           ],
         },
       ],
     },
     {
-      name: 'defaultMargin',
-      type: 'number',
-      required: true,
-      defaultValue: 1,
-      min: 0,
-      admin: { description: 'Multiplier applied after conversion. 1.2 adds 20%.' },
+      type: 'row',
+      fields: [
+        {
+          name: 'defaultDiscount',
+          type: 'number',
+          required: true,
+          defaultValue: 15,
+          min: 0,
+          max: 100,
+          label: 'Shop discount (%)',
+          admin: { description: 'Books without their own discount get this. 0 sells at the listed price. Gifts and stationery only get a discount you set on them.' },
+        },
+        {
+          name: 'defaultMargin',
+          type: 'number',
+          required: true,
+          defaultValue: 1,
+          min: 0,
+          admin: { description: 'Multiplier on the listed price. Leave at 1 to follow the printed price exactly.' },
+        },
+        {
+          name: 'roundTo',
+          type: 'number',
+          required: true,
+          defaultValue: 10,
+          min: 1,
+          admin: { description: 'Prices round to a multiple of this many taka.' },
+        },
+      ],
     },
     {
-      name: 'roundTo',
-      type: 'number',
-      required: true,
-      defaultValue: 10,
-      min: 1,
-      admin: { description: 'Prices round up to a multiple of this many taka.' },
+      type: 'row',
+      fields: [
+        {
+          name: 'typicalBuyDiscount',
+          type: 'number',
+          required: true,
+          defaultValue: 35,
+          min: 0,
+          max: 100,
+          label: 'Usual supplier discount (%)',
+          admin: { description: 'Used only to estimate the cost of books that arrived before purchase costs were recorded.' },
+        },
+        {
+          name: 'minimumMargin',
+          type: 'number',
+          required: true,
+          defaultValue: 20,
+          min: 0,
+          max: 100,
+          label: 'Warn below this margin (%)',
+          admin: { description: 'A book page warns when the price leaves less than this over what the copies cost you.' },
+        },
+      ],
     },
   ],
 }

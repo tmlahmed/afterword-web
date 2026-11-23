@@ -1,9 +1,10 @@
 import type { CollectionConfig, FieldAccess } from 'payload'
+import type { Edition } from '../payload-types'
 
 import { allow, allowField, publishedOrStaff } from '../access/roles'
 import { importIsbnEndpoint } from '../endpoints/importIsbn'
 import { normaliseIsbn } from '../lib/isbn/isbn'
-import { computePrice, derivePrices } from '../lib/pricing'
+import { activeGroupDiscounts, groupDiscountFor, pricesFor } from '../lib/repricing'
 import { removeBook, syncBook } from '../lib/search'
 import { ITEM_TYPES } from '../lib/itemTypes'
 import { slugify } from '../lib/slug'
@@ -117,22 +118,19 @@ export const Editions: CollectionConfig = {
         }
         return data
       },
-      // Prices: the original price comes from the list price and your pricing rules; a selling
-      // price set by staff wins, and when it is lower the original is shown struck through.
+      // Prices: the listed price comes from the printed price and the pricing rules; customers
+      // pay it less the book's discount (or the shop's, or a running group discount, whichever
+      // is bigger). A fixed selling price set by staff wins over all of that.
       async ({ data, req, originalDoc }) => {
-        const pricing = await req.payload.findGlobal({ slug: 'pricing', req })
-        const listPrice = data.listPrice !== undefined ? data.listPrice : originalDoc?.listPrice
-        const listCurrency = data.listCurrency !== undefined ? data.listCurrency : originalDoc?.listCurrency
-        const selling = data.priceOverride !== undefined ? data.priceOverride : originalDoc?.priceOverride
-        const original = computePrice(listPrice, listCurrency, {
-          rates: (pricing.rates ?? []).map((r) => ({ currency: r.currency, rate: r.rate })),
-          margin: pricing.defaultMargin ?? 1,
-          roundTo: pricing.roundTo ?? 10,
-        })
-        const { price, compareAtPrice } = derivePrices(original, selling, data.price ?? originalDoc?.price)
-        data.originalPrice = original
-        data.price = price
-        data.compareAtPrice = compareAtPrice
+        const pick = <K extends keyof Edition>(key: K) => (data[key] !== undefined ? data[key] : originalDoc?.[key]) as Edition[K]
+        const [pricing, rules] = await Promise.all([req.payload.findGlobal({ slug: 'pricing', req, depth: 0, overrideAccess: true }), activeGroupDiscounts(req.payload, req)])
+        const sale = groupDiscountFor({ id: originalDoc?.id, subjects: pick('subjects'), publisher: pick('publisher') }, rules)
+        const next = pricesFor(
+          { kind: pick('kind'), listPrice: pick('listPrice'), listCurrency: pick('listCurrency'), priceOverride: pick('priceOverride'), discount: pick('discount'), price: pick('price') },
+          pricing,
+          sale,
+        )
+        Object.assign(data, next)
         return data
       },
       // A plain-text author line for lists, search and cards.
@@ -341,12 +339,14 @@ export const Editions: CollectionConfig = {
                   name: 'listPrice',
                   type: 'number',
                   min: 0,
+                  label: 'Printed price',
                   access: { read: staffOnly },
-                  admin: { description: 'The price printed on the book, e.g. 599.' },
+                  admin: { description: 'As printed on the book, e.g. 599. While copies are in stock it follows the oldest delivery.' },
                 },
                 {
                   name: 'listCurrency',
                   type: 'select',
+                  label: 'Currency',
                   access: { read: staffOnly },
                   options: ['GBP', 'USD', 'INR', 'EUR', 'BDT'],
                 },
@@ -358,20 +358,31 @@ export const Editions: CollectionConfig = {
                 {
                   name: 'originalPrice',
                   type: 'number',
-                  label: 'Original price (৳)',
                   access: { read: staffOnly },
+                  label: 'Listed price (৳)',
                   admin: {
                     readOnly: true,
-                    description: 'List price × your rate for the currency (Settings → Pricing rules), rounded. Updated when you save.',
+                    description: 'Printed price × taka per unit (Settings → Pricing rules), rounded. Updated when you save.',
                   },
+                },
+                {
+                  name: 'discount',
+                  type: 'number',
+                  min: 0,
+                  max: 100,
+                  label: 'Discount (%)',
+                  admin: {
+                    description: 'Leave empty for the shop discount. 0 sells at the listed price.',
+                  },
+                  access: { read: staffOnly, update: allowField('manager', 'catalogue') },
                 },
                 {
                   name: 'priceOverride',
                   type: 'number',
                   min: 0,
-                  label: 'Selling price (৳)',
+                  label: 'Fixed price (৳)',
                   admin: {
-                    description: 'Optional. Leave empty to sell at the original price. A lower price shows as a discount.',
+                    description: 'Optional. A set price instead of the discount, e.g. 899.',
                   },
                   access: { read: staffOnly, update: allowField('manager', 'catalogue') },
                 },
@@ -385,6 +396,8 @@ export const Editions: CollectionConfig = {
                 // Worked out on save from the two fields above; what the shop shows and charges.
                 { name: 'price', type: 'number', min: 0, label: 'Customers pay (৳)' },
                 { name: 'compareAtPrice', type: 'number', min: 0, label: 'Shown struck through (৳)' },
+                // A group discount running now (Sell → Group discounts), kept up to date on its own.
+                { name: 'saleDiscount', type: 'number', min: 0, max: 100, label: 'Group discount now (%)', access: { read: staffOnly } },
               ],
             },
             {

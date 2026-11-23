@@ -4,6 +4,7 @@ import { allow, nobody } from '../access/roles'
 import { courierModeEndpoint, orderActionEndpoint } from '../endpoints/orderAction'
 import { receivePurchaseOrderEndpoint } from '../endpoints/receivePurchaseOrder'
 import { afterOrderCreated, prepareOrder } from '../lib/orders/prepare'
+import { expensesTotal, landedCosts } from '../lib/lots'
 import { DISTRICTS } from '../lib/orders/pricing'
 
 const DISTRICT_OPTIONS = DISTRICTS.map((d) => ({ label: d, value: d }))
@@ -104,6 +105,7 @@ export const Carts: CollectionConfig = {
 
 export const Promotions: CollectionConfig = {
   slug: 'promotions',
+  labels: { singular: 'Promo code', plural: 'Promo codes' },
   admin: {
     useAsTitle: 'code',
     group: 'Orders',
@@ -562,6 +564,30 @@ export const PurchaseOrders: CollectionConfig = {
     delete: allow('manager'),
   },
   endpoints: [receivePurchaseOrderEndpoint],
+  hooks: {
+    // Cost each = printed price less the supplier's discount, unless typed in; the exchange rate
+    // starts from Settings → Pricing rules; the landed cost of each line is shown before receiving.
+    beforeChange: [
+      async ({ data, req, originalDoc }) => {
+        if ((data.status ?? originalDoc?.status) === 'received') return data
+        const pricing = await req.payload.findGlobal({ slug: 'pricing', depth: 0, req, overrideAccess: true })
+        const currency = data.currency ?? originalDoc?.currency
+        if (currency && currency !== 'BDT' && !data.exchangeRate) {
+          data.exchangeRate = (pricing.rates ?? []).find((r) => r.currency === currency)?.exchangeRate ?? null
+        }
+        const lines = (data.lines ?? []) as { quantity: number; listPrice?: number | null; supplierDiscount?: number | null; unitCost?: number | null; landedCost?: number | null }[]
+        for (const l of lines) {
+          if (typeof l.listPrice === 'number' && l.listPrice > 0) {
+            l.unitCost = Math.round(l.listPrice * (1 - (l.supplierDiscount ?? 0) / 100) * 100) / 100
+          }
+        }
+        const rate = !currency || currency === 'BDT' ? 1 : Number(data.exchangeRate ?? 0)
+        const costs = landedCosts(lines, rate, expensesTotal(data.expenses))
+        lines.forEach((l, i) => (l.landedCost = rate > 0 ? costs[i].landedCost : null))
+        return data
+      },
+    ],
+  },
   fields: [
     { name: 'receive', type: 'ui', admin: { components: { Field: '/components/admin/ReceiveStock#ReceiveStock' } } },
     {
@@ -585,6 +611,25 @@ export const PurchaseOrders: CollectionConfig = {
       ],
     },
     {
+      type: 'row',
+      fields: [
+        {
+          name: 'currency',
+          type: 'select',
+          defaultValue: 'INR',
+          options: ['INR', 'GBP', 'USD', 'EUR', 'BDT'],
+          admin: { description: 'The currency of the supplier’s prices.' },
+        },
+        {
+          name: 'exchangeRate',
+          type: 'number',
+          min: 0,
+          label: 'Exchange rate paid (৳ per unit)',
+          admin: { description: 'What one unit really cost you, e.g. 1.42 for a rupee. Starts from Pricing rules; change it to what you paid.' },
+        },
+      ],
+    },
+    {
       name: 'lines',
       type: 'array',
       required: true,
@@ -596,12 +641,43 @@ export const PurchaseOrders: CollectionConfig = {
           fields: [
             { name: 'edition', type: 'relationship', relationTo: 'editions', required: true, label: 'Book' },
             { name: 'quantity', type: 'number', required: true, min: 1, defaultValue: 1 },
-            { name: 'unitCost', type: 'number', min: 0, label: 'Cost each' },
+            { name: 'listPrice', type: 'number', min: 0, label: 'Printed price', admin: { description: 'As printed on the book, e.g. 699.' } },
+            { name: 'supplierDiscount', type: 'number', min: 0, max: 100, label: 'Discount (%)' },
+            { name: 'unitCost', type: 'number', min: 0, label: 'Cost each', admin: { description: 'Worked out from the printed price and discount, or type it.' } },
+            { name: 'landedCost', type: 'number', label: 'Landed, each (৳)', admin: { readOnly: true, description: 'With its share of the costs below.' } },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'expenses',
+      type: 'array',
+      label: 'Shipment costs',
+      labels: { singular: 'Cost', plural: 'Costs' },
+      admin: { description: 'Everything else this shipment cost, in taka. Shared across the books by value.' },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'kind',
+              type: 'select',
+              required: true,
+              options: ['Freight', 'Customs duty and VAT', 'Clearing agent', 'Transport to Dhaka', 'Bank and transfer charges', 'Other'],
+            },
+            { name: 'amount', type: 'number', required: true, min: 0, label: 'Amount (৳)' },
+            { name: 'note', type: 'text' },
           ],
         },
       ],
     },
     { name: 'notes', type: 'textarea' },
+    {
+      name: 'receivingNote',
+      type: 'textarea',
+      label: 'Labelling',
+      admin: { readOnly: true, condition: (data) => Boolean(data?.receivingNote), description: 'Copies to mark when they were received.' },
+    },
     { name: 'receivedAt', type: 'date', admin: { readOnly: true, position: 'sidebar' } },
   ],
 }

@@ -34,18 +34,39 @@ const roundUp = (amount: number, step: number): number => {
 /** "৳1,450" — whole taka with thousands separators. */
 export const formatTaka = (amount: number): string => `৳${Math.round(amount).toLocaleString('en-IN')}`
 
+/** A price less a percentage, rounded to the nearest step (৳1,000 less 15% is ৳850). */
+export const discountedPrice = (original: number, percent: number, roundTo = 10): number => {
+  const unit = roundTo > 0 ? roundTo : 1
+  return Math.round(Number(((original * (1 - percent / 100)) / unit).toFixed(6))) * unit
+}
+
 /**
- * What a book sells for, from its original price (list price converted to taka) and an
- * optional selling price set by staff. A selling price below the original shows the original
- * struck through, as a discount.
+ * The discount a book gets: its own, or the shop's when it has none, and a group discount
+ * (a sale on its subject, publisher or collection) when that is bigger. 0 means full price.
+ */
+export const effectiveDiscount = (book: number | null | undefined, shop: number | null | undefined, sale?: number | null): number => {
+  const own = typeof book === 'number' && book >= 0 ? book : (shop ?? 0)
+  return Math.min(100, Math.max(0, own, sale ?? 0))
+}
+
+/**
+ * What a book sells for, from its listed price (the printed price converted to taka):
+ * a fixed selling price set by staff wins; otherwise the listed price less the discount.
+ * Whenever customers pay less than the listed price, the listed price is shown struck through.
  */
 export const derivePrices = (
   original: number | null,
   selling: number | null | undefined,
   current?: number | null,
+  discount = 0,
+  roundTo = 10,
 ): { price: number | null; compareAtPrice: number | null } => {
   if (typeof selling === 'number' && selling > 0) {
     return { price: selling, compareAtPrice: original !== null && original > selling ? original : null }
+  }
+  if (original !== null && discount > 0) {
+    const price = discountedPrice(original, discount, roundTo)
+    return { price, compareAtPrice: price < original ? original : null }
   }
   return { price: original ?? current ?? null, compareAtPrice: null }
 }

@@ -1,6 +1,9 @@
 import type { CollectionConfig } from 'payload'
 
+import type { Edition } from '../payload-types'
+
 import { allow, anyone, nobody } from '../access/roles'
+import { lotsForMovement, nextLotPrice } from '../lib/lots'
 import { allocateWaitingOrders } from '../lib/orders/transitions'
 import { slugify } from '../lib/slug'
 
@@ -161,8 +164,10 @@ export const StockMovements: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
-      ({ data, req, operation }) => {
-        if (operation === 'create' && req.user) data.recordedBy = req.user.id
+      async ({ data, req, operation }) => {
+        if (operation !== 'create') return data
+        if (req.user) data.recordedBy = req.user.id
+        data.lots = await lotsForMovement(req, data)
         return data
       },
     ],
@@ -177,10 +182,17 @@ export const StockMovements: CollectionConfig = {
           req,
         })
         const onHand = movements.docs.reduce((sum, m) => sum + (m.quantity ?? 0), 0)
+        // The shop's price follows the copies that go out next: when the oldest lot runs out
+        // and the next has a different printed price, the book is re-priced from it.
+        const [book, next] = await Promise.all([
+          req.payload.findByID({ collection: 'editions', id: editionId, depth: 0, req, overrideAccess: true, select: { listPrice: true, listCurrency: true } }),
+          nextLotPrice(req.payload, editionId, req),
+        ])
+        const printed = next && (next.listPrice !== book.listPrice || next.listCurrency !== book.listCurrency) ? { listPrice: next.listPrice, listCurrency: next.listCurrency as Edition['listCurrency'] } : {}
         await req.payload.update({
           collection: 'editions',
           id: editionId,
-          data: { stockOnHand: onHand },
+          data: { stockOnHand: onHand, ...printed },
           depth: 0,
           req,
         })
@@ -209,6 +221,13 @@ export const StockMovements: CollectionConfig = {
     },
     { name: 'reason', type: 'select', required: true, options: [...STOCK_REASONS] },
     { name: 'note', type: 'text' },
+    { name: 'order', type: 'relationship', relationTo: 'orders', index: true, admin: { readOnly: true, position: 'sidebar', description: 'The order these copies went to or came back from.' } },
+    {
+      name: 'lots',
+      type: 'json',
+      label: 'From or into lots',
+      admin: { readOnly: true, description: 'Which deliveries (lots) the copies came from or went back to, and what each cost.' },
+    },
     {
       name: 'recordedBy',
       type: 'relationship',

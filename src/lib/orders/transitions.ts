@@ -41,7 +41,7 @@ const allocateLines = async (payload: Payload, order: Order, parcels: Parcel[]):
   for (const [i, line] of lines.entries()) {
     if (line.allocated || parcels[line.parcel ?? 0]?.status !== 'pending') continue
     if (await takeCopies(payload, idOf(line.edition), line.quantity)) {
-      await recordMovement(payload, idOf(line.edition), -line.quantity, 'sale', `Order ${order.number}`)
+      await recordMovement(payload, idOf(line.edition), -line.quantity, 'sale', `Order ${order.number}`, undefined, order.id)
       lines[i] = { ...line, allocated: true }
     }
   }
@@ -53,7 +53,7 @@ const releaseLines = async (payload: Payload, order: Order, lines: Lines, which:
   const next = [...lines]
   for (const [i, line] of next.entries()) {
     if (!which(line) || !line.allocated) continue
-    await recordMovement(payload, idOf(line.edition), line.quantity, reason, note)
+    await recordMovement(payload, idOf(line.edition), line.quantity, reason, note, undefined, order.id)
     next[i] = { ...line, allocated: false }
   }
   return next

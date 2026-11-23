@@ -234,12 +234,15 @@ If your Lark plan does not allow SMTP sending, use the free tier of Brevo or Res
 
 ## 8. Backups and alerts
 
+**Stock lots (once).** After the first deploy that includes stock lots, set the real exchange rates in Settings → Pricing rules, then run `pnpm stock:lots`. It gives the copies already on the shelf an opening lot with an estimated cost, and checks that every book's lots match its stock. Run it again any time as a check; it changes nothing when all is well.
+
 **Daily backup.** As the `afterword` user, run `crontab -e` and add:
 ```
 15 3 * * *  cd /home/afterword/afterword-web && sh scripts/backup.sh >> backups/backup.log 2>&1
 */30 * * * *  cd /home/afterword/afterword-web && pnpm -s courier:sync >> backups/courier.log 2>&1
+*/15 * * * *  cd /home/afterword/afterword-web && pnpm -s prices:sync >> backups/prices.log 2>&1
 ```
-The backup keeps the newest 14 copies on the server. The second line asks Pathao about parcels every half hour (section 9a).
+The backup keeps the newest 14 copies on the server. The second line asks Pathao about parcels every half hour (section 9a). The third keeps prices in line with group discounts, so a sale starts and ends on time.
 
 **Off-site copy.** Make a free Backblaze B2 (or Cloudflare R2) bucket, install rclone (`curl https://rclone.org/install.sh | sudo bash`), run `rclone config` to add it as a remote called `b2`, and set `RCLONE_REMOTE=b2:afterword-backups` in `.env`. Every backup is then copied off the server as well.
 

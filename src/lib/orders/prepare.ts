@@ -191,7 +191,7 @@ export const afterOrderCreated = async (doc: Order, req: PayloadRequest, context
   const number = `AW-${100000 + doc.id}`
 
   for (const line of doc.lines ?? []) {
-    if (line.allocated) await recordMovement(payload, idOf(line.edition), -line.quantity, 'sale', `Order ${number}`, req)
+    if (line.allocated) await recordMovement(payload, idOf(line.edition), -line.quantity, 'sale', `Order ${number}`, req, doc.id)
   }
 
   const customerId = idOf(doc.customer)

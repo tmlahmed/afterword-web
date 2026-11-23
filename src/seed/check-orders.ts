@@ -3,13 +3,15 @@
  * Places, confirms, ships, delivers and cancels test orders, then removes everything it created.
  * For development machines only — never run it against the live shop.
  */
+import { sql } from '@payloadcms/db-postgres'
 import { getPayload } from 'payload'
 import config from '../payload.config'
 import { runOrderAction } from '../lib/orders/transitions'
-import { dhakaDay, moneyReport, periodFrom, salesReport, stockReport, toCsv } from '../lib/reports'
+import { dhakaDay, moneyReport, periodFrom, profitReport, salesReport, stockReport, toCsv } from '../lib/reports'
 import { shopRules } from '../lib/orders/prepare'
 import { pointsEarned, pointsToSpend } from '../lib/orders/pricing'
 import { getReviews, reviewEligibility } from '../lib/reviews'
+import { copiesInLots } from '../lib/lots'
 
 const payload = await getPayload({ config })
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -29,6 +31,13 @@ const expectError = async (label: string, fn: () => Promise<unknown>, includes: 
 const inStock = (await payload.find({ collection: 'editions', where: { stockOnHand: { greater_than: 2 } }, limit: 1, depth: 0, sort: 'id' })).docs[0]
 const onRequest = (await payload.find({ collection: 'editions', where: { and: [{ stockOnHand: { equals: 0 } }, { sourcing: { equals: 'standard' } }, { status: { equals: 'published' } }] }, limit: 1, depth: 0, sort: 'id' })).docs[0]
 const before = await stock(inStock.id)
+// Stock lots as they were, so the clean-up can put them back exactly.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = (payload.db as any).drizzle
+const lotRows = async () => (((await db.execute(sql`SELECT id, remaining FROM stock_lots ORDER BY id`)) as { rows: { id: number; remaining: number }[] }).rows)
+const lotsBefore = await lotRows()
+const lastLotBefore = lotsBefore.length ? Math.max(...lotsBefore.map((l) => Number(l.id))) : 0
+const oldestLot = (await payload.find({ collection: 'stock-lots', where: { and: [{ edition: { equals: inStock.id } }, { remaining: { greater_than: 0 } }] }, sort: 'receivedAt', limit: 1, depth: 0 })).docs[0]
 const created: number[] = []
 // The checks follow whatever delivery and advance rules are set in Shop settings.
 const rules = await payload.findGlobal({ slug: 'site-settings' })
@@ -44,6 +53,10 @@ check('order gets a number and token', /^AW-\d+$/.test(o.number ?? '') && (o.tok
 check('prices come from the catalogue', o.subtotal === inStock.price! * 2 && o.total === o.subtotal! + (o.subtotal! >= freeAbove ? 0 : insideFee) && o.payOnDelivery === o.total, `total ${o.total}`)
 check('copies are set aside', (await stock(inStock.id)) === before - 2 && (await ledger(inStock.id)) === before - 2)
 check('website order waits to be confirmed', o.status === 'placed')
+const saleMove = (await payload.find({ collection: 'stock-movements', where: { and: [{ order: { equals: o.id } }, { reason: { equals: 'sale' } }] }, depth: 0, limit: 1 })).docs[0]
+const taken = (saleMove?.lots ?? []) as { lot: number | null; quantity: number; cost: number | null }[]
+check('copies come from the oldest lot, with its cost', !!oldestLot && taken[0]?.lot === oldestLot.id && taken.reduce((n, a) => n + a.quantity, 0) === 2, JSON.stringify(taken))
+check('lots hold what the shelf holds after a sale', (await copiesInLots(payload, inStock.id)) === (await stock(inStock.id)))
 
 // 2. Cannot oversell
 await expectError('cannot order more copies than exist', () => place({ lines: [{ edition: inStock.id, quantity: before + 5 }], paymentPlan: 'cod' }), 'left')
@@ -70,6 +83,7 @@ const raceWinner = (won[0] as PromiseFulfilledResult<{ id: number }>).value.id
 await runOrderAction(payload, raceWinner, { action: 'cancel', reason: 'test' }, 'Test')
 await wait(1200)
 check('cancelling returns copies to stock', (await stock(inStock.id)) === remaining && (await ledger(inStock.id)) === remaining)
+check('cancelling puts the copies back into their lots', (await copiesInLots(payload, inStock.id)) === remaining, `${await copiesInLots(payload, inStock.id)} in lots`)
 
 // 6. On Request needs an advance
 await expectError('On Request cannot be cash on delivery at checkout', () => place({ lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'cod' }), 'advance')
@@ -210,7 +224,9 @@ const mixedBefore = new Map<number, number>()
   check('today appears in the day-by-day figures', today?.day === dhakaDay(new Date()) && today.orders > 0, today?.day ?? 'none')
   const stockNow = await stockReport(payload)
   const withCopies = await payload.count({ collection: 'editions', where: { stockOnHand: { greater_than: 0 } }, overrideAccess: true })
-  check('stock report covers every book with copies', stockNow.titles === withCopies.totalDocs, `${stockNow.titles} vs ${withCopies.totalDocs}`)
+  const profit = await profitReport(payload, periodFrom('7d'))
+check('profit report costs the copies sold from their lots', profit.totals.revenue > 0 && profit.totals.cost > 0 && profit.totals.profit === profit.totals.revenue - profit.totals.cost, `sales ${profit.totals.revenue}, cost ${profit.totals.cost}`)
+check('stock report covers every book with copies', stockNow.titles === withCopies.totalDocs, `${stockNow.titles} vs ${withCopies.totalDocs}`)
   const money = await moneyReport(payload)
   check('money report sees the advance waiting to be checked or held', money.toVerify.length + money.advancesHeld.length > 0)
   const csv = toCsv(['a', 'b'], [['=1+1', 'x, "y"']])
@@ -242,7 +258,11 @@ check('clean-up removed the test reviews', reviewedBooks.length === 0 || ((await
 if (supplier.name === 'Test supplier') await payload.delete({ collection: 'suppliers', id: supplier.id, overrideAccess: true })
 // ledger rows were removed directly, so restore the two stock figures to what the ledger says
 for (const id of [inStock.id, onRequest.id, ...mixedIds]) await payload.update({ collection: 'editions', id, data: { stockOnHand: await ledger(id) }, depth: 0 })
+// Lots: remove the ones the test made, and put the counts back as they were.
+await db.execute(sql`DELETE FROM stock_lots WHERE id > ${lastLotBefore}`)
+for (const l of lotsBefore) await db.execute(sql`UPDATE stock_lots SET remaining = ${l.remaining} WHERE id = ${l.id}`)
 check('clean-up restored stock', (await stock(inStock.id)) === before && (await stock(onRequest.id)) === 0, `${await stock(inStock.id)} vs ${before}`)
+check('clean-up restored the lots', (await copiesInLots(payload, inStock.id)) === before && (await copiesInLots(payload, onRequest.id)) === 0, `${await copiesInLots(payload, inStock.id)} vs ${before}`)
 for (const id of mixedIds) check(`clean-up restored stock of book ${id}`, (await stock(id)) === mixedBefore.get(id), `${await stock(id)} vs ${mixedBefore.get(id)}`)
 console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED')
 process.exit(0)

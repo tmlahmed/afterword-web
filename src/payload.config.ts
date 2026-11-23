@@ -19,6 +19,8 @@ import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { healthEndpoint } from './endpoints/health'
 import { reportsCsvEndpoint } from './endpoints/reports'
 import { Home, Navigation, Pricing, SiteSettings } from './globals'
+import { GroupDiscounts } from './collections/GroupDiscounts'
+import { StockLots } from './collections/StockLots'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -87,10 +89,12 @@ export default buildConfig({
     Requests,
     Customers,
     Promotions,
+    GroupDiscounts,
     RewardEntries,
     Messages,
     // Stock and purchasing
     StockMovements,
+    StockLots,
     PurchaseOrders,
     Suppliers,
     // Internal

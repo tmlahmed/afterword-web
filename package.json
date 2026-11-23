@@ -23,6 +23,8 @@
     "import:catalogue": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/import-catalogue.ts",
     "covers:copy": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/copy-covers.ts",
     "check:orders": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/check-orders.ts",
+    "stock:lots": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/stock-lots.ts",
+    "prices:sync": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/prices-sync.ts",
     "check:courier": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/check-courier.ts",
     "courier:sync": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/courier-sync.ts"
   },

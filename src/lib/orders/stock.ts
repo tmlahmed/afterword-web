@@ -30,10 +30,12 @@ export const recordMovement = async (
   reason: 'sale' | 'released' | 'return',
   note: string,
   req?: Partial<PayloadRequest>,
+  /** The order the copies go to or come back from, so they return to the lots they came from. */
+  orderId?: number,
 ): Promise<void> => {
   await payload.create({
     collection: 'stock-movements',
-    data: { edition: editionId, quantity, reason, note },
+    data: { edition: editionId, quantity, reason, note, order: orderId ?? null },
     depth: 0,
     overrideAccess: true,
     req,

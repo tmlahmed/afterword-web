@@ -86,9 +86,11 @@ export interface Config {
     requests: Request;
     customers: Customer;
     promotions: Promotion;
+    'group-discounts': GroupDiscount;
     'reward-entries': RewardEntry;
     messages: Message;
     'stock-movements': StockMovement;
+    'stock-lots': StockLot;
     'purchase-orders': PurchaseOrder;
     suppliers: Supplier;
     carts: Cart;
@@ -134,9 +136,11 @@ export interface Config {
     requests: RequestsSelect<false> | RequestsSelect<true>;
     customers: CustomersSelect<false> | CustomersSelect<true>;
     promotions: PromotionsSelect<false> | PromotionsSelect<true>;
+    'group-discounts': GroupDiscountsSelect<false> | GroupDiscountsSelect<true>;
     'reward-entries': RewardEntriesSelect<false> | RewardEntriesSelect<true>;
     messages: MessagesSelect<false> | MessagesSelect<true>;
     'stock-movements': StockMovementsSelect<false> | StockMovementsSelect<true>;
+    'stock-lots': StockLotsSelect<false> | StockLotsSelect<true>;
     'purchase-orders': PurchaseOrdersSelect<false> | PurchaseOrdersSelect<true>;
     suppliers: SuppliersSelect<false> | SuppliersSelect<true>;
     carts: CartsSelect<false> | CartsSelect<true>;
@@ -263,20 +267,25 @@ export interface Edition {
   spineMm?: number | null;
   weightG?: number | null;
   /**
-   * The price printed on the book, e.g. 599.
+   * As printed on the book, e.g. 599. While copies are in stock it follows the oldest delivery.
    */
   listPrice?: number | null;
   listCurrency?: ('GBP' | 'USD' | 'INR' | 'EUR' | 'BDT') | null;
   /**
-   * List price × your rate for the currency (Settings → Pricing rules), rounded. Updated when you save.
+   * Printed price × taka per unit (Settings → Pricing rules), rounded. Updated when you save.
    */
   originalPrice?: number | null;
   /**
-   * Optional. Leave empty to sell at the original price. A lower price shows as a discount.
+   * Leave empty for the shop discount. 0 sells at the listed price.
+   */
+  discount?: number | null;
+  /**
+   * Optional. A set price instead of the discount, e.g. 899.
    */
   priceOverride?: number | null;
   price?: number | null;
   compareAtPrice?: number | null;
+  saleDiscount?: number | null;
   sourcing: 'standard' | 'pre_order' | 'out_of_print';
   expectedDate?: string | null;
   /**
@@ -541,7 +550,321 @@ export interface StockMovement {
   quantity: number;
   reason: 'opening' | 'received' | 'sale' | 'released' | 'return' | 'damaged' | 'adjustment';
   note?: string | null;
+  /**
+   * The order these copies went to or came back from.
+   */
+  order?: (number | null) | Order;
+  /**
+   * Which deliveries (lots) the copies came from or went back to, and what each cost.
+   */
+  lots?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   recordedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * To take an order by phone or chat, press Create New, fill in the customer and the books, and save.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  /**
+   * Given when the order is saved.
+   */
+  number?: string | null;
+  status: 'placed' | 'awaiting_stock' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+  paymentStatus: 'unpaid' | 'to_verify' | 'advance_paid' | 'paid' | 'refunded';
+  contactName: string;
+  /**
+   * 01XXXXXXXXX
+   */
+  contactPhone: string;
+  contactEmail?: string | null;
+  district:
+    | 'Dhaka'
+    | 'Bagerhat'
+    | 'Bandarban'
+    | 'Barguna'
+    | 'Barishal'
+    | 'Bhola'
+    | 'Bogura'
+    | 'Brahmanbaria'
+    | 'Chandpur'
+    | 'Chapainawabganj'
+    | 'Chattogram'
+    | 'Chuadanga'
+    | "Cox's Bazar"
+    | 'Cumilla'
+    | 'Dinajpur'
+    | 'Faridpur'
+    | 'Feni'
+    | 'Gaibandha'
+    | 'Gazipur'
+    | 'Gopalganj'
+    | 'Habiganj'
+    | 'Jamalpur'
+    | 'Jashore'
+    | 'Jhalokathi'
+    | 'Jhenaidah'
+    | 'Joypurhat'
+    | 'Khagrachhari'
+    | 'Khulna'
+    | 'Kishoreganj'
+    | 'Kurigram'
+    | 'Kushtia'
+    | 'Lakshmipur'
+    | 'Lalmonirhat'
+    | 'Madaripur'
+    | 'Magura'
+    | 'Manikganj'
+    | 'Meherpur'
+    | 'Moulvibazar'
+    | 'Munshiganj'
+    | 'Mymensingh'
+    | 'Naogaon'
+    | 'Narail'
+    | 'Narayanganj'
+    | 'Narsingdi'
+    | 'Natore'
+    | 'Netrokona'
+    | 'Nilphamari'
+    | 'Noakhali'
+    | 'Pabna'
+    | 'Panchagarh'
+    | 'Patuakhali'
+    | 'Pirojpur'
+    | 'Rajbari'
+    | 'Rajshahi'
+    | 'Rangamati'
+    | 'Rangpur'
+    | 'Satkhira'
+    | 'Shariatpur'
+    | 'Sherpur'
+    | 'Sirajganj'
+    | 'Sunamganj'
+    | 'Sylhet'
+    | 'Tangail'
+    | 'Thakurgaon';
+  /**
+   * Optional. The website no longer asks for it; the address above is enough.
+   */
+  area?: string | null;
+  street: string;
+  deliveryNote?: string | null;
+  channel?: ('web' | 'phone' | 'facebook' | 'whatsapp' | 'instagram') | null;
+  /**
+   * Matched by phone number when saved.
+   */
+  customer?: (number | null) | Customer;
+  /**
+   * Choose the book and quantity. Prices and availability are filled in when you save.
+   */
+  lines: {
+    edition: number | Edition;
+    quantity: number;
+    title?: string | null;
+    unitPrice?: number | null;
+    kind?: ('in_stock' | 'pre_order' | 'on_request') | null;
+    allocated?: boolean | null;
+    /**
+     * 0 = first parcel, 1 = second.
+     */
+    parcel?: number | null;
+    authorLine?: string | null;
+    isbn13?: string | null;
+    id?: string | null;
+  }[];
+  giftWrap?: boolean | null;
+  promoCode?: string | null;
+  /**
+   * Only matters when the order has books in stock and books to order in. Two parcels cost two delivery fees (both free when the order gets free delivery).
+   */
+  deliveryPlan?: ('split' | 'together') | null;
+  /**
+   * As many as the rules allow. Worked out when you save.
+   */
+  usePoints?: boolean | null;
+  pointsUsed?: number | null;
+  /**
+   * Given when the order is delivered.
+   */
+  pointsEarned?: number | null;
+  giftNote?: string | null;
+  paymentPlan: 'cod' | 'advance' | 'full';
+  payNowVia?: ('bkash_manual' | 'bkash' | 'sslcommerz') | null;
+  paymentReference?: string | null;
+  /**
+   * The customer’s bKash number the money was sent from.
+   */
+  paymentSender?: string | null;
+  subtotal?: number | null;
+  discount?: number | null;
+  rewardDiscount?: number | null;
+  delivery?: number | null;
+  giftWrapFee?: number | null;
+  total?: number | null;
+  payNow?: number | null;
+  paid?: number | null;
+  payOnDelivery?: number | null;
+  /**
+   * Money received. Recorded by the order actions.
+   */
+  payments?:
+    | {
+        amount: number;
+        method: string;
+        reference?: string | null;
+        at: string;
+        id?: string | null;
+      }[]
+    | null;
+  courier?: string | null;
+  trackingId?: string | null;
+  zone?: ('inside_dhaka' | 'outside_dhaka') | null;
+  /**
+   * One parcel, or two when books in stock go first and the rest follow. Moved on by the actions at the top.
+   */
+  parcels?:
+    | {
+        status: 'pending' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+        collect?: number | null;
+        courier?: string | null;
+        trackingId?: string | null;
+        courierStatus?: string | null;
+        courierFee?: number | null;
+        courierCheckedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  timeline?:
+    | {
+        at: string;
+        event: string;
+        by?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * For staff only. Never shown to the customer.
+   */
+  staffNotes?: string | null;
+  token?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customers".
+ */
+export interface Customer {
+  id: number;
+  /**
+   * In the form +8801XXXXXXXXX.
+   */
+  phone: string;
+  name?: string | null;
+  email?: string | null;
+  address?: {
+    district?:
+      | (
+          | 'Dhaka'
+          | 'Bagerhat'
+          | 'Bandarban'
+          | 'Barguna'
+          | 'Barishal'
+          | 'Bhola'
+          | 'Bogura'
+          | 'Brahmanbaria'
+          | 'Chandpur'
+          | 'Chapainawabganj'
+          | 'Chattogram'
+          | 'Chuadanga'
+          | "Cox's Bazar"
+          | 'Cumilla'
+          | 'Dinajpur'
+          | 'Faridpur'
+          | 'Feni'
+          | 'Gaibandha'
+          | 'Gazipur'
+          | 'Gopalganj'
+          | 'Habiganj'
+          | 'Jamalpur'
+          | 'Jashore'
+          | 'Jhalokathi'
+          | 'Jhenaidah'
+          | 'Joypurhat'
+          | 'Khagrachhari'
+          | 'Khulna'
+          | 'Kishoreganj'
+          | 'Kurigram'
+          | 'Kushtia'
+          | 'Lakshmipur'
+          | 'Lalmonirhat'
+          | 'Madaripur'
+          | 'Magura'
+          | 'Manikganj'
+          | 'Meherpur'
+          | 'Moulvibazar'
+          | 'Munshiganj'
+          | 'Mymensingh'
+          | 'Naogaon'
+          | 'Narail'
+          | 'Narayanganj'
+          | 'Narsingdi'
+          | 'Natore'
+          | 'Netrokona'
+          | 'Nilphamari'
+          | 'Noakhali'
+          | 'Pabna'
+          | 'Panchagarh'
+          | 'Patuakhali'
+          | 'Pirojpur'
+          | 'Rajbari'
+          | 'Rajshahi'
+          | 'Rangamati'
+          | 'Rangpur'
+          | 'Satkhira'
+          | 'Shariatpur'
+          | 'Sherpur'
+          | 'Sirajganj'
+          | 'Sunamganj'
+          | 'Sylhet'
+          | 'Tangail'
+          | 'Thakurgaon'
+        )
+      | null;
+    area?: string | null;
+    street?: string | null;
+  };
+  ordersCount?: number | null;
+  /**
+   * Parcels refused or returned undelivered.
+   */
+  refusedCount?: number | null;
+  /**
+   * The total of this customer’s reward entries. Change it by adding an entry under Orders → Reward points.
+   */
+  rewardPoints?: number | null;
+  /**
+   * A blocked number cannot place orders.
+   */
+  blocked?: boolean | null;
+  staffNotes?: string | null;
+  orders?: {
+    docs?: (number | Order)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -787,304 +1110,6 @@ export interface Review {
   createdAt: string;
 }
 /**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "customers".
- */
-export interface Customer {
-  id: number;
-  /**
-   * In the form +8801XXXXXXXXX.
-   */
-  phone: string;
-  name?: string | null;
-  email?: string | null;
-  address?: {
-    district?:
-      | (
-          | 'Dhaka'
-          | 'Bagerhat'
-          | 'Bandarban'
-          | 'Barguna'
-          | 'Barishal'
-          | 'Bhola'
-          | 'Bogura'
-          | 'Brahmanbaria'
-          | 'Chandpur'
-          | 'Chapainawabganj'
-          | 'Chattogram'
-          | 'Chuadanga'
-          | "Cox's Bazar"
-          | 'Cumilla'
-          | 'Dinajpur'
-          | 'Faridpur'
-          | 'Feni'
-          | 'Gaibandha'
-          | 'Gazipur'
-          | 'Gopalganj'
-          | 'Habiganj'
-          | 'Jamalpur'
-          | 'Jashore'
-          | 'Jhalokathi'
-          | 'Jhenaidah'
-          | 'Joypurhat'
-          | 'Khagrachhari'
-          | 'Khulna'
-          | 'Kishoreganj'
-          | 'Kurigram'
-          | 'Kushtia'
-          | 'Lakshmipur'
-          | 'Lalmonirhat'
-          | 'Madaripur'
-          | 'Magura'
-          | 'Manikganj'
-          | 'Meherpur'
-          | 'Moulvibazar'
-          | 'Munshiganj'
-          | 'Mymensingh'
-          | 'Naogaon'
-          | 'Narail'
-          | 'Narayanganj'
-          | 'Narsingdi'
-          | 'Natore'
-          | 'Netrokona'
-          | 'Nilphamari'
-          | 'Noakhali'
-          | 'Pabna'
-          | 'Panchagarh'
-          | 'Patuakhali'
-          | 'Pirojpur'
-          | 'Rajbari'
-          | 'Rajshahi'
-          | 'Rangamati'
-          | 'Rangpur'
-          | 'Satkhira'
-          | 'Shariatpur'
-          | 'Sherpur'
-          | 'Sirajganj'
-          | 'Sunamganj'
-          | 'Sylhet'
-          | 'Tangail'
-          | 'Thakurgaon'
-        )
-      | null;
-    area?: string | null;
-    street?: string | null;
-  };
-  ordersCount?: number | null;
-  /**
-   * Parcels refused or returned undelivered.
-   */
-  refusedCount?: number | null;
-  /**
-   * The total of this customer’s reward entries. Change it by adding an entry under Orders → Reward points.
-   */
-  rewardPoints?: number | null;
-  /**
-   * A blocked number cannot place orders.
-   */
-  blocked?: boolean | null;
-  staffNotes?: string | null;
-  orders?: {
-    docs?: (number | Order)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * To take an order by phone or chat, press Create New, fill in the customer and the books, and save.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "orders".
- */
-export interface Order {
-  id: number;
-  /**
-   * Given when the order is saved.
-   */
-  number?: string | null;
-  status: 'placed' | 'awaiting_stock' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
-  paymentStatus: 'unpaid' | 'to_verify' | 'advance_paid' | 'paid' | 'refunded';
-  contactName: string;
-  /**
-   * 01XXXXXXXXX
-   */
-  contactPhone: string;
-  contactEmail?: string | null;
-  district:
-    | 'Dhaka'
-    | 'Bagerhat'
-    | 'Bandarban'
-    | 'Barguna'
-    | 'Barishal'
-    | 'Bhola'
-    | 'Bogura'
-    | 'Brahmanbaria'
-    | 'Chandpur'
-    | 'Chapainawabganj'
-    | 'Chattogram'
-    | 'Chuadanga'
-    | "Cox's Bazar"
-    | 'Cumilla'
-    | 'Dinajpur'
-    | 'Faridpur'
-    | 'Feni'
-    | 'Gaibandha'
-    | 'Gazipur'
-    | 'Gopalganj'
-    | 'Habiganj'
-    | 'Jamalpur'
-    | 'Jashore'
-    | 'Jhalokathi'
-    | 'Jhenaidah'
-    | 'Joypurhat'
-    | 'Khagrachhari'
-    | 'Khulna'
-    | 'Kishoreganj'
-    | 'Kurigram'
-    | 'Kushtia'
-    | 'Lakshmipur'
-    | 'Lalmonirhat'
-    | 'Madaripur'
-    | 'Magura'
-    | 'Manikganj'
-    | 'Meherpur'
-    | 'Moulvibazar'
-    | 'Munshiganj'
-    | 'Mymensingh'
-    | 'Naogaon'
-    | 'Narail'
-    | 'Narayanganj'
-    | 'Narsingdi'
-    | 'Natore'
-    | 'Netrokona'
-    | 'Nilphamari'
-    | 'Noakhali'
-    | 'Pabna'
-    | 'Panchagarh'
-    | 'Patuakhali'
-    | 'Pirojpur'
-    | 'Rajbari'
-    | 'Rajshahi'
-    | 'Rangamati'
-    | 'Rangpur'
-    | 'Satkhira'
-    | 'Shariatpur'
-    | 'Sherpur'
-    | 'Sirajganj'
-    | 'Sunamganj'
-    | 'Sylhet'
-    | 'Tangail'
-    | 'Thakurgaon';
-  /**
-   * Optional. The website no longer asks for it; the address above is enough.
-   */
-  area?: string | null;
-  street: string;
-  deliveryNote?: string | null;
-  channel?: ('web' | 'phone' | 'facebook' | 'whatsapp' | 'instagram') | null;
-  /**
-   * Matched by phone number when saved.
-   */
-  customer?: (number | null) | Customer;
-  /**
-   * Choose the book and quantity. Prices and availability are filled in when you save.
-   */
-  lines: {
-    edition: number | Edition;
-    quantity: number;
-    title?: string | null;
-    unitPrice?: number | null;
-    kind?: ('in_stock' | 'pre_order' | 'on_request') | null;
-    allocated?: boolean | null;
-    /**
-     * 0 = first parcel, 1 = second.
-     */
-    parcel?: number | null;
-    authorLine?: string | null;
-    isbn13?: string | null;
-    id?: string | null;
-  }[];
-  giftWrap?: boolean | null;
-  promoCode?: string | null;
-  /**
-   * Only matters when the order has books in stock and books to order in. Two parcels cost two delivery fees (both free when the order gets free delivery).
-   */
-  deliveryPlan?: ('split' | 'together') | null;
-  /**
-   * As many as the rules allow. Worked out when you save.
-   */
-  usePoints?: boolean | null;
-  pointsUsed?: number | null;
-  /**
-   * Given when the order is delivered.
-   */
-  pointsEarned?: number | null;
-  giftNote?: string | null;
-  paymentPlan: 'cod' | 'advance' | 'full';
-  payNowVia?: ('bkash_manual' | 'bkash' | 'sslcommerz') | null;
-  paymentReference?: string | null;
-  /**
-   * The customer’s bKash number the money was sent from.
-   */
-  paymentSender?: string | null;
-  subtotal?: number | null;
-  discount?: number | null;
-  rewardDiscount?: number | null;
-  delivery?: number | null;
-  giftWrapFee?: number | null;
-  total?: number | null;
-  payNow?: number | null;
-  paid?: number | null;
-  payOnDelivery?: number | null;
-  /**
-   * Money received. Recorded by the order actions.
-   */
-  payments?:
-    | {
-        amount: number;
-        method: string;
-        reference?: string | null;
-        at: string;
-        id?: string | null;
-      }[]
-    | null;
-  courier?: string | null;
-  trackingId?: string | null;
-  zone?: ('inside_dhaka' | 'outside_dhaka') | null;
-  /**
-   * One parcel, or two when books in stock go first and the rest follow. Moved on by the actions at the top.
-   */
-  parcels?:
-    | {
-        status: 'pending' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
-        collect?: number | null;
-        courier?: string | null;
-        trackingId?: string | null;
-        courierStatus?: string | null;
-        courierFee?: number | null;
-        courierCheckedAt?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  timeline?:
-    | {
-        at: string;
-        event: string;
-        by?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * For staff only. Never shown to the customer.
-   */
-  staffNotes?: string | null;
-  token?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * People who asked for the newsletter. Download the list (managers) at /api/subscribers/export.csv and import it into your email service.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1152,6 +1177,47 @@ export interface Promotion {
   createdAt: string;
 }
 /**
+ * A discount on a whole subject, publisher or collection, with optional start and end dates. Books keep their own discount when it is bigger.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "group-discounts".
+ */
+export interface GroupDiscount {
+  id: number;
+  /**
+   * For staff, e.g. “Penguin Classics week”.
+   */
+  name: string;
+  percent: number;
+  /**
+   * Untick to stop it at once.
+   */
+  active?: boolean | null;
+  /**
+   * Empty: straight away.
+   */
+  startsAt?: string | null;
+  /**
+   * Empty: until you untick it.
+   */
+  endsAt?: string | null;
+  /**
+   * Every book in these subjects.
+   */
+  subjects?: (number | Subject)[] | null;
+  /**
+   * Every book from these publishers.
+   */
+  publishers?: (number | Publisher)[] | null;
+  /**
+   * Every book in these collections.
+   */
+  lists?: (number | List)[] | null;
+  books?: (number | Edition)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Every point earned or spent. To give or take points by hand, add an entry; entries cannot be edited.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1186,6 +1252,38 @@ export interface Message {
   createdAt: string;
 }
 /**
+ * Each delivery of each book, with what the copies cost you. Sold oldest first. Counts change only through the stock ledger; a manager can correct an estimated cost.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stock-lots".
+ */
+export interface StockLot {
+  id: number;
+  code?: string | null;
+  edition: number | Edition;
+  purchaseOrder?: (number | null) | PurchaseOrder;
+  quantity: number;
+  remaining: number;
+  receivedAt: string;
+  listPrice?: number | null;
+  listCurrency?: ('GBP' | 'USD' | 'INR' | 'EUR' | 'BDT') | null;
+  /**
+   * The supplier’s price in taka, before shipping and duty.
+   */
+  unitCost?: number | null;
+  /**
+   * What one copy cost you here, with its share of shipping, duty and other costs.
+   */
+  landedCost?: number | null;
+  /**
+   * Copies that arrived before costs were recorded. Correct the landed cost if you know it, then untick.
+   */
+  estimated?: boolean | null;
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * What has been ordered from a supplier. Receiving it adds the stock and releases waiting customer orders.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1200,13 +1298,54 @@ export interface PurchaseOrder {
   supplier: number | Supplier;
   status: 'draft' | 'ordered' | 'received';
   expectedDate?: string | null;
+  /**
+   * The currency of the supplier’s prices.
+   */
+  currency?: ('INR' | 'GBP' | 'USD' | 'EUR' | 'BDT') | null;
+  /**
+   * What one unit really cost you, e.g. 1.42 for a rupee. Starts from Pricing rules; change it to what you paid.
+   */
+  exchangeRate?: number | null;
   lines: {
     edition: number | Edition;
     quantity: number;
+    /**
+     * As printed on the book, e.g. 699.
+     */
+    listPrice?: number | null;
+    supplierDiscount?: number | null;
+    /**
+     * Worked out from the printed price and discount, or type it.
+     */
     unitCost?: number | null;
+    /**
+     * With its share of the costs below.
+     */
+    landedCost?: number | null;
     id?: string | null;
   }[];
+  /**
+   * Everything else this shipment cost, in taka. Shared across the books by value.
+   */
+  expenses?:
+    | {
+        kind:
+          | 'Freight'
+          | 'Customs duty and VAT'
+          | 'Clearing agent'
+          | 'Transport to Dhaka'
+          | 'Bank and transfer charges'
+          | 'Other';
+        amount: number;
+        note?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   notes?: string | null;
+  /**
+   * Copies to mark when they were received.
+   */
+  receivingNote?: string | null;
   receivedAt?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -1346,6 +1485,10 @@ export interface PayloadLockedDocument {
         value: number | Promotion;
       } | null)
     | ({
+        relationTo: 'group-discounts';
+        value: number | GroupDiscount;
+      } | null)
+    | ({
         relationTo: 'reward-entries';
         value: number | RewardEntry;
       } | null)
@@ -1356,6 +1499,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'stock-movements';
         value: number | StockMovement;
+      } | null)
+    | ({
+        relationTo: 'stock-lots';
+        value: number | StockLot;
       } | null)
     | ({
         relationTo: 'purchase-orders';
@@ -1463,9 +1610,11 @@ export interface EditionsSelect<T extends boolean = true> {
   listPrice?: T;
   listCurrency?: T;
   originalPrice?: T;
+  discount?: T;
   priceOverride?: T;
   price?: T;
   compareAtPrice?: T;
+  saleDiscount?: T;
   sourcing?: T;
   expectedDate?: T;
   leadTimeWeeks?: T;
@@ -1884,6 +2033,23 @@ export interface PromotionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "group-discounts_select".
+ */
+export interface GroupDiscountsSelect<T extends boolean = true> {
+  name?: T;
+  percent?: T;
+  active?: T;
+  startsAt?: T;
+  endsAt?: T;
+  subjects?: T;
+  publishers?: T;
+  lists?: T;
+  books?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reward-entries_select".
  */
 export interface RewardEntriesSelect<T extends boolean = true> {
@@ -1918,7 +2084,29 @@ export interface StockMovementsSelect<T extends boolean = true> {
   quantity?: T;
   reason?: T;
   note?: T;
+  order?: T;
+  lots?: T;
   recordedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stock-lots_select".
+ */
+export interface StockLotsSelect<T extends boolean = true> {
+  code?: T;
+  edition?: T;
+  purchaseOrder?: T;
+  quantity?: T;
+  remaining?: T;
+  receivedAt?: T;
+  listPrice?: T;
+  listCurrency?: T;
+  unitCost?: T;
+  landedCost?: T;
+  estimated?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1931,15 +2119,29 @@ export interface PurchaseOrdersSelect<T extends boolean = true> {
   supplier?: T;
   status?: T;
   expectedDate?: T;
+  currency?: T;
+  exchangeRate?: T;
   lines?:
     | T
     | {
         edition?: T;
         quantity?: T;
+        listPrice?: T;
+        supplierDiscount?: T;
         unitCost?: T;
+        landedCost?: T;
+        id?: T;
+      };
+  expenses?:
+    | T
+    | {
+        kind?: T;
+        amount?: T;
+        note?: T;
         id?: T;
       };
   notes?: T;
+  receivingNote?: T;
   receivedAt?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -2184,7 +2386,7 @@ export interface SiteSetting {
   createdAt?: string | null;
 }
 /**
- * Selling price = list price × your rate for that currency × margin, rounded up. Saving here does not change existing prices; books are re-priced when they are next saved.
+ * Listed price = printed price × taka per unit × margin, rounded up. Customers pay the listed price less the discount. Saving here re-prices every book within a minute.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pricing".
@@ -2192,23 +2394,36 @@ export interface SiteSetting {
 export interface Pricing {
   id: number;
   /**
-   * The taka you actually pay for one unit of each currency.
+   * Taka per unit turns a printed price into your listed price (2 for rupees, the market convention). The exchange rate is what you really pay; it estimates what books cost you and fills in new purchase orders.
    */
   rates?:
     | {
         currency: 'GBP' | 'USD' | 'INR' | 'EUR';
         rate: number;
+        exchangeRate?: number | null;
         id?: string | null;
       }[]
     | null;
   /**
-   * Multiplier applied after conversion. 1.2 adds 20%.
+   * Books without their own discount get this. 0 sells at the listed price. Gifts and stationery only get a discount you set on them.
+   */
+  defaultDiscount: number;
+  /**
+   * Multiplier on the listed price. Leave at 1 to follow the printed price exactly.
    */
   defaultMargin: number;
   /**
-   * Prices round up to a multiple of this many taka.
+   * Prices round to a multiple of this many taka.
    */
   roundTo: number;
+  /**
+   * Used only to estimate the cost of books that arrived before purchase costs were recorded.
+   */
+  typicalBuyDiscount: number;
+  /**
+   * A book page warns when the price leaves less than this over what the copies cost you.
+   */
+  minimumMargin: number;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2303,10 +2518,14 @@ export interface PricingSelect<T extends boolean = true> {
     | {
         currency?: T;
         rate?: T;
+        exchangeRate?: T;
         id?: T;
       };
+  defaultDiscount?: T;
   defaultMargin?: T;
   roundTo?: T;
+  typicalBuyDiscount?: T;
+  minimumMargin?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

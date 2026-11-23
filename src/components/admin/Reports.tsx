@@ -6,7 +6,7 @@ import type { AdminViewServerProps } from 'payload'
 import React from 'react'
 
 import { userHasRole } from '../../access/roles'
-import { demandReport, moneyReport, PERIODS, periodFrom, salesReport, stockReport } from '../../lib/reports'
+import { demandReport, moneyReport, PERIODS, periodFrom, profitReport, salesReport, shipmentsReport, stockReport } from '../../lib/reports'
 
 const taka = (n: number | null | undefined) => `৳${Math.round(n ?? 0).toLocaleString('en-IN')}`
 const num = (n: number) => n.toLocaleString('en-IN')
@@ -81,12 +81,15 @@ export const Reports = async ({ initPageResult, params, searchParams }: AdminVie
 
   const body = allowed ? (
     await (async () => {
-      const [sales, money, stock, demand] = await Promise.all([
+      const [sales, money, stock, demand, profit, shipments] = await Promise.all([
         salesReport(req.payload, period),
         moneyReport(req.payload),
         stockReport(req.payload),
         demandReport(req.payload, period),
+        profitReport(req.payload, period),
+        shipmentsReport(req.payload),
       ])
+      const pt = profit.totals
       const csv = (name: string) => `/api/reports/${name}.csv?period=${period.key}`
       const t = sales.totals
       return (
@@ -208,14 +211,99 @@ export const Reports = async ({ initPageResult, params, searchParams }: AdminVie
           </div>
 
           <Section
+            title={`Profit · ${period.label}`}
+            intro="What customers paid for the books (after discounts, without delivery) less what those exact copies cost you: each copy carries the landed cost of the delivery it came from."
+          >
+            <div style={grid}>
+              <Figure value={taka(pt.revenue)} label="Book sales" hint={count(pt.copies, 'copy', 'copies')} />
+              <Figure value={taka(pt.cost)} label="Cost of those copies" hint={pt.unknownCopies ? `${pt.unknownCopies} copies have no cost` : undefined} />
+              <Figure value={taka(pt.profit)} label="Profit" hint={`${pt.margin}% of book sales`} />
+            </div>
+            {profit.byTitle.length ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', fontSize: 14 }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Book</th>
+                    <th style={rightTh}>Copies</th>
+                    <th style={rightTh}>Sales</th>
+                    <th style={rightTh}>Cost</th>
+                    <th style={rightTh}>Profit</th>
+                    <th style={rightTh}>Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profit.byTitle.slice(0, 25).map((b) => (
+                    <tr key={b.id}>
+                      <td style={td}>
+                        <Link href={`/admin/collections/editions/${b.id}`}>{b.title}</Link>
+                      </td>
+                      <td style={right}>{num(b.copies)}</td>
+                      <td style={right}>{taka(b.revenue)}</td>
+                      <td style={right}>{b.unknown ? '—' : taka(b.cost)}</td>
+                      <td style={right}>{b.unknown ? '—' : taka(b.profit)}</td>
+                      <td style={right}>{b.unknown || !b.revenue ? '—' : `${Math.round((b.profit / b.revenue) * 100)}%`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </Section>
+
+          <Section
+            title="Deliveries"
+            intro="Each purchase order received: copies in, sold and left, what they cost with shipping and duty, and the profit on the copies sold so far."
+          >
+            {shipments.length ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Delivery</th>
+                    <th style={th}>Received</th>
+                    <th style={rightTh}>In</th>
+                    <th style={rightTh}>Sold</th>
+                    <th style={rightTh}>Left</th>
+                    <th style={rightTh}>Cost</th>
+                    <th style={rightTh}>Sales so far</th>
+                    <th style={rightTh}>Profit so far</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shipments.slice(0, 30).map((d) => (
+                    <tr key={d.key}>
+                      <td style={td}>
+                        {d.id ? <Link href={`/admin/collections/purchase-orders/${d.id}`}>{d.reference}</Link> : d.reference}
+                        {d.supplier ? <div style={{ fontSize: 12, opacity: 0.65 }}>{d.supplier}</div> : null}
+                        {d.estimated ? <div style={{ fontSize: 12, opacity: 0.65 }}>Some costs estimated</div> : null}
+                      </td>
+                      <td style={td}>{d.receivedAt.slice(0, 10)}</td>
+                      <td style={right}>{num(d.copiesIn)}</td>
+                      <td style={right}>{num(d.sold)}</td>
+                      <td style={right}>{num(d.left)}</td>
+                      <td style={right}>{taka(d.cost)}</td>
+                      <td style={right}>{taka(d.revenue)}</td>
+                      <td style={right}>{taka(d.profit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p style={{ opacity: 0.7 }}>No deliveries yet.</p>
+            )}
+          </Section>
+
+          <Section
             title="Stock"
             csv="/api/reports/stock.csv"
-            intro="Cost is estimated from each book’s list price and your exchange rates, before margin. Books without a list price are left out of the cost figure."
+            intro="Cost is what the copies on the shelf cost you: each delivery’s landed cost. Copies from before costs were recorded use an estimate (printed price less your usual supplier discount, at your exchange rate)."
           >
             <div style={grid}>
               <Figure value={num(stock.copies)} label="Copies in Dhaka" hint={count(stock.titles, 'title')} />
               <Figure value={taka(stock.retailValue)} label="At selling price" />
-              <Figure value={taka(stock.costValue)} label="Estimated cost" hint={stock.costUnknown ? `${stock.costUnknown} titles have no list price` : undefined} />
+              <Figure
+                value={taka(stock.costValue)}
+                label="What they cost you"
+                hint={[stock.estimatedCopies ? `${num(stock.estimatedCopies)} copies estimated` : '', stock.costUnknown ? `${stock.costUnknown} titles with no cost` : ''].filter(Boolean).join(' · ') || undefined}
+              />
               <Figure value={num(stock.unpublished.length)} label="In stock but not in the shop" hint="Drafts or archived books with copies" />
             </div>
           </Section>
