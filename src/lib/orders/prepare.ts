@@ -6,6 +6,8 @@ import type { Order } from '../../payload-types'
 import { notifyOrder } from '../notify'
 import { overallStatus, readyParcels, stillToCollect } from './parcels'
 import { type DeliveryPlan, type LineKind, normalisePhone, parcelCount, parcelFor, type PaymentPlan, planParcels, plansFor, pointsToSpend, priceOrder, type Promotion, type RewardRules, splitPayment, zoneFor } from './pricing'
+import { alertStaff } from '../staffAlerts'
+import { assessRisk, customerHistory } from './risk'
 import { recordMovement, takeCopies, takePoints } from './stock'
 
 const fail = (message: string): never => {
@@ -229,7 +231,22 @@ export const afterOrderCreated = async (doc: Order, req: PayloadRequest, context
     }
   }
 
-  await payload.update({ collection: 'orders', id: doc.id, data: { number }, depth: 0, overrideAccess: true, req, context: { internal: true } })
+  // Worth a call before confirming? (refused parcels before, a large first cash order…)
+  const settings = await payload.findGlobal({ slug: 'site-settings', depth: 0, req })
+  const { risk, riskNote } = assessRisk(doc, await customerHistory(payload, doc, req), settings.riskyCodAbove ?? 3000)
+
+  await payload.update({ collection: 'orders', id: doc.id, data: { number, risk, riskNote }, depth: 0, overrideAccess: true, req, context: { internal: true } })
   notifyOrder(payload, { ...doc, number }, 'placed')
-  return { ...doc, number }
+  // Website orders: tell the order desk at once. Orders taken by staff need no alert.
+  if (context?.checkout) {
+    const toCheck = doc.paymentStatus === 'to_verify'
+    alertStaff(payload, {
+      kind: toCheck ? 'payment' : 'order',
+      title: `New order ${number}${toCheck ? ': advance to check' : ''}`,
+      detail: [`${doc.contactName}, ${doc.district}`, `৳${(doc.total ?? 0).toLocaleString('en-IN')}`, riskNote ? `⚠ ${riskNote}` : ''].filter(Boolean).join(' · '),
+      link: `/admin/collections/orders/${doc.id}`,
+      audience: ['orders'],
+    })
+  }
+  return { ...doc, number, risk, riskNote }
 }

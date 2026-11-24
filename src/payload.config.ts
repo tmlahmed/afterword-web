@@ -21,6 +21,7 @@ import { reportsCsvEndpoint } from './endpoints/reports'
 import { Home, Navigation, Pricing, SiteSettings } from './globals'
 import { GroupDiscounts } from './collections/GroupDiscounts'
 import { StockLots } from './collections/StockLots'
+import { Notifications } from './collections/Notifications'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -56,10 +57,13 @@ export default buildConfig({
     components: {
       // Our own side menu (Dashboard and Reports first, icons, counts) and first screen.
       Nav: '/components/admin/Nav#AdminNav',
+      // The bell at the top right: new orders, payments to check, requests, reviews…
+      actions: ['/components/admin/NotificationBell#NotificationBell'],
       graphics: { Logo: '/components/admin/Logo#AdminLogo', Icon: '/components/admin/Logo#AdminIcon' },
       views: {
         dashboard: { Component: '/components/admin/Dashboard#Dashboard' },
         reports: { Component: '/components/admin/Reports#Reports', path: '/reports', meta: { title: 'Reports' } },
+        toOrder: { Component: '/components/admin/ToOrder#ToOrder', path: '/to-order', meta: { title: 'To order' } },
       },
     },
     importMap: {
@@ -95,6 +99,7 @@ export default buildConfig({
     // Stock and purchasing
     StockMovements,
     StockLots,
+    Notifications,
     PurchaseOrders,
     Suppliers,
     // Internal

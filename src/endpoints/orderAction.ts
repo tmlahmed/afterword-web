@@ -9,7 +9,7 @@ type CourierAction = { action: 'book_pathao'; parcel?: number } | { action: 'che
 
 /**
  * POST /api/orders/:id/action
- * { action: 'confirm' | 'record_payment' | 'ship' | 'unship' | 'deliver' | 'return' | 'cancel' | 'book_pathao' | 'check_courier', … }
+ * { action: 'confirm' | 'record_payment' | 'ship' | 'unship' | 'deliver' | 'return' | 'cancel' | 'record_refund' | 'take_back' | 'book_pathao' | 'check_courier', … }
  */
 export const orderActionEndpoint: Endpoint = {
   path: '/:id/action',
@@ -20,7 +20,7 @@ export const orderActionEndpoint: Endpoint = {
     }
     const id = Number(req.routeParams?.id)
     const body = ((await req.json?.().catch(() => null)) ?? {}) as OrderAction | CourierAction
-    const allowed = ['confirm', 'record_payment', 'ship', 'unship', 'deliver', 'return', 'cancel', 'book_pathao', 'check_courier']
+    const allowed = ['confirm', 'record_payment', 'ship', 'unship', 'deliver', 'return', 'cancel', 'record_refund', 'take_back', 'book_pathao', 'check_courier']
     if (!id || !allowed.includes(body.action)) return Response.json({ message: 'Unknown action.' }, { status: 400 })
     try {
       const by = (req.user as { name?: string; email?: string }).name ?? (req.user as { email?: string }).email ?? 'Staff'

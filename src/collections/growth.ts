@@ -4,6 +4,7 @@ import type { CollectionConfig, Endpoint, FieldAccess, Payload } from 'payload'
 
 import { allow, nobody, publishedOrStaff, userHasRole } from '../access/roles'
 import { toCsv } from '../lib/reports'
+import { alertStaff } from '../lib/staffAlerts'
 
 const idOf = (v: unknown): number | undefined =>
   typeof v === 'object' && v !== null ? (v as { id: number }).id : typeof v === 'number' ? v : undefined
@@ -118,6 +119,19 @@ export const Reviews: CollectionConfig = {
   },
   hooks: {
     afterChange: [
+      // A new review waits to be read: tell whoever looks after reviews.
+      ({ doc, operation, req }) => {
+        if (operation === 'create' && doc.status === 'pending') {
+          alertStaff(req.payload, {
+            kind: 'review',
+            title: `Review to read: ${'★'.repeat(Math.round(doc.rating ?? 0))}`,
+            detail: `${doc.title} — ${doc.displayName ?? 'a reader'}`,
+            link: `/admin/collections/reviews/${doc.id}`,
+            audience: ['writer', 'catalogue'],
+          })
+        }
+        return doc
+      },
       ({ doc, previousDoc, req }) => {
         const editionId = idOf(doc.edition)
         if (editionId && (doc.status !== previousDoc?.status || doc.rating !== previousDoc?.rating)) {

@@ -42,6 +42,8 @@ export const Users: CollectionConfig = {
   },
   fields: [
     { name: 'name', type: 'text', required: true },
+    // When this person last opened the alerts under the bell; newer ones count as unread.
+    { name: 'notificationsSeenAt', type: 'date', admin: { hidden: true } },
     {
       name: 'roles',
       type: 'select',

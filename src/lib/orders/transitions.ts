@@ -5,6 +5,7 @@ import { notifyOrder } from '../notify'
 import { linesIn, overallStatus, type Parcel, PARCEL_NAME, parcelsOf, readyParcels, rebalance, stillToCollect } from './parcels'
 import { shopRules } from './prepare'
 import { pointsEarned } from './pricing'
+import { alertStaff } from '../staffAlerts'
 import { recordMovement, takeCopies } from './stock'
 
 const idOf = (v: unknown): number => (typeof v === 'object' && v !== null ? (v as { id: number }).id : (v as number))
@@ -22,6 +23,20 @@ export type OrderAction =
   | { action: 'deliver'; parcel?: number }
   | { action: 'return'; parcel?: number }
   | { action: 'cancel'; reason?: string }
+  /** Money paid back to the customer. */
+  | { action: 'record_refund'; amount: number; method: string; reference?: string }
+  /**
+   * Books that come back after delivery (damaged, wrong copy, changed mind): back on the shelf
+   * or written off as damaged, and either refunded or replaced with another copy.
+   */
+  | {
+      action: 'take_back'
+      items: { line: number; quantity: number }[]
+      condition: 'resell' | 'damaged'
+      outcome: 'refund' | 'replace'
+      refund?: number
+      reason?: string
+    }
 
 type Patch = Partial<Order>
 type Lines = NonNullable<Order['lines']>
@@ -240,11 +255,95 @@ export const runOrderAction = async (payload: Payload, orderId: number, input: O
       const saved = await save(
         payload,
         order,
-        { lines, parcels: next, status, payOnDelivery: stillToCollect(next) },
+        { lines, parcels: next, status, payOnDelivery: stillToCollect(next), refundDue: (order.refundDue ?? 0) + Math.max(0, refund) },
         `${anyDelivered ? 'Remaining books cancelled' : 'Cancelled'}${input.reason ? `: ${input.reason}` : ''}${refund > 0 ? `. ৳${refund} to be refunded` : ''}`,
         by,
       )
       notifyOrder(payload, saved, 'cancelled')
+      return saved
+    }
+
+    case 'record_refund': {
+      const amount = Math.round(Number(input.amount))
+      if (!Number.isFinite(amount) || amount <= 0) fail('Enter the amount paid back.')
+      const refunded = order.refunded ?? 0
+      if (refunded + amount > paid) fail(`That is more than the customer has paid. ৳${paid - refunded} at most.`)
+      const nowRefunded = refunded + amount
+      return save(
+        payload,
+        order,
+        {
+          refunded: nowRefunded,
+          refundDue: Math.max(0, (order.refundDue ?? 0) - amount),
+          refunds: [...(order.refunds ?? []), { amount, method: input.method || 'bKash', reference: input.reference, at: new Date().toISOString() }],
+          paymentStatus: nowRefunded >= paid ? 'refunded' : order.paymentStatus,
+        },
+        `Refund of ৳${amount} paid (${input.method || 'bKash'}${input.reference ? `, ${input.reference}` : ''})`,
+        by,
+      )
+    }
+
+    case 'take_back': {
+      const lines = [...(order.lines ?? [])]
+      const items = (input.items ?? [])
+        .map((it) => ({ line: Number(it.line), quantity: Math.round(Number(it.quantity)) }))
+        .filter((it) => Number.isInteger(it.line) && it.quantity > 0)
+      if (!items.length) fail('Choose the books that came back and how many copies.')
+      for (const it of items) {
+        const l = lines[it.line]
+        if (!l || parcels[l.parcel ?? 0]?.status !== 'delivered') fail('Only books that were delivered can be taken back.')
+        const left = l.quantity - (l.returned ?? 0)
+        if (it.quantity > left) fail(`Only ${left} ${left === 1 ? 'copy' : 'copies'} of “${l.title}” can come back.`)
+      }
+      // What the customer paid for these copies: their price less their share of the order discount.
+      const keep = order.subtotal ? 1 - (order.discount ?? 0) / order.subtotal : 1
+      const worth = Math.round(items.reduce((sum, it) => sum + (lines[it.line].unitPrice ?? 0) * it.quantity * keep, 0))
+      const refund = input.outcome === 'refund' ? Math.round(Number(input.refund ?? worth)) : 0
+      if (!Number.isFinite(refund) || refund < 0) fail('Enter the amount to refund, or 0.')
+      const room = paid - (order.refunded ?? 0) - (order.refundDue ?? 0)
+      if (refund > room) fail(`At most ৳${Math.max(0, room)} can be refunded on this order.`)
+      if (input.outcome === 'replace') {
+        for (const it of items) {
+          const book = await payload.findByID({ collection: 'editions', id: idOf(lines[it.line].edition), depth: 0, overrideAccess: true, select: { stockOnHand: true } })
+          const spare = (book.stockOnHand ?? 0) + (input.condition === 'resell' ? it.quantity : 0)
+          if (spare < it.quantity) fail(`No copy of “${lines[it.line].title}” is on the shelf to send. Refund it instead, or receive stock first.`)
+        }
+      }
+      const note = `Order ${order.number}`
+      for (const it of items) {
+        const l = lines[it.line]
+        const edition = idOf(l.edition)
+        // Back into the delivery (lot) it came from, so the sale and its cost are undone.
+        await recordMovement(payload, edition, it.quantity, 'return', `${note}: taken back after delivery${input.reason ? ` (${input.reason})` : ''}`, undefined, order.id)
+        if (input.condition === 'damaged') {
+          await payload.create({ collection: 'stock-movements', data: { edition, quantity: -it.quantity, reason: 'damaged', note: `${note}: came back damaged` }, depth: 0, overrideAccess: true })
+        }
+        if (input.outcome === 'replace') {
+          if (!(await takeCopies(payload, edition, it.quantity))) fail(`The last copy of “${l.title}” has just gone. Refund it instead.`)
+          await recordMovement(payload, edition, -it.quantity, 'sale', `${note}: replacement`, undefined, order.id)
+        } else {
+          lines[it.line] = { ...l, returned: (l.returned ?? 0) + it.quantity }
+        }
+      }
+      const what = items.map((it) => `${it.quantity} × ${lines[it.line].title}`).join(', ')
+      const saved = await save(
+        payload,
+        order,
+        { lines, refundDue: (order.refundDue ?? 0) + refund },
+        `${what} taken back after delivery, ${input.condition === 'damaged' ? 'damaged' : 'back on the shelf'}${input.reason ? ` (${input.reason})` : ''}. ${
+          input.outcome === 'replace' ? 'Replacement to send' : refund ? `৳${refund} to be refunded` : 'No refund'
+        }`,
+        by,
+      )
+      if (input.outcome === 'replace') {
+        alertStaff(payload, {
+          kind: 'stock',
+          title: `${order.number}: replacement to send`,
+          detail: `${what} for ${order.contactName}. Book the courier yourself; the copy is already out of stock.`,
+          link: `/admin/collections/orders/${order.id}`,
+          audience: ['warehouse', 'orders'],
+        })
+      }
       return saved
     }
   }
@@ -282,6 +381,13 @@ export const allocateWaitingOrders = async (payload: Payload, editionId: number)
     if (nowReady) {
       released++
       notifyOrder(payload, next, 'arrived')
+      alertStaff(payload, {
+        kind: 'stock',
+        title: `${next.number} is ready to pack`,
+        detail: `The books ${next.contactName} was waiting for have arrived.`,
+        link: `/admin/collections/orders/${next.id}`,
+        audience: ['warehouse', 'orders'],
+      })
     }
   }
   return released

@@ -193,6 +193,14 @@ export const SiteSettings: GlobalConfig = {
               // No longer used: books in stock are always cash on delivery. Kept so no data is dropped.
               admin: { hidden: true },
             },
+            {
+              name: 'riskyCodAbove',
+              type: 'number',
+              min: 0,
+              defaultValue: 3000,
+              label: 'Flag a first order with cash on delivery above (৳)',
+              admin: { description: 'Such orders are marked “Check first”: call before confirming. Customers who refused a parcel before are always flagged.' },
+            },
           ],
         },
         {

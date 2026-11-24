@@ -60,6 +60,8 @@ type OrderRow = {
   paymentStatus: string
   paymentPlan?: string | null
   total?: number | null
+  refunded?: number | null
+  refundDue?: number | null
   subtotal?: number | null
   discount?: number | null
   delivery?: number | null
@@ -75,6 +77,8 @@ type OrderRow = {
 
 const ORDER_SELECT = {
   number: true,
+  refunded: true,
+  refundDue: true,
   status: true,
   paymentStatus: true,
   paymentPlan: true,
@@ -166,7 +170,8 @@ export const salesReport = async (payload: Payload, period: Period) => {
     byDistrict.set(o.district ?? '—', d)
   }
 
-  const revenue = sum(live, (o) => o.total)
+  // Money paid back (books taken back after delivery) comes off what the order brought in.
+  const revenue = sum(live, (o) => (o.total ?? 0) - (o.refunded ?? 0))
   return {
     period,
     totals: {
@@ -219,7 +224,20 @@ export const moneyReport = async (payload: Payload) => {
   const toVerify = orders.filter((o) => o.paymentStatus === 'to_verify')
   // Advances paid for books not yet delivered.
   const advancesHeld = orders.filter((o) => (o.paid ?? 0) > 0 && (o.parcels ?? []).some((p) => p.status === 'pending' || p.status === 'packing'))
+  // Money owed back to customers (cancellations, books taken back), on any order.
+  const owed = (
+    await payload.find({
+      collection: 'orders',
+      where: { refundDue: { greater_than: 0 } },
+      select: ORDER_SELECT,
+      depth: 0,
+      pagination: false,
+      overrideAccess: true,
+    })
+  ).docs as unknown as OrderRow[]
   return {
+    refundsDue: owed,
+    refundsDueTotal: sum(owed, (o) => o.refundDue),
     withCouriers,
     couriers: [...byCourier.entries()].map(([name, c]) => ({ name, ...c })),
     courierTotal: sum(withCouriers, (o) => o.toCollect),

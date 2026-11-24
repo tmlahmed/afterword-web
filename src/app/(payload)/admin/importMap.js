@@ -30,8 +30,10 @@ import { ReceiveStock as ReceiveStock_e94c31740ad8366096b8060c6559749e } from '.
 import { AdminNav as AdminNav_965175d01b56876a09418037afb35340 } from '../../../components/admin/Nav'
 import { AdminIcon as AdminIcon_91a09b539d3c86b0aebf520e7564ce08 } from '../../../components/admin/Logo'
 import { AdminLogo as AdminLogo_91a09b539d3c86b0aebf520e7564ce08 } from '../../../components/admin/Logo'
+import { NotificationBell as NotificationBell_9b234b2343344c65ad3743ace38afb48 } from '../../../components/admin/NotificationBell'
 import { Dashboard as Dashboard_16b88e9b8c48e393fa86591406efd08f } from '../../../components/admin/Dashboard'
 import { Reports as Reports_7a5433900ac8875d5f0ae5dc5755dde6 } from '../../../components/admin/Reports'
+import { ToOrder as ToOrder_f65e80f8bfcc26dec221d79f0bd641b9 } from '../../../components/admin/ToOrder'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -68,7 +70,9 @@ export const importMap = {
   "/components/admin/Nav#AdminNav": AdminNav_965175d01b56876a09418037afb35340,
   "/components/admin/Logo#AdminIcon": AdminIcon_91a09b539d3c86b0aebf520e7564ce08,
   "/components/admin/Logo#AdminLogo": AdminLogo_91a09b539d3c86b0aebf520e7564ce08,
+  "/components/admin/NotificationBell#NotificationBell": NotificationBell_9b234b2343344c65ad3743ace38afb48,
   "/components/admin/Dashboard#Dashboard": Dashboard_16b88e9b8c48e393fa86591406efd08f,
   "/components/admin/Reports#Reports": Reports_7a5433900ac8875d5f0ae5dc5755dde6,
+  "/components/admin/ToOrder#ToOrder": ToOrder_f65e80f8bfcc26dec221d79f0bd641b9,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

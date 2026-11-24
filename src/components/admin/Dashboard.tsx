@@ -6,6 +6,7 @@ import React from 'react'
 import { userHasRole } from '../../access/roles'
 import { ORDER_STATUSES } from '../../collections/commerce'
 import { moneyReport, periodFrom, salesReport, stockReport, type Period } from '../../lib/reports'
+import { toOrderReport } from '../../lib/toOrder'
 import { Icon, type IconName } from './icons'
 
 const taka = (n: number | null | undefined) => `৳${Math.round(n ?? 0).toLocaleString('en-IN')}`
@@ -49,7 +50,7 @@ type Todo = { n: number; label: string; hint: string; href: string; icon: IconNa
 const todos = async (payload: Payload, can: (slug: string) => boolean): Promise<Todo[]> => {
   const count = async (collection: 'orders' | 'requests' | 'editions' | 'reviews', where: object) =>
     can(collection) ? (await payload.count({ collection, where: where as never, overrideAccess: true })).totalDocs : 0
-  const [toConfirm, toVerify, toPack, shipped, awaiting, requests, reviews, lastCopy] = await Promise.all([
+  const [toConfirm, toVerify, toPack, shipped, awaiting, requests, reviews, lastCopy, flagged, refunds, toOrder] = await Promise.all([
     count('orders', { status: { equals: 'placed' } }),
     count('orders', { and: [{ status: { in: ['placed', 'awaiting_stock', 'packing'] } }, { paymentStatus: { equals: 'to_verify' } }] }),
     count('orders', { status: { equals: 'packing' } }),
@@ -58,16 +59,28 @@ const todos = async (payload: Payload, can: (slug: string) => boolean): Promise<
     count('requests', { status: { equals: 'new' } }),
     count('reviews', { status: { equals: 'pending' } }),
     count('editions', { and: [{ status: { equals: 'published' } }, { stockOnHand: { equals: 1 } }] }),
+    count('orders', { and: [{ status: { equals: 'placed' } }, { risk: { in: ['check', 'high'] } }] }),
+    count('orders', { refundDue: { greater_than: 0 } }),
+    can('purchase-orders') || can('orders') ? toOrderReport(payload).then((rows) => rows.filter((r) => r.toOrder > 0).length) : 0,
   ])
   const orders = (where: string) => `/admin/collections/orders?${where}`
   const list: Todo[] = [
-    { n: toConfirm, label: toConfirm === 1 ? 'order to confirm' : 'orders to confirm', hint: 'Call or message, then confirm', href: orders('where[status][equals]=placed'), icon: 'orders', urgent: true },
+    {
+      n: toConfirm,
+      label: toConfirm === 1 ? 'order to confirm' : 'orders to confirm',
+      hint: flagged ? `${flagged} flagged: call before confirming` : 'Call or message, then confirm',
+      href: orders('where[status][equals]=placed'),
+      icon: 'orders',
+      urgent: true,
+    },
+    { n: refunds, label: refunds === 1 ? 'refund to pay' : 'refunds to pay', hint: 'Pay back, then record it on the order', href: orders('where[refundDue][greater_than]=0'), icon: 'wallet', urgent: true },
     { n: toVerify, label: toVerify === 1 ? 'payment to check' : 'payments to check', hint: 'bKash or bank transfer sent', href: orders('where[paymentStatus][equals]=to_verify'), icon: 'wallet', urgent: true },
     { n: toPack, label: 'to pack', hint: 'Pick, pack and book the courier', href: orders('where[status][equals]=packing'), icon: 'orders' },
     { n: requests, label: requests === 1 ? 'book request' : 'book requests', hint: 'Find the book and quote', href: '/admin/collections/requests?where[status][equals]=new', icon: 'requests' },
     { n: reviews, label: reviews === 1 ? 'review to read' : 'reviews to read', hint: 'Publish or hide', href: '/admin/collections/reviews?where[status][equals]=pending', icon: 'reviews' },
     { n: shipped, label: 'with couriers', hint: 'Out for delivery', href: orders('where[status][equals]=shipped'), icon: 'purchases' },
     { n: awaiting, label: 'waiting for stock', hint: 'Go out when the books arrive', href: orders('where[status][equals]=awaiting_stock'), icon: 'clock' },
+    { n: toOrder, label: toOrder === 1 ? 'book to order' : 'books to order', hint: 'For customers waiting: see To order', href: '/admin/to-order', icon: 'clock' },
     { n: lastCopy, label: lastCopy === 1 ? 'book on its last copy' : 'books on their last copy', hint: 'Reorder if it sells', href: '/admin/collections/editions?where[stockOnHand][equals]=1&where[status][equals]=published', icon: 'books' },
   ]
   return list.filter((t) => t.n > 0)

@@ -91,6 +91,7 @@ export interface Config {
     messages: Message;
     'stock-movements': StockMovement;
     'stock-lots': StockLot;
+    notifications: Notification;
     'purchase-orders': PurchaseOrder;
     suppliers: Supplier;
     carts: Cart;
@@ -141,6 +142,7 @@ export interface Config {
     messages: MessagesSelect<false> | MessagesSelect<true>;
     'stock-movements': StockMovementsSelect<false> | StockMovementsSelect<true>;
     'stock-lots': StockLotsSelect<false> | StockLotsSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'purchase-orders': PurchaseOrdersSelect<false> | PurchaseOrdersSelect<true>;
     suppliers: SuppliersSelect<false> | SuppliersSelect<true>;
     carts: CartsSelect<false> | CartsSelect<true>;
@@ -583,6 +585,8 @@ export interface Order {
    */
   number?: string | null;
   status: 'placed' | 'awaiting_stock' | 'packing' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+  risk?: ('none' | 'check' | 'high') | null;
+  riskNote?: string | null;
   paymentStatus: 'unpaid' | 'to_verify' | 'advance_paid' | 'paid' | 'refunded';
   contactName: string;
   /**
@@ -680,6 +684,10 @@ export interface Order {
      * 0 = first parcel, 1 = second.
      */
     parcel?: number | null;
+    /**
+     * Copies returned after delivery and refunded.
+     */
+    returned?: number | null;
     authorLine?: string | null;
     isbn13?: string | null;
     id?: string | null;
@@ -720,6 +728,23 @@ export interface Order {
    * Money received. Recorded by the order actions.
    */
   payments?:
+    | {
+        amount: number;
+        method: string;
+        reference?: string | null;
+        at: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Money to pay back: from a cancellation or books taken back.
+   */
+  refundDue?: number | null;
+  refunded?: number | null;
+  /**
+   * Money paid back. Recorded by the order actions.
+   */
+  refunds?:
     | {
         amount: number;
         method: string;
@@ -877,6 +902,7 @@ export interface Customer {
 export interface User {
   id: number;
   name: string;
+  notificationsSeenAt?: string | null;
   /**
    * The first account created always becomes the Owner, whatever is chosen here.
    */
@@ -1352,6 +1378,20 @@ export interface PurchaseOrder {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  kind: 'order' | 'payment' | 'request' | 'review' | 'stock' | 'refund';
+  title: string;
+  detail?: string | null;
+  link?: string | null;
+  audience?: ('owner' | 'manager' | 'catalogue' | 'orders' | 'warehouse' | 'writer')[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "carts".
  */
 export interface Cart {
@@ -1503,6 +1543,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'stock-lots';
         value: number | StockLot;
+      } | null)
+    | ({
+        relationTo: 'notifications';
+        value: number | Notification;
       } | null)
     | ({
         relationTo: 'purchase-orders';
@@ -1892,6 +1936,8 @@ export interface MediaSelect<T extends boolean = true> {
 export interface OrdersSelect<T extends boolean = true> {
   number?: T;
   status?: T;
+  risk?: T;
+  riskNote?: T;
   paymentStatus?: T;
   contactName?: T;
   contactPhone?: T;
@@ -1912,6 +1958,7 @@ export interface OrdersSelect<T extends boolean = true> {
         kind?: T;
         allocated?: T;
         parcel?: T;
+        returned?: T;
         authorLine?: T;
         isbn13?: T;
         id?: T;
@@ -1937,6 +1984,17 @@ export interface OrdersSelect<T extends boolean = true> {
   paid?: T;
   payOnDelivery?: T;
   payments?:
+    | T
+    | {
+        amount?: T;
+        method?: T;
+        reference?: T;
+        at?: T;
+        id?: T;
+      };
+  refundDue?: T;
+  refunded?: T;
+  refunds?:
     | T
     | {
         amount?: T;
@@ -2112,6 +2170,19 @@ export interface StockLotsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  kind?: T;
+  title?: T;
+  detail?: T;
+  link?: T;
+  audience?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "purchase-orders_select".
  */
 export interface PurchaseOrdersSelect<T extends boolean = true> {
@@ -2198,6 +2269,7 @@ export interface OtpCodesSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  notificationsSeenAt?: T;
   roles?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -2357,6 +2429,10 @@ export interface SiteSetting {
   advancePercent?: number | null;
   codCeiling?: number | null;
   /**
+   * Such orders are marked “Check first”: call before confirming. Customers who refused a parcel before are always flagged.
+   */
+  riskyCodAbove?: number | null;
+  /**
    * Until the online gateway is connected, customers send advance payments to this number and tell us the number or account they paid from (the transaction ID is optional). Leave empty to hide the option.
    */
   bkashNumber?: string | null;
@@ -2490,6 +2566,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   giftWrapFee?: T;
   advancePercent?: T;
   codCeiling?: T;
+  riskyCodAbove?: T;
   bkashNumber?: T;
   banglaQrImage?: T;
   banglaQr?: T;

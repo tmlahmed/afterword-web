@@ -5,6 +5,7 @@ import { courierModeEndpoint, orderActionEndpoint } from '../endpoints/orderActi
 import { receivePurchaseOrderEndpoint } from '../endpoints/receivePurchaseOrder'
 import { afterOrderCreated, prepareOrder } from '../lib/orders/prepare'
 import { expensesTotal, landedCosts } from '../lib/lots'
+import { alertStaff } from '../lib/staffAlerts'
 import { DISTRICTS } from '../lib/orders/pricing'
 
 const DISTRICT_OPTIONS = DISTRICTS.map((d) => ({ label: d, value: d }))
@@ -179,7 +180,7 @@ export const Orders: CollectionConfig = {
   admin: {
     useAsTitle: 'number',
     group: 'Orders',
-    defaultColumns: ['number', 'status', 'paymentStatus', 'contactName', 'total', 'createdAt'],
+    defaultColumns: ['number', 'status', 'risk', 'paymentStatus', 'contactName', 'total', 'createdAt'],
     listSearchableFields: ['number', 'contactName', 'contactPhone'],
     description: 'To take an order by phone or chat, press Create New, fill in the customer and the books, and save.',
   },
@@ -211,6 +212,20 @@ export const Orders: CollectionConfig = {
       fields: [
         { name: 'number', type: 'text', index: true, admin: { readOnly: true, description: 'Given when the order is saved.' } },
         { name: 'status', type: 'select', required: true, defaultValue: 'placed', index: true, options: [...ORDER_STATUSES], admin: { readOnly: true } },
+        {
+          name: 'risk',
+          type: 'select',
+          defaultValue: 'none',
+          index: true,
+          label: 'Cash-on-delivery risk',
+          options: [
+            { label: '—', value: 'none' },
+            { label: 'Check first', value: 'check' },
+            { label: 'High risk', value: 'high' },
+          ],
+          admin: { readOnly: true },
+        },
+        { name: 'riskNote', type: 'text', label: 'Why', admin: { readOnly: true, condition: (data) => Boolean(data?.riskNote) } },
         {
           name: 'paymentStatus',
           type: 'select',
@@ -306,6 +321,7 @@ export const Orders: CollectionConfig = {
                     },
                     { name: 'allocated', type: 'checkbox', label: 'Copies set aside', admin: { readOnly: true } },
                     { name: 'parcel', type: 'number', defaultValue: 0, label: 'Parcel', admin: { readOnly: true, description: '0 = first parcel, 1 = second.' } },
+                    { name: 'returned', type: 'number', defaultValue: 0, label: 'Taken back', admin: { readOnly: true, description: 'Copies returned after delivery and refunded.' } },
                   ],
                 },
                 { name: 'authorLine', type: 'text', admin: { hidden: true } },
@@ -419,6 +435,29 @@ export const Orders: CollectionConfig = {
                 },
               ],
             },
+            {
+              type: 'row',
+              fields: [
+                { name: 'refundDue', type: 'number', defaultValue: 0, label: 'Owed to the customer (৳)', admin: { readOnly: true, description: 'Money to pay back: from a cancellation or books taken back.' } },
+                { name: 'refunded', type: 'number', defaultValue: 0, label: 'Refunded (৳)', admin: { readOnly: true } },
+              ],
+            },
+            {
+              name: 'refunds',
+              type: 'array',
+              admin: { readOnly: true, description: 'Money paid back. Recorded by the order actions.' },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    { name: 'amount', type: 'number', required: true },
+                    { name: 'method', type: 'text', required: true },
+                    { name: 'reference', type: 'text' },
+                    { name: 'at', type: 'date', required: true },
+                  ],
+                },
+              ],
+            },
           ],
         },
         {
@@ -511,6 +550,23 @@ export const Requests: CollectionConfig = {
     create: allow('manager', 'orders'),
     update: allow('manager', 'orders', 'catalogue'),
     delete: allow('manager'),
+  },
+  hooks: {
+    // A new request from the website: tell the order desk.
+    afterChange: [
+      ({ doc, operation, req }) => {
+        if (operation === 'create' && req.user?.collection !== 'users') {
+          alertStaff(req.payload, {
+            kind: 'request',
+            title: `Book request: ${doc.wanted}`,
+            detail: `${doc.contactName} · ${doc.contactPhone}`,
+            link: `/admin/collections/requests/${doc.id}`,
+            audience: ['orders', 'catalogue'],
+          })
+        }
+        return doc
+      },
+    ],
   },
   fields: [
     { name: 'wanted', type: 'text', required: true, label: 'Book wanted', admin: { description: 'Title and author, as the customer wrote it.' } },

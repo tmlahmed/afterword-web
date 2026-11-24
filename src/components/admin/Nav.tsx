@@ -107,6 +107,12 @@ export const AdminNav = async (props: ServerProps & { visibleEntities?: { collec
       }),
   })).filter((g) => g.items.length)
 
+  // "To order" (books customers are waiting for) sits at the top of Stock for those who order books.
+  const stock = groups.find((g) => g.label === 'Stock')
+  if (stock && userHasRole(user, 'manager', 'warehouse', 'catalogue', 'orders')) {
+    stock.items.unshift({ href: '/admin/to-order', label: 'To order', icon: 'clock', badge: 0 })
+  }
+
   // Anything added later that is not placed in a group still shows, under "Other".
   const others = [...collections].filter((slug) => !known.has(slug))
   if (others.length) {

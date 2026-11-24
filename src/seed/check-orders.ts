@@ -12,6 +12,7 @@ import { shopRules } from '../lib/orders/prepare'
 import { pointsEarned, pointsToSpend } from '../lib/orders/pricing'
 import { getReviews, reviewEligibility } from '../lib/reviews'
 import { copiesInLots } from '../lib/lots'
+import { toOrderReport } from '../lib/toOrder'
 
 const payload = await getPayload({ config })
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -39,6 +40,7 @@ const lotsBefore = await lotRows()
 const lastLotBefore = lotsBefore.length ? Math.max(...lotsBefore.map((l) => Number(l.id))) : 0
 const oldestLot = (await payload.find({ collection: 'stock-lots', where: { and: [{ edition: { equals: inStock.id } }, { remaining: { greater_than: 0 } }] }, sort: 'receivedAt', limit: 1, depth: 0 })).docs[0]
 const created: number[] = []
+const startedAt = new Date().toISOString()
 // The checks follow whatever delivery and advance rules are set in Shop settings.
 const rules = await payload.findGlobal({ slug: 'site-settings' })
 const insideFee = rules.insideDhakaFee ?? 70
@@ -85,7 +87,36 @@ await wait(1200)
 check('cancelling returns copies to stock', (await stock(inStock.id)) === remaining && (await ledger(inStock.id)) === remaining)
 check('cancelling puts the copies back into their lots', (await copiesInLots(payload, inStock.id)) === remaining, `${await copiesInLots(payload, inStock.id)} in lots`)
 
+// 5b. A delivered book comes back: refunded, then another comes back damaged and is replaced
+const unit = o.lines![0].unitPrice ?? 0
+const share = Math.round(unit * (o.subtotal ? 1 - (o.discount ?? 0) / o.subtotal : 1))
+o = await runOrderAction(payload, o.id, { action: 'take_back', items: [{ line: 0, quantity: 1 }], condition: 'resell', outcome: 'refund' }, 'Test')
+await wait(800)
+check('a book taken back goes back on the shelf, into its lot', (await stock(inStock.id)) === remaining + 1 && (await copiesInLots(payload, inStock.id)) === remaining + 1, `stock ${await stock(inStock.id)}`)
+check('taking a book back owes the customer what they paid for it', o.refundDue === share && o.lines![0].returned === 1, `owed ${o.refundDue} vs ${share}`)
+await expectError('cannot take back more than was delivered', () => runOrderAction(payload, o.id, { action: 'take_back', items: [{ line: 0, quantity: 2 }], condition: 'resell', outcome: 'refund' }, 'Test'), 'can come back')
+await expectError('cannot refund more than was paid', () => runOrderAction(payload, o.id, { action: 'record_refund', amount: (o.paid ?? 0) + 1, method: 'bKash' }, 'Test'), 'more than the customer has paid')
+o = await runOrderAction(payload, o.id, { action: 'record_refund', amount: share, method: 'bKash', reference: 'TESTREFUND' }, 'Test')
+check('recording the refund clears what is owed', o.refundDue === 0 && o.refunded === share && (o.refunds ?? []).length === 1, `owed ${o.refundDue}, refunded ${o.refunded}`)
+o = await runOrderAction(payload, o.id, { action: 'take_back', items: [{ line: 0, quantity: 1 }], condition: 'damaged', outcome: 'replace' }, 'Test')
+await wait(800)
+check('a damaged copy replaced: written off, and a new copy leaves the shelf', (await stock(inStock.id)) === remaining && (await copiesInLots(payload, inStock.id)) === remaining && o.lines![0].returned === 1 && (o.refundDue ?? 0) === 0, `stock ${await stock(inStock.id)}`)
+
 // 6. On Request needs an advance
+// 5c. A website order raises an alert; a customer who refused parcels is flagged
+await wait(600)
+const alert = (await payload.find({ collection: 'notifications', where: { and: [{ link: { equals: `/admin/collections/orders/${o.id}` } }, { kind: { equals: 'order' } }] }, depth: 0, limit: 1 })).docs[0]
+check('a new website order raises an alert for the order desk', !!alert && alert.kind === 'order' && (alert.audience ?? []).includes('orders'), alert?.title ?? 'none')
+const flaggedCustomer = (await payload.find({ collection: 'customers', where: { phone: { equals: '+8801700000002' } }, depth: 0, limit: 1 })).docs[0]
+if (flaggedCustomer) await payload.update({ collection: 'customers', id: flaggedCustomer.id, data: { refusedCount: 2 }, depth: 0, overrideAccess: true })
+else await payload.create({ collection: 'customers', data: { phone: '+8801700000002', name: 'Test Customer', refusedCount: 2 } as never, depth: 0, overrideAccess: true })
+const risky = await place({ lines: [{ edition: inStock.id, quantity: 1 }], paymentPlan: 'cod', contactPhone: '01700000002' })
+created.push(risky.id)
+const riskyNow = await payload.findByID({ collection: 'orders', id: risky.id, depth: 0 })
+check('a customer who refused two parcels is flagged high risk', riskyNow.risk === 'high' && (riskyNow.riskNote ?? '').includes('Refused 2'), `${riskyNow.risk}: ${riskyNow.riskNote}`)
+await runOrderAction(payload, risky.id, { action: 'cancel', reason: 'test' }, 'Test')
+await wait(800)
+
 await expectError('On Request cannot be cash on delivery at checkout', () => place({ lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'cod' }), 'advance')
 let r = await place({ lines: [{ edition: onRequest.id, quantity: 1 }], paymentPlan: 'advance', payNowVia: 'bkash_manual', paymentReference: 'TESTTRX1', paymentSender: '01700000001' })
 created.push(r.id)
@@ -96,6 +127,8 @@ await expectError('cannot confirm before the advance is recorded', () => runOrde
 await expectError('cannot record more than is owed', () => runOrderAction(payload, r.id, { action: 'record_payment', amount: r.total! + 1, method: 'bKash' }, 'Test'), 'more than')
 r = await runOrderAction(payload, r.id, { action: 'record_payment', amount: half, method: 'bKash', reference: 'TESTTRX1' }, 'Test')
 check('recording the advance confirms the order and waits for stock', r.status === 'awaiting_stock' && r.paymentStatus === 'advance_paid')
+const waitingRow = (await toOrderReport(payload)).find((row) => row.id === onRequest.id)
+check('the waiting book is on the To order list', !!waitingRow && waitingRow.waiting >= 1 && waitingRow.orders.some((x) => x.id === r.id), JSON.stringify(waitingRow && { waiting: waitingRow.waiting, toOrder: waitingRow.toOrder }))
 
 // 7. Stock arrives -> order released
 const supplier = (await payload.find({ collection: 'suppliers', limit: 1 })).docs[0] ?? (await payload.create({ collection: 'suppliers', data: { name: 'Test supplier' } }))
@@ -217,8 +250,8 @@ const mixedBefore = new Map<number, number>()
   const sales = await salesReport(payload, period)
   const recent = await payload.find({ collection: 'orders', where: { createdAt: { greater_than_equal: period.from.toISOString() } }, depth: 0, pagination: false, overrideAccess: true })
   const counted = recent.docs.filter((x) => x.status !== 'cancelled' && x.status !== 'returned')
-  const expected = counted.reduce((sum, x) => sum + (x.total ?? 0), 0)
-  check('sales report totals match the orders', sales.totals.orders === counted.length && sales.totals.revenue === expected, `${sales.totals.orders} orders, ৳${sales.totals.revenue} vs ৳${expected}`)
+  const expected = counted.reduce((sum, x) => sum + (x.total ?? 0) - (x.refunded ?? 0), 0)
+  check('sales report totals match the orders (less refunds)', sales.totals.orders === counted.length && sales.totals.revenue === expected, `${sales.totals.orders} orders, ৳${sales.totals.revenue} vs ৳${expected}`)
   check('best sellers list the books sold', sales.bestSellers.some((b) => b.id === inStock.id || b.id === onRequest.id))
   const today = sales.days.at(-1)
   check('today appears in the day-by-day figures', today?.day === dhakaDay(new Date()) && today.orders > 0, today?.day ?? 'none')
@@ -245,6 +278,7 @@ await payload.create({ collection: 'stock-movements', data: { edition: inStock.i
 await payload.create({ collection: 'stock-movements', data: { edition: onRequest.id, quantity: -(await stock(onRequest.id)), reason: 'adjustment', note: 'orders check: restore' }, overrideAccess: true }).catch(() => undefined)
 await wait(1500)
 await payload.delete({ collection: 'messages', where: { order: { in: created } }, overrideAccess: true })
+await payload.delete({ collection: 'notifications', where: { createdAt: { greater_than_equal: startedAt } }, overrideAccess: true })
 await payload.delete({ collection: 'orders', where: { id: { in: created } }, overrideAccess: true })
 await payload.delete({ collection: 'stock-movements', where: { or: [{ note: { like: 'orders check' } }, ...numbers.map((n) => ({ note: { like: n! } }))] }, overrideAccess: true })
 await payload.delete({ collection: 'promotions', where: { code: { equals: 'TESTTEN' } }, overrideAccess: true })

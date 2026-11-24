@@ -23,6 +23,8 @@ The first admin screen. Reach it from any page with **Dashboard** at the top of 
 
 **Needs attention** lists only what is waiting; click one to see the list behind it. When nothing is, it says *All clear*.
 
+**Alerts.** The bell at the top right of every admin page lists what has just happened: new website orders (and advances to check), book requests, reviews to read, books arrived for waiting orders, and replacements to send. A red number shows how many are new to you; the browser tab shows it too, e.g. *(2) Dashboard*. Each person sees the alerts for their role. Open the bell and press **Turn on desktop alerts** to get a pop-up on your computer whenever one arrives, as long as the admin is open in a tab.
+
 - **Orders to confirm**: new website orders. Each one needs a person to look at it (section 2).
 - **Payments to check**: advances customers say they have sent by bKash, Bangla QR or bank.
 - **To pack**: confirmed, books set aside, ready for a parcel.
@@ -70,7 +72,16 @@ Either way the customer gets the tracking number by text.
 
 **Courier did not take it.** If a parcel was marked with the courier but never left (booked by mistake, pickup missed), press **Courier did not take it**. It goes back to "To pack". Cancel the booking in the courier's own panel too.
 
-**Cancelling.** Press **Cancel order** with a short reason. Any copies set aside go back into stock. A parcel already with a courier cannot be cancelled; wait for it to come back and mark it returned. If the first parcel has been delivered, the button reads **Cancel the rest** and cancels only the books not yet sent; the advance paid for them is owed back. If the customer paid anything, refund it through bKash or SSLCommerz, then note it on the order.
+**Cancelling.** Press **Cancel order** with a short reason. Any copies set aside go back into stock. A parcel already with a courier cannot be cancelled; wait for it to come back and mark it returned. If the first parcel has been delivered, the button reads **Cancel the rest** and cancels only the books not yet sent; the advance paid for them is owed back. Whatever the customer paid for books that will not be sent is shown on the order as **to pay back**, and under *Refunds to pay* on the Dashboard.
+
+**Refunds.** Send the money back the way it came (bKash, Nagad, bank or card), within 10 days. Then, on the order, enter the amount, method and transaction ID and press **Record refund**. The amount owed goes to zero and the order shows what was refunded. Sales in Reports are counted after refunds.
+
+**Books that come back after delivery** (damaged, a wrong copy, a changed mind). On the order, press **Books came back after delivery…**, choose the books and copies, then:
+- whether the copies are **fine** (they go back on the shelf, into the delivery they came from) or **damaged** (written off as damaged);
+- whether the customer gets a **refund** (the price they paid for those copies is filled in; change it if you also refund delivery) or a **replacement copy** (it comes off the shelf at once; book the courier for it yourself, and an alert reminds the warehouse).
+A refund is then owed and recorded as above.
+
+**Cash-on-delivery risk.** Some new orders are marked **Check first** or **High risk** in the order list and at the top of the order: the customer refused a parcel before (twice or more is high risk), their earlier orders were all cancelled, or it is their first order and the cash to collect is above the amount in Settings → Shop settings (৳3,000 to start). Call them before confirming; for high risk, consider asking for an advance. The order page also shows the customer's record: earlier orders, delivered, cancelled and refused.
 
 **Phone, Facebook and WhatsApp orders.** Go to Orders → **Create new**. Fill in the customer, the address and the books with their quantities, choose how they will pay, and save. Prices, delivery and stock are worked out when you save. Staff cash orders are confirmed straight away.
 
@@ -121,6 +132,8 @@ Items are only sold from your own shelves: with none left they show **Sold out**
 **Group discounts.** Sell → Group discounts: a percentage off every book in chosen subjects (including their sub-subjects), publishers or collections, or picked one by one, for example "20% off Penguin Classics this week". Set a start and end, or leave them empty and untick **Active** to stop it. A book gets the bigger of its own discount and the group's; books with a fixed price are left alone. Prices change within a minute of saving, and within a quarter of an hour of the start and end times.
 
 ## 4. Stock (warehouse)
+
+**To order.** Stock → **To order** lists the books customers are waiting for (On Request, pre-orders, or stock that ran out) that still have to be ordered, grouped by the book's supplier: how many copies are waiting, on their way on a purchase order, free on the shelf, and **to order**, with the orders behind each. Order them from the supplier yourself, then record the purchase order; they then move to *Already covered*. Below are books selling fast and running low. The Dashboard shows how many books are to order.
 
 Stock is a ledger: the copies on hand are the total of every movement. **Nobody types a stock number directly**, and movements cannot be edited or deleted. To fix a mistake, add another movement.
 

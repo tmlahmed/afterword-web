@@ -15,7 +15,14 @@ type OrderState = {
   paymentReference?: string | null
   paymentSender?: string | null
   token?: string
-  lines?: { allocated?: boolean; parcel?: number | null; title?: string | null; quantity?: number }[]
+  subtotal?: number
+  discount?: number
+  refundDue?: number | null
+  refunded?: number | null
+  risk?: 'none' | 'check' | 'high' | null
+  riskNote?: string | null
+  customer?: number | { id: number } | null
+  lines?: { allocated?: boolean; parcel?: number | null; title?: string | null; quantity?: number; unitPrice?: number | null; returned?: number | null }[]
   parcels?:
     | {
         status: string
@@ -76,13 +83,46 @@ export const OrderActions: React.FC = () => {
   const [courier, setCourier] = useState('Pathao')
   const [trackingId, setTrackingId] = useState('')
   const [pathao, setPathao] = useState<'off' | 'test' | 'live'>('off')
+  const [history, setHistory] = useState<{ orders: number; delivered: number; cancelled: number; refused: number } | null>(null)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundMethod, setRefundMethod] = useState('bKash')
+  const [refundRef, setRefundRef] = useState('')
+  const [takeOpen, setTakeOpen] = useState(false)
+  const [takeQty, setTakeQty] = useState<Record<number, number>>({})
+  const [condition, setCondition] = useState<'resell' | 'damaged'>('resell')
+  const [outcome, setOutcome] = useState<'refund' | 'replace'>('refund')
+  const [takeRefund, setTakeRefund] = useState('')
+  const [takeReason, setTakeReason] = useState('')
 
   useEffect(() => {
     if (!id) return
     let live = true
     fetch(`/api/orders/${id}?depth=0`, { credentials: 'include' })
       .then((res) => (res.ok ? (res.json() as Promise<OrderState>) : null))
-      .then((data) => live && data && setOrder(data))
+      .then((data) => {
+        if (!live || !data) return
+        setOrder(data)
+        // The customer's record, for deciding whether to call before confirming.
+        const customerId = typeof data.customer === 'object' && data.customer ? data.customer.id : data.customer
+        if (customerId) {
+          Promise.all([
+            fetch(`/api/customers/${customerId}?depth=0`, { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
+            fetch(`/api/orders?where[customer][equals]=${customerId}&where[id][not_equals]=${id}&limit=200&depth=0&select[status]=true`, { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
+          ])
+            .then(([customer, past]: [{ refusedCount?: number } | null, { docs?: { status: string }[] } | null]) => {
+              const docs = past?.docs ?? []
+              if (live) {
+                setHistory({
+                  orders: docs.length,
+                  delivered: docs.filter((o) => o.status === 'delivered').length,
+                  cancelled: docs.filter((o) => o.status === 'cancelled').length,
+                  refused: customer?.refusedCount ?? 0,
+                })
+              }
+            })
+            .catch(() => undefined)
+        }
+      })
       .catch(() => undefined)
     fetch('/api/orders/courier-mode', { credentials: 'include' })
       .then((res) => (res.ok ? (res.json() as Promise<{ pathao: 'off' | 'test' | 'live' }>) : null))
@@ -128,6 +168,16 @@ export const OrderActions: React.FC = () => {
   if (!order) return <div style={box}>Loading the order…</div>
 
   const owing = (order.total ?? 0) - (order.paid ?? 0)
+  const refundDue = order.refundDue ?? 0
+  // Delivered books that can still come back, and what the chosen copies were paid for.
+  // Orders from before parcels existed have none recorded: the order's own status stands for its one parcel.
+  const deliveredParcel = (i: number) => (order.parcels?.length ? order.parcels[i]?.status : order.status) === 'delivered'
+  const returnable = (order.lines ?? [])
+    .map((line, index) => ({ line, index, left: (line.quantity ?? 0) - (line.returned ?? 0) }))
+    .filter(({ line, left }) => left > 0 && deliveredParcel(line.parcel ?? 0))
+  const keep = order.subtotal ? 1 - (order.discount ?? 0) / order.subtotal : 1
+  const takeCount = Object.values(takeQty).reduce((a, b) => a + b, 0)
+  const takeWorth = Math.round(Object.entries(takeQty).reduce((sum, [i, q]) => sum + ((order.lines ?? [])[Number(i)]?.unitPrice ?? 0) * q * keep, 0))
   const advanceOwing = Math.max(0, (order.payNow ?? 0) - (order.paid ?? 0))
   const open = !['delivered', 'returned', 'cancelled'].includes(order.status)
   // Orders from before parcels existed are shown as one parcel.
@@ -158,6 +208,29 @@ export const OrderActions: React.FC = () => {
           </a>
         ) : null}
       </div>
+
+      {order.risk && order.risk !== 'none' ? (
+        <div
+          role="note"
+          style={{
+            margin: '0 0 0.75rem',
+            padding: '0.6rem 0.85rem',
+            borderRadius: 4,
+            border: `1px solid ${order.risk === 'high' ? '#d22b2f' : '#d99a00'}`,
+            background: order.risk === 'high' ? 'rgb(210 43 47 / 0.08)' : 'rgb(217 154 0 / 0.1)',
+          }}
+        >
+          <strong>{order.risk === 'high' ? 'High risk' : 'Check first'}:</strong> {order.riskNote}.{' '}
+          {order.risk === 'high' ? 'Consider asking for an advance before sending.' : 'Call the customer before confirming.'}
+        </div>
+      ) : null}
+      {history ? (
+        <p style={{ margin: '0 0 0.75rem', fontSize: 13, opacity: 0.8 }}>
+          {history.orders
+            ? `Customer’s earlier orders: ${history.orders} · ${history.delivered} delivered${history.cancelled ? ` · ${history.cancelled} cancelled` : ''}${history.refused ? ` · ${history.refused} ${history.refused === 1 ? 'parcel' : 'parcels'} refused` : ''}`
+            : 'First order from this customer.'}
+        </p>
+      ) : null}
 
       {order.status === 'placed' && advanceOwing > 0 ? (
         <p style={{ margin: '0 0 0.75rem' }}>
@@ -336,6 +409,129 @@ export const OrderActions: React.FC = () => {
           >
             Record payment
           </Button>
+        </div>
+      ) : null}
+
+      {(order.paid ?? 0) - (order.refunded ?? 0) > 0 && (refundDue > 0 || ['cancelled', 'returned'].includes(order.status)) ? (
+        <div style={{ ...row, marginTop: '0.75rem' }}>
+          <span>
+            {refundDue > 0 ? (
+              <>
+                <strong style={{ color: '#d22b2f' }}>৳{refundDue} to pay back.</strong> Record the refund once it is sent:
+              </>
+            ) : (
+              'Record a refund:'
+            )}
+          </span>
+          <input style={{ ...input, width: 110 }} inputMode="numeric" placeholder={`৳ ${refundDue || (order.paid ?? 0) - (order.refunded ?? 0)}`} value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} />
+          <select style={input} value={refundMethod} onChange={(e) => setRefundMethod(e.target.value)} aria-label="Refund method">
+            <option>bKash</option>
+            <option>Nagad</option>
+            <option>Bank transfer</option>
+            <option>Card refund</option>
+            <option>Cash</option>
+          </select>
+          <input style={input} placeholder="Transaction ID" value={refundRef} onChange={(e) => setRefundRef(e.target.value)} />
+          <Button
+            disabled={busy || !Number(refundAmount)}
+            onClick={() => run({ action: 'record_refund', amount: Number(refundAmount), method: refundMethod, reference: refundRef }, `Record ৳${Number(refundAmount)} paid back to the customer?`)}
+            buttonStyle="secondary"
+            size="medium"
+          >
+            Record refund
+          </Button>
+        </div>
+      ) : null}
+
+      {returnable.length ? (
+        <div style={{ marginTop: '0.75rem' }}>
+          {takeOpen ? (
+            <div style={{ border: '1px solid var(--theme-elevation-150)', borderRadius: 4, padding: '0.85rem 1rem', background: 'var(--theme-bg)' }}>
+              <strong>Books that came back after delivery</strong>
+              <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0.5rem 0', fontSize: 14 }}>
+                <tbody>
+                  {returnable.map(({ line, index, left }) => (
+                    <tr key={index}>
+                      <td style={{ padding: '4px 8px 4px 0' }}>{line.title}</td>
+                      <td style={{ padding: '4px 0', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        <input
+                          type="number"
+                          min={0}
+                          max={left}
+                          value={takeQty[index] ?? 0}
+                          onChange={(e) => setTakeQty({ ...takeQty, [index]: Math.max(0, Math.min(left, Math.round(Number(e.target.value) || 0))) })}
+                          style={{ ...input, width: 70 }}
+                          aria-label={`Copies of ${line.title} back`}
+                        />{' '}
+                        of {left}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ ...row, marginBottom: '0.5rem' }}>
+                <span>The copies are</span>
+                <label>
+                  <input type="radio" checked={condition === 'resell'} onChange={() => setCondition('resell')} /> fine, back on the shelf
+                </label>
+                <label>
+                  <input type="radio" checked={condition === 'damaged'} onChange={() => setCondition('damaged')} /> damaged, not for sale
+                </label>
+              </div>
+              <div style={{ ...row, marginBottom: '0.5rem' }}>
+                <span>The customer gets</span>
+                <label>
+                  <input type="radio" checked={outcome === 'refund'} onChange={() => setOutcome('refund')} /> a refund of
+                </label>
+                <input
+                  style={{ ...input, width: 110 }}
+                  inputMode="numeric"
+                  disabled={outcome !== 'refund'}
+                  placeholder={`৳ ${takeWorth}`}
+                  value={takeRefund}
+                  onChange={(e) => setTakeRefund(e.target.value)}
+                  aria-label="Refund amount"
+                />
+                <label>
+                  <input type="radio" checked={outcome === 'replace'} onChange={() => setOutcome('replace')} /> a replacement copy
+                </label>
+              </div>
+              <div style={row}>
+                <input style={{ ...input, flex: 1, minWidth: 200 }} placeholder="Why, e.g. torn cover, wrong edition" value={takeReason} onChange={(e) => setTakeReason(e.target.value)} />
+                <Button
+                  disabled={busy || !takeCount}
+                  onClick={() =>
+                    run(
+                      {
+                        action: 'take_back',
+                        items: Object.entries(takeQty)
+                          .filter(([, q]) => q > 0)
+                          .map(([line, quantity]) => ({ line: Number(line), quantity })),
+                        condition,
+                        outcome,
+                        refund: outcome === 'refund' ? (takeRefund === '' ? takeWorth : Number(takeRefund)) : 0,
+                        reason: takeReason,
+                      },
+                      outcome === 'refund'
+                        ? `Take back ${takeCount} ${takeCount === 1 ? 'copy' : 'copies'} and owe the customer ৳${takeRefund === '' ? takeWorth : Number(takeRefund)}?`
+                        : `Take back ${takeCount} ${takeCount === 1 ? 'copy' : 'copies'} and send a replacement? It comes off the shelf now.`,
+                    )
+                  }
+                  buttonStyle="primary"
+                  size="medium"
+                >
+                  Take back
+                </Button>
+                <Button disabled={busy} onClick={() => setTakeOpen(false)} buttonStyle="secondary" size="medium">
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button disabled={busy} onClick={() => setTakeOpen(true)} buttonStyle="secondary" size="medium">
+              Books came back after delivery…
+            </Button>
+          )}
         </div>
       ) : null}
     </div>
